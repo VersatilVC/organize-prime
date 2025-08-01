@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,6 +28,9 @@ export default function Organizations() {
   const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', slug: '' });
 
   useEffect(() => {
     fetchOrganizations();
@@ -101,6 +107,51 @@ export default function Organizations() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditOrganization = (org: Organization) => {
+    setEditingOrg(org);
+    setEditForm({ name: org.name, slug: org.slug });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingOrg) return;
+
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          name: editForm.name.trim(),
+          slug: editForm.slug.trim(),
+        })
+        .eq('id', editingOrg.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Organization updated successfully",
+      });
+
+      setEditDialogOpen(false);
+      setEditingOrg(null);
+      setEditForm({ name: '', slug: '' });
+      fetchOrganizations();
+    } catch (error) {
+      console.error('Error updating organization:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update organization",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditDialogOpen(false);
+    setEditingOrg(null);
+    setEditForm({ name: '', slug: '' });
   };
 
   if (roleLoading) {
@@ -194,6 +245,12 @@ export default function Organizations() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
+                              onClick={() => handleEditOrganization(org)}
+                            >
+                              <Icons.edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
                               onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
                             >
                               {org.is_active ? (
@@ -222,6 +279,49 @@ export default function Organizations() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Organization</DialogTitle>
+              <DialogDescription>
+                Update the organization details below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="slug" className="text-right">
+                  Domain
+                </Label>
+                <Input
+                  id="slug"
+                  value={editForm.slug}
+                  onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCancelEdit}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
