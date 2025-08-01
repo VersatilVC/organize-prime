@@ -49,7 +49,7 @@ export default function Users() {
           joined_at,
           department,
           position,
-          profiles (
+          profiles!memberships_user_id_fkey (
             id,
             full_name,
             username,
