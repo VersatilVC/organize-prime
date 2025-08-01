@@ -515,6 +515,8 @@ export default function Users() {
 
   const handleCopyInvitationLink = async (invitation: Invitation) => {
     const inviteLink = `${window.location.origin}/invite/${invitation.token}`;
+    console.log('Generated invitation link:', inviteLink);
+    console.log('Current origin:', window.location.origin);
     try {
       await navigator.clipboard.writeText(inviteLink);
       toast({
