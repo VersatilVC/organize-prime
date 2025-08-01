@@ -14,6 +14,17 @@ export default function Dashboard() {
   const { currentOrganization } = useOrganization();
   const { organizations, users, notifications, files, loading } = useDashboardData();
 
+  // Debug icons to find undefined ones
+  console.log('Icons object:', Icons);
+  console.log('building icon:', Icons.building);
+  console.log('users icon:', Icons.users);
+  console.log('bell icon:', Icons.bell);
+  console.log('fileText icon:', Icons.fileText);
+  console.log('mail icon:', Icons.mail);
+  console.log('barChart icon:', Icons.barChart);
+  console.log('shield icon:', Icons.shield);
+  console.log('user icon:', Icons.user);
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'super_admin':
