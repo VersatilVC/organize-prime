@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/ui/icons';
@@ -13,6 +14,9 @@ export default function Dashboard() {
   const { role } = useUserRole();
   const { currentOrganization } = useOrganization();
   const { organizations, users, notifications, files, loading } = useDashboardData();
+  
+  // Check for automatic organization creation
+  useOrganizationCreation();
 
 
   const getRoleBadgeVariant = (role: string) => {

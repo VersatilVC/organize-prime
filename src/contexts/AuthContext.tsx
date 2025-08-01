@@ -113,6 +113,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleOrganizationLogic = async (user: User) => {
     if (!user.email) return;
 
+    // First check if user already has any memberships
+    const { data: existingMemberships } = await supabase
+      .from('memberships')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    // If user already has memberships, skip organization creation
+    if (existingMemberships && existingMemberships.length > 0) {
+      return;
+    }
+
     const domain = user.email.split('@')[1];
     const businessDomains = ['versatil.vc', 'verss.ai'];
     const personalDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com'];
@@ -142,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (newOrg && !orgError) {
           // Create admin membership
-          await supabase.from('memberships').insert({
+          const { error: membershipError } = await supabase.from('memberships').insert({
             user_id: user.id,
             organization_id: newOrg.id,
             role: 'admin',
@@ -150,13 +162,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             joined_at: new Date().toISOString(),
           });
 
-          toast({
-            title: "Welcome!",
-            description: `You're now the Company Admin for ${orgName}`,
-          });
+          if (!membershipError) {
+            console.log(`Organization ${orgName} created successfully for ${user.email}`);
+            toast({
+              title: "Welcome!",
+              description: `You're now the Company Admin for ${orgName}`,
+            });
+          } else {
+            console.error('Error creating membership:', membershipError);
+          }
+        } else {
+          console.error('Error creating organization:', orgError);
         }
       } else {
-        // Check if user has pending invitation
+        // Organization exists, check if user has pending invitation
         const { data: invitation } = await supabase
           .from('invitations')
           .select('id, role, organization_id')
