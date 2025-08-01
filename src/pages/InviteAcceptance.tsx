@@ -52,7 +52,9 @@ export default function InviteAcceptance() {
       }
 
       // Fetch invitation details first
-      const { data: invitationData, error: invitationError } = await supabase
+      console.log('🔍 Query parameters:', { token });
+      
+      const query = supabase
         .from('invitations')
         .select(`
           id,
@@ -64,10 +66,20 @@ export default function InviteAcceptance() {
           organization_id,
           invited_by
         `)
-        .eq('token', token)
-        .maybeSingle();
+        .eq('token', token);
+      
+      console.log('🔍 About to execute query...');
+      const { data: invitationData, error: invitationError } = await query.maybeSingle();
 
-      console.log('📋 Invitation query result:', { invitationData, invitationError });
+      console.log('📋 Raw query response:', { 
+        invitationData, 
+        invitationError, 
+        queryDebug: {
+          token,
+          tokenType: typeof token,
+          tokenLength: token ? token.length : 0
+        }
+      });
 
       if (invitationError) {
         console.error('❌ Invitation fetch error:', invitationError);
@@ -77,6 +89,13 @@ export default function InviteAcceptance() {
 
       if (!invitationData) {
         console.error('❌ No invitation data found for token');
+        // Let's try a different approach - query without token filter to see if there are any invitations
+        const { data: allInvitations } = await supabase
+          .from('invitations')
+          .select('id, token, email')
+          .limit(5);
+        console.log('🔍 Available invitations (first 5):', allInvitations);
+        
         setError('Invitation not found');
         return;
       }
