@@ -178,19 +178,23 @@ export default function Users() {
     try {
       // Update profile information
       console.log('Updating profile...');
-      const { error: profileError } = await supabase
+      const updateResult = await supabase
         .from('profiles')
         .update({
           full_name: editForm.full_name,
           username: editForm.username
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select(); // Add select to see what was actually updated
 
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-        throw profileError;
+      console.log('Update result:', updateResult);
+      
+      if (updateResult.error) {
+        console.error('Profile update error:', updateResult.error);
+        throw updateResult.error;
       }
-      console.log('Profile updated successfully');
+      
+      console.log('Profile updated successfully, updated data:', updateResult.data);
       
       // Verify the update worked by fetching the specific user
       const { data: verifyUpdate, error: verifyError } = await supabase
