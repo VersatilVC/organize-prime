@@ -227,8 +227,8 @@ export default function InviteAcceptance() {
         description: `You've successfully joined ${invitation.organization_name}`,
       });
 
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to main page
+      navigate('/');
 
     } catch (error: any) {
       console.error('Error accepting invitation:', error);
