@@ -183,7 +183,28 @@ export default function InviteAcceptance() {
 
       if (existingMembership) {
         if (existingMembership.status === 'active') {
-          throw new Error('You are already a member of this organization');
+          // User is already a member - just mark invitation as accepted and show success
+          console.log('✅ User already a member, marking invitation as accepted');
+          
+          const { error: invitationError } = await supabase
+            .from('invitations')
+            .update({
+              accepted_at: new Date().toISOString()
+            })
+            .eq('id', invitation.id);
+
+          if (invitationError) {
+            console.warn('⚠️ Could not mark invitation as accepted:', invitationError);
+          }
+
+          toast({
+            title: "Already a member!",
+            description: `You're already part of ${invitation.organization_name}`,
+          });
+
+          // Redirect to main page
+          navigate('/');
+          return;
         } else {
           // Reactivate existing membership
           const { error: updateError } = await supabase
