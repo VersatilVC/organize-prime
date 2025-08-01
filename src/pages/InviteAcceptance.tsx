@@ -43,12 +43,15 @@ export default function InviteAcceptance() {
 
   const fetchInvitation = async () => {
     try {
+      console.log('🔍 Fetching invitation with token:', token);
+      
       if (!token) {
+        console.error('❌ No token provided');
         setError('Invalid invitation link');
         return;
       }
 
-      // Fetch invitation with organization and inviter details
+      // Fetch invitation details first
       const { data: invitationData, error: invitationError } = await supabase
         .from('invitations')
         .select(`
@@ -64,52 +67,83 @@ export default function InviteAcceptance() {
         .eq('token', token)
         .maybeSingle();
 
+      console.log('📋 Invitation query result:', { invitationData, invitationError });
+
       if (invitationError) {
-        console.error('Invitation fetch error:', invitationError);
-        setError('Invitation not found');
+        console.error('❌ Invitation fetch error:', invitationError);
+        setError(`Invitation lookup failed: ${invitationError.message}`);
         return;
       }
 
       if (!invitationData) {
+        console.error('❌ No invitation data found for token');
         setError('Invitation not found');
         return;
       }
 
       // Check if invitation is expired
-      if (new Date(invitationData.expires_at) < new Date()) {
+      const expirationDate = new Date(invitationData.expires_at);
+      const now = new Date();
+      if (expirationDate < now) {
+        console.error('❌ Invitation expired:', { expirationDate, now });
         setError('This invitation has expired');
         return;
       }
 
       // Check if invitation is already accepted
       if (invitationData.accepted_at) {
+        console.error('❌ Invitation already accepted:', invitationData.accepted_at);
         setError('This invitation has already been accepted');
         return;
       }
 
-      // Get organization details
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', invitationData.organization_id)
-        .single();
+      console.log('✅ Invitation data processed successfully');
 
-      // Get inviter details
-      const { data: inviterData } = await supabase
-        .from('profiles')
-        .select('full_name, username')
-        .eq('id', invitationData.invited_by)
-        .single();
+      // Fetch organization and inviter details with graceful fallbacks
+      let organizationName = 'Unknown Organization';
+      let inviterName = 'Unknown User';
+
+      try {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', invitationData.organization_id)
+          .maybeSingle();
+        
+        if (orgError) {
+          console.warn('⚠️ Could not fetch organization name:', orgError);
+        } else if (orgData) {
+          organizationName = orgData.name;
+        }
+      } catch (error) {
+        console.warn('⚠️ Organization fetch failed:', error);
+      }
+
+      try {
+        const { data: inviterData, error: inviterError } = await supabase
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', invitationData.invited_by)
+          .maybeSingle();
+        
+        if (inviterError) {
+          console.warn('⚠️ Could not fetch inviter name:', inviterError);
+        } else if (inviterData) {
+          inviterName = inviterData.full_name || inviterData.username || 'Unknown User';
+        }
+      } catch (error) {
+        console.warn('⚠️ Inviter fetch failed:', error);
+      }
 
       setInvitation({
         ...invitationData,
-        organization_name: orgData?.name || 'Unknown Organization',
-        invited_by_name: inviterData?.full_name || inviterData?.username || 'Unknown User'
+        organization_name: organizationName,
+        invited_by_name: inviterName
       });
 
     } catch (error) {
-      console.error('Error fetching invitation:', error);
-      setError('Failed to load invitation');
+      console.error('💥 Unexpected error fetching invitation:', error);
+      setError('Failed to load invitation. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
