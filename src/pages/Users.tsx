@@ -168,8 +168,11 @@ export default function Users() {
   };
 
   const handleSaveEdit = async (userId: string) => {
+    console.log('Starting save edit for user:', userId, 'with form data:', editForm);
+    
     try {
       // Update profile information
+      console.log('Updating profile...');
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -178,17 +181,51 @@ export default function Users() {
         })
         .eq('id', userId);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw profileError;
+      }
+      console.log('Profile updated successfully');
 
       // Update membership role if changed
       const currentUser = users.find(u => u.id === userId);
+      console.log('Current user found:', currentUser);
+      
       if (currentUser && editForm.role !== currentUser.role) {
-        const { error: membershipError } = await supabase
+        console.log('Updating membership role from', currentUser.role, 'to', editForm.role);
+        
+        // Find the active membership for this user
+        const { data: memberships, error: membershipFindError } = await supabase
           .from('memberships')
-          .update({ role: editForm.role })
-          .eq('user_id', userId);
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active');
 
-        if (membershipError) throw membershipError;
+        if (membershipFindError) {
+          console.error('Error finding membership:', membershipFindError);
+          throw membershipFindError;
+        }
+
+        console.log('Found memberships:', memberships);
+
+        if (memberships && memberships.length > 0) {
+          // Update the first active membership (there should only be one per org)
+          const membershipToUpdate = memberships[0];
+          console.log('Updating membership:', membershipToUpdate.id);
+          
+          const { error: membershipError } = await supabase
+            .from('memberships')
+            .update({ role: editForm.role })
+            .eq('id', membershipToUpdate.id);
+
+          if (membershipError) {
+            console.error('Membership update error:', membershipError);
+            throw membershipError;
+          }
+          console.log('Membership role updated successfully');
+        } else {
+          console.warn('No active membership found for user');
+        }
       }
 
       toast({
@@ -197,7 +234,9 @@ export default function Users() {
       });
 
       setEditingUserId(null);
-      fetchUsers(); // Refresh the user list
+      console.log('Refreshing user list...');
+      await fetchUsers(); // Wait for the refresh to complete
+      console.log('User list refreshed');
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
