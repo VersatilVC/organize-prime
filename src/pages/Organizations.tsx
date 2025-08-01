@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,8 +26,7 @@ export default function Organizations() {
   const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '', slug: '' });
 
   useEffect(() => {
@@ -110,14 +107,11 @@ export default function Organizations() {
   };
 
   const handleEditOrganization = (org: Organization) => {
-    setEditingOrg(org);
+    setEditingOrgId(org.id);
     setEditForm({ name: org.name, slug: org.slug });
-    setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingOrg) return;
-
+  const handleSaveEdit = async (orgId: string) => {
     try {
       const { error } = await supabase
         .from('organizations')
@@ -125,7 +119,7 @@ export default function Organizations() {
           name: editForm.name.trim(),
           slug: editForm.slug.trim(),
         })
-        .eq('id', editingOrg.id);
+        .eq('id', orgId);
 
       if (error) throw error;
 
@@ -134,8 +128,7 @@ export default function Organizations() {
         description: "Organization updated successfully",
       });
 
-      setEditDialogOpen(false);
-      setEditingOrg(null);
+      setEditingOrgId(null);
       setEditForm({ name: '', slug: '' });
       fetchOrganizations();
     } catch (error) {
@@ -149,8 +142,7 @@ export default function Organizations() {
   };
 
   const handleCancelEdit = () => {
-    setEditDialogOpen(false);
-    setEditingOrg(null);
+    setEditingOrgId(null);
     setEditForm({ name: '', slug: '' });
   };
 
@@ -224,8 +216,28 @@ export default function Organizations() {
                 <TableBody>
                   {organizations.map((org) => (
                     <TableRow key={org.id}>
-                      <TableCell className="font-medium">{org.name}</TableCell>
-                      <TableCell>{org.slug}</TableCell>
+                      <TableCell className="font-medium">
+                        {editingOrgId === org.id ? (
+                          <Input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                            className="h-8 text-sm font-medium"
+                          />
+                        ) : (
+                          org.name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingOrgId === org.id ? (
+                          <Input
+                            value={editForm.slug}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, slug: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        ) : (
+                          org.slug
+                        )}
+                      </TableCell>
                       <TableCell>{org.admin_count}</TableCell>
                       <TableCell>{org.user_count}</TableCell>
                       <TableCell>
@@ -237,40 +249,59 @@ export default function Organizations() {
                         {new Date(org.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Icons.moreHorizontal className="h-4 w-4" />
+                        {editingOrgId === org.id ? (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSaveEdit(org.id)}
+                            >
+                              <Icons.checkCircle className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleEditOrganization(org)}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEdit}
                             >
-                              <Icons.edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
-                            >
-                              {org.is_active ? (
-                                <>
-                                  <Icons.pause className="h-4 w-4 mr-2" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <Icons.play className="h-4 w-4 mr-2" />
-                                  Activate
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Icons.externalLink className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Icons.xCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Icons.moreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => handleEditOrganization(org)}
+                              >
+                                <Icons.edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
+                              >
+                                {org.is_active ? (
+                                  <>
+                                    <Icons.pause className="h-4 w-4 mr-2" />
+                                    Deactivate
+                                  </>
+                                ) : (
+                                  <>
+                                    <Icons.play className="h-4 w-4 mr-2" />
+                                    Activate
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Icons.externalLink className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -279,49 +310,6 @@ export default function Organizations() {
             )}
           </CardContent>
         </Card>
-
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Organization</DialogTitle>
-              <DialogDescription>
-                Update the organization details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="slug" className="text-right">
-                  Domain
-                </Label>
-                <Input
-                  id="slug"
-                  value={editForm.slug}
-                  onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancelEdit}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit}>
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </AppLayout>
   );
