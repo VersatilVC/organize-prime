@@ -439,7 +439,10 @@ export default function Users() {
                       <TableCell>
                         {editingUserId === user.id ? (
                           <div className="flex items-center gap-1">
-                            <Button size="sm" onClick={() => handleSaveEdit(user.id)}>
+                            <Button size="sm" onClick={() => {
+                              console.log('Save button clicked!', user.id);
+                              handleSaveEdit(user.id);
+                            }}>
                               ✓
                             </Button>
                             <Button size="sm" variant="outline" onClick={handleCancelEdit}>
