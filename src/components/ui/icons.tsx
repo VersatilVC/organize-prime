@@ -39,6 +39,9 @@ import {
   ArrowLeft,
   ArrowRight,
   MoreVertical,
+  MoreHorizontal,
+  Pause,
+  Play,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -85,6 +88,9 @@ export const Icons = {
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRight,
   moreVertical: MoreVertical,
+  moreHorizontal: MoreHorizontal,
+  pause: Pause,
+  play: Play,
   google: (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" {...props}>
       <path

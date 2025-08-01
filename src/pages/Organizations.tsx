@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
 
@@ -185,18 +186,34 @@ export default function Organizations() {
                         {new Date(org.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
-                          >
-                            {org.is_active ? "Deactivate" : "Activate"}
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Icons.externalLink className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Icons.moreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
+                            >
+                              {org.is_active ? (
+                                <>
+                                  <Icons.pause className="h-4 w-4 mr-2" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <Icons.play className="h-4 w-4 mr-2" />
+                                  Activate
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Icons.externalLink className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
