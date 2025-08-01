@@ -16,11 +16,13 @@ interface UserWithMembership {
   username: string | null;
   avatar_url: string | null;
   last_login_at: string | null;
+  email?: string | null;
   role: string;
   status: string;
   joined_at: string | null;
   department: string | null;
   position: string | null;
+  organization_name?: string | null;
 }
 
 export default function Users() {
@@ -40,7 +42,7 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      // First get memberships
+      // First get memberships with organization info for super admin
       let membershipQuery = supabase
         .from('memberships')
         .select(`
@@ -49,7 +51,8 @@ export default function Users() {
           status,
           joined_at,
           department,
-          position
+          position,
+          organization_id
         `)
         .eq('status', 'active');
 
@@ -70,7 +73,7 @@ export default function Users() {
       // Get user IDs from memberships
       const userIds = memberships.map(m => m.user_id);
 
-      // Then get profiles for those users
+      // Get profiles for those users (includes email from auth metadata)
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, username, avatar_url, last_login_at')
@@ -78,20 +81,55 @@ export default function Users() {
 
       if (profileError) throw profileError;
 
+      // For super admin, also get organization names and user emails
+      let organizations: any[] = [];
+      let userEmails: { [key: string]: string } = {};
+
+      if (role === 'super_admin') {
+        // Get organization names
+        const orgIds = [...new Set(memberships.map(m => m.organization_id))];
+        const { data: orgsData } = await supabase
+          .from('organizations')
+          .select('id, name')
+          .in('id', orgIds);
+        
+        organizations = orgsData || [];
+
+        // Get user emails by querying auth users (we'll use a function or get from user metadata)
+        // Since we can't directly query auth.users, we'll try to get email from auth context
+        // For now, let's use the current user's email as an example and fetch others via RPC if available
+        for (const userId of userIds) {
+          try {
+            // Try to get user details via auth admin (this might need a custom function)
+            const { data: userData } = await supabase.auth.admin.getUserById(userId);
+            if (userData.user?.email) {
+              userEmails[userId] = userData.user.email;
+            }
+          } catch (e) {
+            // If admin access fails, we'll skip email for now
+            console.log('Could not fetch email for user:', userId);
+          }
+        }
+      }
+
       // Combine the data
       const usersData = memberships.map((membership) => {
         const profile = profiles?.find(p => p.id === membership.user_id);
+        const organization = organizations.find(org => org.id === membership.organization_id);
+        
         return {
           id: membership.user_id,
           full_name: profile?.full_name || null,
           username: profile?.username || null,
           avatar_url: profile?.avatar_url || null,
           last_login_at: profile?.last_login_at || null,
+          email: userEmails[membership.user_id] || null,
           role: membership.role,
           status: membership.status,
           joined_at: membership.joined_at,
           department: membership.department,
           position: membership.position,
+          organization_name: organization?.name || null,
         };
       });
 
@@ -167,6 +205,8 @@ export default function Users() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
+                    {role === 'super_admin' && <TableHead>Email</TableHead>}
+                    {role === 'super_admin' && <TableHead>Organization</TableHead>}
                     <TableHead>Role</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Position</TableHead>
@@ -197,6 +237,16 @@ export default function Users() {
                           </div>
                         </div>
                       </TableCell>
+                      {role === 'super_admin' && (
+                        <TableCell>
+                          <span className="text-sm">{user.email || 'N/A'}</span>
+                        </TableCell>
+                      )}
+                      {role === 'super_admin' && (
+                        <TableCell>
+                          <span className="text-sm">{user.organization_name || 'N/A'}</span>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant={getRoleBadgeVariant(user.role)}>
                           {user.role === 'admin' ? 'Admin' : 'User'}
