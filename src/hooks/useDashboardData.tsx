@@ -30,6 +30,11 @@ export function useDashboardData(): DashboardStats {
       return;
     }
 
+    // Don't fetch until we have the role data loaded
+    if (!role || (role === 'admin' && !currentOrganization)) {
+      return;
+    }
+
     const fetchStats = async () => {
       try {
         let organizationsCount = 0;
@@ -106,7 +111,7 @@ export function useDashboardData(): DashboardStats {
     };
 
     fetchStats();
-  }, [user, role, currentOrganization]);
+  }, [user?.id, role, currentOrganization?.id]); // Use more specific dependencies
 
   return stats;
 }
