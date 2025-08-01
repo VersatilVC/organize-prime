@@ -58,7 +58,7 @@ export default function Users() {
   });
 
   useEffect(() => {
-    console.log('Users component loaded with role:', role);
+    console.log('Users component loaded with role:', role, 'organization:', currentOrganization?.name);
     if (role === 'admin' || role === 'super_admin') {
       fetchUsers();
       fetchInvitations();
