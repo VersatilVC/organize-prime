@@ -27,11 +27,13 @@ export function useDashboardData(): DashboardStats {
   useEffect(() => {
     // Don't fetch if we're still loading dependencies
     if (!user || roleLoading || orgLoading) {
+      setStats(prev => ({ ...prev, loading: true }));
       return;
     }
 
     // Don't fetch until we have the role data loaded
     if (role === 'admin' && !currentOrganization) {
+      setStats(prev => ({ ...prev, loading: true }));
       return;
     }
 

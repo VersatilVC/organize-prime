@@ -190,8 +190,17 @@ export default function Dashboard() {
                     <stat.icon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                    {loading ? (
+                      <>
+                        <Skeleton className="h-8 w-16 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                        <p className="text-xs text-muted-foreground">{stat.description}</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               ))}
