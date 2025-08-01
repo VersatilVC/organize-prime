@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ interface InviteUserDialogProps {
 }
 
 export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUserDialogProps) {
+  const { user } = useAuth();
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -82,9 +84,16 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      // Get current user for invited_by
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+
+      // Get current user's profile for the inviter name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', user.id)
+        .single();
+
+      const inviterName = profile?.full_name || profile?.username || 'Someone';
 
       // Create invitation record
       const { data: invitation, error } = await supabase
@@ -103,14 +112,47 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
 
       if (error) throw error;
 
-      // Generate invitation link
+      // Send invitation email via edge function
+      try {
+        const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            email: formData.email,
+            inviterName,
+            organizationName: currentOrganization.name,
+            role: formData.role,
+            message: formData.message,
+            inviteToken: token,
+            department: formData.department,
+            position: formData.position
+          }
+        });
+
+        if (emailError) {
+          console.error('Email sending error:', emailError);
+          // Don't throw here - the invitation was created, just email failed
+          toast({
+            title: "Invitation Created",
+            description: `Invitation created but email failed to send. You can copy the link below to send manually.`,
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Invitation Sent",
+            description: `Invitation email sent to ${formData.email}`,
+          });
+        }
+      } catch (emailError) {
+        console.error('Email function error:', emailError);
+        toast({
+          title: "Invitation Created",
+          description: `Invitation created but email failed to send. You can copy the link below to send manually.`,
+          variant: "default",
+        });
+      }
+
+      // Generate invitation link for copying
       const inviteLink = `${window.location.origin}/invite/${token}`;
       setInvitationLink(inviteLink);
-
-      toast({
-        title: "Invitation Sent",
-        description: `Invitation sent to ${formData.email}`,
-      });
 
       onInviteSent?.();
     } catch (error: any) {
