@@ -69,63 +69,96 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      // Start with getting all profiles, then join with memberships
-      let profileQuery = supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url, last_login_at');
-
-      console.log('Fetching profiles...');
-      const { data: profiles, error: profileError } = await profileQuery;
-      console.log('Profiles fetched:', JSON.stringify(profiles, null, 2));
-      if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        throw profileError;
-      }
-
-      if (!profiles || profiles.length === 0) {
-        setUsers([]);
-        return;
-      }
-
-      const userIds = profiles.map(p => p.id);
-
-      // Get memberships for these users
-      let membershipQuery = supabase
-        .from('memberships')
-        .select(`
-          user_id,
-          role,
-          status,
-          joined_at,
-          organization_id
-        `)
-        .in('user_id', userIds)
-        .eq('status', 'active');
-
-      // If company admin, only show users from their organization
+      // For admin users, start by getting memberships from their organization first
       if (role === 'admin' && currentOrganization) {
-        membershipQuery = membershipQuery.eq('organization_id', currentOrganization.id);
+        console.log('Fetching users as admin for organization:', currentOrganization.name);
         
-        // For admin, we need to filter profiles to only show users from their org
-        const { data: adminMemberships } = await membershipQuery;
-        const orgUserIds = adminMemberships?.map(m => m.user_id) || [];
-        const filteredProfiles = profiles.filter(p => orgUserIds.includes(p.id));
-        
-        if (filteredProfiles.length === 0) {
+        // Get only active memberships from the current organization
+        const { data: memberships, error: membershipError } = await supabase
+          .from('memberships')
+          .select(`
+            user_id,
+            role,
+            status,
+            joined_at,
+            organization_id
+          `)
+          .eq('organization_id', currentOrganization.id)
+          .eq('status', 'active');
+
+        if (membershipError) throw membershipError;
+
+        if (!memberships || memberships.length === 0) {
           setUsers([]);
           return;
         }
+
+        // Get profiles only for users in this organization
+        const orgUserIds = memberships.map(m => m.user_id);
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url, last_login_at')
+          .in('id', orgUserIds);
+
+        if (profileError) throw profileError;
+
+        // Combine the data
+        const usersData = profiles?.map((profile) => {
+          const membership = memberships.find(m => m.user_id === profile.id);
+          
+          return {
+            id: profile.id,
+            full_name: profile.full_name || null,
+            username: profile.username || null,
+            avatar_url: profile.avatar_url || null,
+            last_login_at: profile.last_login_at || null,
+            email: null, // Admins don't see emails
+            role: membership?.role || 'user',
+            status: membership?.status || 'inactive',
+            joined_at: membership?.joined_at || null,
+            organization_name: currentOrganization.name,
+          };
+        }) || [];
+
+        setUsers(usersData);
+        return;
       }
 
-      const { data: memberships, error: membershipError } = await membershipQuery;
-      if (membershipError) throw membershipError;
-
-      // For super admin, get organization names and user emails
-      let organizations: any[] = [];
-      let userEmailsData: any[] = [];
-
+      // Super admin logic - can see all users
       if (role === 'super_admin') {
+        console.log('Fetching all users as super admin');
+        
+        // Get all profiles first
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url, last_login_at');
+
+        if (profileError) throw profileError;
+
+        if (!profiles || profiles.length === 0) {
+          setUsers([]);
+          return;
+        }
+
+        const userIds = profiles.map(p => p.id);
+
+        // Get all memberships
+        const { data: memberships, error: membershipError } = await supabase
+          .from('memberships')
+          .select(`
+            user_id,
+            role,
+            status,
+            joined_at,
+            organization_id
+          `)
+          .in('user_id', userIds)
+          .eq('status', 'active');
+
+        if (membershipError) throw membershipError;
+
         // Get organization names
+        let organizations: any[] = [];
         if (memberships && memberships.length > 0) {
           const orgIds = [...new Set(memberships.map(m => m.organization_id))];
           const { data: orgsData } = await supabase
@@ -140,34 +173,28 @@ export default function Users() {
         const { data: emailsData } = await supabase
           .rpc('get_user_emails_for_super_admin', { user_ids: userIds });
         
-        userEmailsData = emailsData || [];
-      }
+        const userEmailsData = emailsData || [];
 
-      // Combine the data - show all profiles, with membership info if available
-      const usersData = profiles.map((profile) => {
-        const membership = memberships?.find(m => m.user_id === profile.id);
-        const organization = organizations.find(org => org.id === membership?.organization_id);
-        const emailData = userEmailsData.find(e => e.user_id === profile.id);
-        
-        return {
-          id: profile.id,
-          full_name: profile.full_name || null,
-          username: profile.username || null,
-          avatar_url: profile.avatar_url || null,
-          last_login_at: profile.last_login_at || null,
-          email: emailData?.email || null,
-          role: membership?.role || 'user',
-          status: membership?.status || 'inactive',
-          joined_at: membership?.joined_at || null,
-          organization_name: organization?.name || null,
-        };
-      });
+        // Combine the data - show all profiles, with membership info if available
+        const usersData = profiles.map((profile) => {
+          const membership = memberships?.find(m => m.user_id === profile.id);
+          const organization = organizations.find(org => org.id === membership?.organization_id);
+          const emailData = userEmailsData.find(e => e.user_id === profile.id);
+          
+          return {
+            id: profile.id,
+            full_name: profile.full_name || null,
+            username: profile.username || null,
+            avatar_url: profile.avatar_url || null,
+            last_login_at: profile.last_login_at || null,
+            email: emailData?.email || null,
+            role: membership?.role || 'user',
+            status: membership?.status || 'inactive',
+            joined_at: membership?.joined_at || null,
+            organization_name: organization?.name || null,
+          };
+        });
 
-      // Filter for admin users to only show their org users
-      if (role === 'admin' && currentOrganization) {
-        const filteredUsers = usersData.filter(user => user.organization_name === currentOrganization.name || !user.organization_name);
-        setUsers(filteredUsers);
-      } else {
         setUsers(usersData);
       }
     } catch (error) {
