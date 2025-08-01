@@ -20,7 +20,7 @@ interface Organization {
 }
 
 export default function Organizations() {
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,20 @@ export default function Organizations() {
       });
     }
   };
+
+  if (roleLoading) {
+    return (
+      <AppLayout>
+        <div className="flex-1 p-6">
+          <div className="space-y-4 w-full max-w-md">
+            <div className="h-8 w-full animate-pulse rounded-md bg-muted" />
+            <div className="h-8 w-3/4 animate-pulse rounded-md bg-muted" />
+            <div className="h-8 w-1/2 animate-pulse rounded-md bg-muted" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (role !== 'super_admin') {
     return (

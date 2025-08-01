@@ -27,7 +27,7 @@ interface UserWithMembership {
 }
 
 export default function Users() {
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithMembership[]>([]);
@@ -317,6 +317,20 @@ export default function Users() {
         return 'outline';
     }
   };
+
+  if (roleLoading) {
+    return (
+      <AppLayout>
+        <div className="flex-1 p-6">
+          <div className="space-y-4 w-full max-w-md">
+            <div className="h-8 w-full animate-pulse rounded-md bg-muted" />
+            <div className="h-8 w-3/4 animate-pulse rounded-md bg-muted" />
+            <div className="h-8 w-1/2 animate-pulse rounded-md bg-muted" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (role !== 'admin' && role !== 'super_admin') {
     return (
