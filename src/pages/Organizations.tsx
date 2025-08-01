@@ -252,18 +252,17 @@ export default function Organizations() {
                         {editingOrgId === org.id ? (
                           <div className="flex items-center gap-1">
                             <Button
-                              variant="outline"
                               size="sm"
                               onClick={() => handleSaveEdit(org.id)}
                             >
-                              <Icons.checkCircle className="h-4 w-4" />
+                              ✓
                             </Button>
                             <Button
-                              variant="outline"
                               size="sm"
+                              variant="outline"
                               onClick={handleCancelEdit}
                             >
-                              <Icons.xCircle className="h-4 w-4" />
+                              ✕
                             </Button>
                           </div>
                         ) : (
