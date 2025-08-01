@@ -20,8 +20,6 @@ interface UserWithMembership {
   role: string;
   status: string;
   joined_at: string | null;
-  department: string | null;
-  position: string | null;
   organization_name?: string | null;
 }
 
@@ -42,7 +40,22 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      // First get memberships with organization info for super admin
+      // Start with getting all profiles, then join with memberships
+      let profileQuery = supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, last_login_at');
+
+      const { data: profiles, error: profileError } = await profileQuery;
+      if (profileError) throw profileError;
+
+      if (!profiles || profiles.length === 0) {
+        setUsers([]);
+        return;
+      }
+
+      const userIds = profiles.map(p => p.id);
+
+      // Get memberships for these users
       let membershipQuery = supabase
         .from('memberships')
         .select(`
@@ -50,50 +63,44 @@ export default function Users() {
           role,
           status,
           joined_at,
-          department,
-          position,
           organization_id
         `)
+        .in('user_id', userIds)
         .eq('status', 'active');
 
       // If company admin, only show users from their organization
       if (role === 'admin' && currentOrganization) {
         membershipQuery = membershipQuery.eq('organization_id', currentOrganization.id);
+        
+        // For admin, we need to filter profiles to only show users from their org
+        const { data: adminMemberships } = await membershipQuery;
+        const orgUserIds = adminMemberships?.map(m => m.user_id) || [];
+        const filteredProfiles = profiles.filter(p => orgUserIds.includes(p.id));
+        
+        if (filteredProfiles.length === 0) {
+          setUsers([]);
+          return;
+        }
       }
 
       const { data: memberships, error: membershipError } = await membershipQuery;
-
       if (membershipError) throw membershipError;
 
-      if (!memberships || memberships.length === 0) {
-        setUsers([]);
-        return;
-      }
-
-      // Get user IDs from memberships
-      const userIds = memberships.map(m => m.user_id);
-
-      // Get profiles for those users (includes email from auth metadata)
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url, last_login_at')
-        .in('id', userIds);
-
-      if (profileError) throw profileError;
-
-      // For super admin, also get organization names and user emails
+      // For super admin, get organization names and user emails
       let organizations: any[] = [];
       let userEmailsData: any[] = [];
 
       if (role === 'super_admin') {
         // Get organization names
-        const orgIds = [...new Set(memberships.map(m => m.organization_id))];
-        const { data: orgsData } = await supabase
-          .from('organizations')
-          .select('id, name')
-          .in('id', orgIds);
-        
-        organizations = orgsData || [];
+        if (memberships && memberships.length > 0) {
+          const orgIds = [...new Set(memberships.map(m => m.organization_id))];
+          const { data: orgsData } = await supabase
+            .from('organizations')
+            .select('id, name')
+            .in('id', orgIds);
+          
+          organizations = orgsData || [];
+        }
 
         // Get user emails using the secure function
         const { data: emailsData } = await supabase
@@ -102,29 +109,33 @@ export default function Users() {
         userEmailsData = emailsData || [];
       }
 
-      // Combine the data
-      const usersData = memberships.map((membership) => {
-        const profile = profiles?.find(p => p.id === membership.user_id);
-        const organization = organizations.find(org => org.id === membership.organization_id);
-        const emailData = userEmailsData.find(e => e.user_id === membership.user_id);
+      // Combine the data - show all profiles, with membership info if available
+      const usersData = profiles.map((profile) => {
+        const membership = memberships?.find(m => m.user_id === profile.id);
+        const organization = organizations.find(org => org.id === membership?.organization_id);
+        const emailData = userEmailsData.find(e => e.user_id === profile.id);
         
         return {
-          id: membership.user_id,
-          full_name: profile?.full_name || null,
-          username: profile?.username || null,
-          avatar_url: profile?.avatar_url || null,
-          last_login_at: profile?.last_login_at || null,
+          id: profile.id,
+          full_name: profile.full_name || null,
+          username: profile.username || null,
+          avatar_url: profile.avatar_url || null,
+          last_login_at: profile.last_login_at || null,
           email: emailData?.email || null,
-          role: membership.role,
-          status: membership.status,
-          joined_at: membership.joined_at,
-          department: membership.department,
-          position: membership.position,
+          role: membership?.role || 'user',
+          status: membership?.status || 'inactive',
+          joined_at: membership?.joined_at || null,
           organization_name: organization?.name || null,
         };
       });
 
-      setUsers(usersData);
+      // Filter for admin users to only show their org users
+      if (role === 'admin' && currentOrganization) {
+        const filteredUsers = usersData.filter(user => user.organization_name === currentOrganization.name || !user.organization_name);
+        setUsers(filteredUsers);
+      } else {
+        setUsers(usersData);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -199,8 +210,6 @@ export default function Users() {
                     {role === 'super_admin' && <TableHead>Email</TableHead>}
                     {role === 'super_admin' && <TableHead>Organization</TableHead>}
                     <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Position</TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Actions</TableHead>
@@ -243,8 +252,6 @@ export default function Users() {
                           {user.role === 'admin' ? 'Admin' : 'User'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{user.department || '-'}</TableCell>
-                      <TableCell>{user.position || '-'}</TableCell>
                       <TableCell>
                         {user.last_login_at 
                           ? new Date(user.last_login_at).toLocaleDateString()
