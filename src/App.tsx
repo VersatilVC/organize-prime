@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Organizations from "./pages/Organizations";
 import Users from "./pages/Users";
+import InviteAcceptance from "./pages/InviteAcceptance";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/invite/:token" element={<InviteAcceptance />} />
               {/* Protected Routes */}
               <Route 
                 path="/organizations" 
