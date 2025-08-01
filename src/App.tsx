@@ -4,10 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Organizations from "./pages/Organizations";
+import Users from "./pages/Users";
 
 const queryClient = new QueryClient();
 
@@ -17,39 +20,41 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            {/* Protected Routes */}
-            <Route 
-              path="/organizations" 
-              element={
-                <ProtectedRoute>
-                  <div>Organizations (Coming Soon)</div>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/users" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <div>Users Management (Coming Soon)</div>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/*" 
-              element={
-                <ProtectedRoute requiredRole="super_admin">
-                  <div>System Admin (Coming Soon)</div>
-                </ProtectedRoute>
-              } 
-            />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <OrganizationProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              {/* Protected Routes */}
+              <Route 
+                path="/organizations" 
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <Organizations />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/users" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <Users />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/*" 
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <div>System Admin (Coming Soon)</div>
+                  </ProtectedRoute>
+                } 
+              />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </OrganizationProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

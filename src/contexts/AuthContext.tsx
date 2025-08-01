@@ -102,9 +102,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('Profile created successfully with username:', baseUsername);
         }
       }
+
+      // Handle organization logic after profile creation
+      await handleOrganizationLogic(user);
     } catch (error) {
-      console.error('Error ensuring profile:', error);
+      console.error('Error in ensureProfile:', error);
     }
+  };
+
+  const handleOrganizationLogic = async (user: User) => {
+    if (!user.email) return;
+
+    const domain = user.email.split('@')[1];
+    const businessDomains = ['versatil.vc', 'verss.ai'];
+    const personalDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com'];
+
+    if (businessDomains.includes(domain)) {
+      // Business domain logic
+      const { data: existingOrg } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('slug', domain)
+        .maybeSingle();
+
+      if (!existingOrg) {
+        // First user from this domain - create organization
+        const orgName = domain === 'versatil.vc' ? 'Versatil VC' : 
+                       domain === 'verss.ai' ? 'Verss AI' : 
+                       domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            name: orgName,
+            slug: domain,
+          })
+          .select()
+          .single();
+
+        if (newOrg && !orgError) {
+          // Create admin membership
+          await supabase.from('memberships').insert({
+            user_id: user.id,
+            organization_id: newOrg.id,
+            role: 'admin',
+            status: 'active',
+            joined_at: new Date().toISOString(),
+          });
+
+          toast({
+            title: "Welcome!",
+            description: `You're now the Company Admin for ${orgName}`,
+          });
+        }
+      } else {
+        // Check if user has pending invitation
+        const { data: invitation } = await supabase
+          .from('invitations')
+          .select('id, role, organization_id')
+          .eq('email', user.email)
+          .eq('organization_id', existingOrg.id)
+          .is('accepted_at', null)
+          .maybeSingle();
+
+        if (invitation) {
+          // Accept invitation
+          await supabase.from('invitations').update({
+            accepted_at: new Date().toISOString(),
+          }).eq('id', invitation.id);
+
+          await supabase.from('memberships').insert({
+            user_id: user.id,
+            organization_id: invitation.organization_id,
+            role: invitation.role,
+            status: 'active',
+            joined_at: new Date().toISOString(),
+          });
+
+          toast({
+            title: "Welcome!",
+            description: `You've joined ${existingOrg.name}`,
+          });
+        } else {
+          // Show contact admin message
+          toast({
+            title: "Contact Admin",
+            description: `Please contact your company admin at ${existingOrg.name} for an invitation.`,
+            variant: "default",
+          });
+        }
+      }
+    }
+    // For personal domains, we'll handle this in the UI
   };
 
   const signUp = async (email: string, password: string) => {

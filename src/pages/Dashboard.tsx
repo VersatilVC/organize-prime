@@ -1,13 +1,18 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/ui/icons';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { role, organizations } = useUserRole();
+  const { role } = useUserRole();
+  const { currentOrganization } = useOrganization();
+  const { organizations, users, notifications, files, loading } = useDashboardData();
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -31,32 +36,92 @@ export default function Dashboard() {
     }
   };
 
-  const stats = [
-    {
-      title: 'Organizations',
-      value: organizations.length,
-      description: 'Active organizations',
-      icon: Icons.building,
-    },
-    {
-      title: 'Notifications',
-      value: 3,
-      description: 'Unread notifications',
-      icon: Icons.bell,
-    },
-    {
-      title: 'Files',
-      value: 12,
-      description: 'Recent uploads',
-      icon: Icons.fileText,
-    },
-    {
-      title: 'API Calls',
-      value: '1.2k',
-      description: 'This month',
-      icon: Icons.barChart,
-    },
-  ];
+  const getStatsForRole = () => {
+    if (role === 'super_admin') {
+      return [
+        {
+          title: 'Organizations',
+          value: organizations,
+          description: 'Total organizations',
+          icon: Icons.building,
+        },
+        {
+          title: 'Total Users',
+          value: users,
+          description: 'Across all orgs',
+          icon: Icons.users,
+        },
+        {
+          title: 'Notifications',
+          value: notifications,
+          description: 'System alerts',
+          icon: Icons.bell,
+        },
+        {
+          title: 'Files',
+          value: files,
+          description: 'Total files',
+          icon: Icons.fileText,
+        },
+      ];
+    } else if (role === 'admin') {
+      return [
+        {
+          title: 'Team Members',
+          value: users,
+          description: `In ${currentOrganization?.name || 'organization'}`,
+          icon: Icons.users,
+        },
+        {
+          title: 'Pending Invites',
+          value: 0, // TODO: Add invitations count
+          description: 'Awaiting response',
+          icon: Icons.mail,
+        },
+        {
+          title: 'Notifications',
+          value: notifications,
+          description: 'Unread messages',
+          icon: Icons.bell,
+        },
+        {
+          title: 'Company Files',
+          value: files,
+          description: 'Shared documents',
+          icon: Icons.fileText,
+        },
+      ];
+    } else {
+      return [
+        {
+          title: 'Organizations',
+          value: organizations,
+          description: 'Your memberships',
+          icon: Icons.building,
+        },
+        {
+          title: 'Notifications',
+          value: notifications,
+          description: 'Unread messages',
+          icon: Icons.bell,
+        },
+        {
+          title: 'My Files',
+          value: files,
+          description: 'Your uploads',
+          icon: Icons.fileText,
+        },
+        {
+          title: 'Activity',
+          value: 0, // TODO: Add activity count
+          description: 'Recent actions',
+          icon: Icons.barChart,
+        },
+      ];
+    }
+  };
+
+  const stats = getStatsForRole();
 
   return (
     <div className="flex-1 space-y-6 p-6">
