@@ -40,6 +40,7 @@ export default function Users() {
   });
 
   useEffect(() => {
+    console.log('Users component loaded with role:', role);
     if (role === 'admin' || role === 'super_admin') {
       fetchUsers();
     } else {
