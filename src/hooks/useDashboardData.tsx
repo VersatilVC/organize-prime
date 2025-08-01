@@ -14,8 +14,8 @@ interface DashboardStats {
 
 export function useDashboardData(): DashboardStats {
   const { user } = useAuth();
-  const { role } = useUserRole();
-  const { currentOrganization } = useOrganization();
+  const { role, loading: roleLoading } = useUserRole();
+  const { currentOrganization, loading: orgLoading } = useOrganization();
   const [stats, setStats] = useState<DashboardStats>({
     organizations: 0,
     users: 0,
@@ -25,13 +25,13 @@ export function useDashboardData(): DashboardStats {
   });
 
   useEffect(() => {
-    if (!user) {
-      setStats({ organizations: 0, users: 0, notifications: 0, files: 0, loading: false });
+    // Don't fetch if we're still loading dependencies
+    if (!user || roleLoading || orgLoading) {
       return;
     }
 
     // Don't fetch until we have the role data loaded
-    if (!role || (role === 'admin' && !currentOrganization)) {
+    if (role === 'admin' && !currentOrganization) {
       return;
     }
 
@@ -111,7 +111,7 @@ export function useDashboardData(): DashboardStats {
     };
 
     fetchStats();
-  }, [user?.id, role, currentOrganization?.id]); // Use more specific dependencies
+  }, [user?.id, role, currentOrganization?.id, roleLoading, orgLoading]); // Include loading states
 
   return stats;
 }
