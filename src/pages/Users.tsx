@@ -40,7 +40,8 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      let query = supabase
+      // First get memberships
+      let membershipQuery = supabase
         .from('memberships')
         .select(`
           user_id,
@@ -48,38 +49,51 @@ export default function Users() {
           status,
           joined_at,
           department,
-          position,
-          profiles!memberships_user_id_fkey (
-            id,
-            full_name,
-            username,
-            avatar_url,
-            last_login_at
-          )
+          position
         `)
-        .eq('status', 'active')
+        .eq('status', 'active');
 
       // If company admin, only show users from their organization
       if (role === 'admin' && currentOrganization) {
-        query = query.eq('organization_id', currentOrganization.id);
+        membershipQuery = membershipQuery.eq('organization_id', currentOrganization.id);
       }
 
-      const { data: memberships, error } = await query;
+      const { data: memberships, error: membershipError } = await membershipQuery;
 
-      if (error) throw error;
+      if (membershipError) throw membershipError;
 
-      const usersData = memberships?.map((membership: any) => ({
-        id: membership.profiles?.id || membership.user_id,
-        full_name: membership.profiles?.full_name,
-        username: membership.profiles?.username,
-        avatar_url: membership.profiles?.avatar_url,
-        last_login_at: membership.profiles?.last_login_at,
-        role: membership.role,
-        status: membership.status,
-        joined_at: membership.joined_at,
-        department: membership.department,
-        position: membership.position,
-      })) || [];
+      if (!memberships || memberships.length === 0) {
+        setUsers([]);
+        return;
+      }
+
+      // Get user IDs from memberships
+      const userIds = memberships.map(m => m.user_id);
+
+      // Then get profiles for those users
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, last_login_at')
+        .in('id', userIds);
+
+      if (profileError) throw profileError;
+
+      // Combine the data
+      const usersData = memberships.map((membership) => {
+        const profile = profiles?.find(p => p.id === membership.user_id);
+        return {
+          id: membership.user_id,
+          full_name: profile?.full_name || null,
+          username: profile?.username || null,
+          avatar_url: profile?.avatar_url || null,
+          last_login_at: profile?.last_login_at || null,
+          role: membership.role,
+          status: membership.status,
+          joined_at: membership.joined_at,
+          department: membership.department,
+          position: membership.position,
+        };
+      });
 
       setUsers(usersData);
     } catch (error) {
