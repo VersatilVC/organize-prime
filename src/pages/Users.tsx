@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
 
@@ -148,6 +149,48 @@ export default function Users() {
     }
   };
 
+  const handleEditUser = (user: UserWithMembership) => {
+    // TODO: Implement edit user functionality
+    toast({
+      title: "Edit User",
+      description: `Edit functionality for ${user.full_name || user.username} will be implemented here.`,
+    });
+  };
+
+  const handleDeleteUser = async (user: UserWithMembership) => {
+    if (!confirm(`Are you sure you want to delete ${user.full_name || user.username}?`)) {
+      return;
+    }
+
+    try {
+      // For super admin, they can delete any user's membership
+      // For org admin, they can only delete users from their organization
+      if (role === 'super_admin' || (role === 'admin' && currentOrganization)) {
+        const { error } = await supabase
+          .from('memberships')
+          .update({ status: 'inactive' })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "User Removed",
+          description: `${user.full_name || user.username} has been removed from the organization.`,
+        });
+
+        // Refresh the user list
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove user",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getRoleBadgeVariant = (userRole: string) => {
     switch (userRole) {
       case 'admin':
@@ -265,14 +308,26 @@ export default function Users() {
                         }
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Icons.moreVertical className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Icons.moreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                              <Icons.edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Icons.trash className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
