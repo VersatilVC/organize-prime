@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
       position 
     }: InvitationEmailRequest = await req.json();
 
-    const inviteLink = `https://cjwgfoingscquolnfkhh.supabase.co/invite/${inviteToken}`;
+    const inviteLink = `${req.headers.get('origin') || 'https://cjwgfoingscquolnfkhh.supabase.co'}/invite/${inviteToken}`;
 
     const emailHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">

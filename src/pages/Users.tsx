@@ -407,6 +407,7 @@ export default function Users() {
   };
 
   const handleResendInvitation = async (invitation: Invitation) => {
+    console.log('Starting resend invitation for:', invitation.email);
     try {
       // Generate new token and expiry
       const newToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
