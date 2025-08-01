@@ -416,6 +416,7 @@ export default function Users() {
       const newExpiresAt = new Date();
       newExpiresAt.setDate(newExpiresAt.getDate() + 7);
 
+      // Update the invitation record
       const { error } = await supabase
         .from('invitations')
         .update({
@@ -427,10 +428,49 @@ export default function Users() {
 
       if (error) throw error;
 
-      toast({
-        title: "Invitation Resent",
-        description: `New invitation sent to ${invitation.email}`,
-      });
+      // Get current user's profile for the inviter name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', invitation.invited_by)
+        .single();
+
+      const inviterName = profile?.full_name || profile?.username || 'Someone';
+
+      // Send the invitation email via edge function
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            email: invitation.email,
+            inviterName,
+            organizationName: currentOrganization?.name || 'Organization',
+            role: invitation.role,
+            message: invitation.message,
+            inviteToken: newToken
+          }
+        });
+
+        if (emailError) {
+          console.error('Email sending error:', emailError);
+          toast({
+            title: "Invitation Updated",
+            description: `Invitation updated but email failed to send. You can copy the link manually.`,
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Invitation Resent",
+            description: `New invitation email sent to ${invitation.email}`,
+          });
+        }
+      } catch (emailError) {
+        console.error('Email function error:', emailError);
+        toast({
+          title: "Invitation Updated",
+          description: `Invitation updated but email failed to send. You can copy the link manually.`,
+          variant: "default",
+        });
+      }
 
       fetchInvitations();
     } catch (error) {
