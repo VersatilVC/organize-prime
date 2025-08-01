@@ -83,7 +83,7 @@ export default function Users() {
 
       // For super admin, also get organization names and user emails
       let organizations: any[] = [];
-      let userEmails: { [key: string]: string } = {};
+      let userEmailsData: any[] = [];
 
       if (role === 'super_admin') {
         // Get organization names
@@ -95,27 +95,18 @@ export default function Users() {
         
         organizations = orgsData || [];
 
-        // Get user emails by querying auth users (we'll use a function or get from user metadata)
-        // Since we can't directly query auth.users, we'll try to get email from auth context
-        // For now, let's use the current user's email as an example and fetch others via RPC if available
-        for (const userId of userIds) {
-          try {
-            // Try to get user details via auth admin (this might need a custom function)
-            const { data: userData } = await supabase.auth.admin.getUserById(userId);
-            if (userData.user?.email) {
-              userEmails[userId] = userData.user.email;
-            }
-          } catch (e) {
-            // If admin access fails, we'll skip email for now
-            console.log('Could not fetch email for user:', userId);
-          }
-        }
+        // Get user emails using the secure function
+        const { data: emailsData } = await supabase
+          .rpc('get_user_emails_for_super_admin', { user_ids: userIds });
+        
+        userEmailsData = emailsData || [];
       }
 
       // Combine the data
       const usersData = memberships.map((membership) => {
         const profile = profiles?.find(p => p.id === membership.user_id);
         const organization = organizations.find(org => org.id === membership.organization_id);
+        const emailData = userEmailsData.find(e => e.user_id === membership.user_id);
         
         return {
           id: membership.user_id,
@@ -123,7 +114,7 @@ export default function Users() {
           username: profile?.username || null,
           avatar_url: profile?.avatar_url || null,
           last_login_at: profile?.last_login_at || null,
-          email: userEmails[membership.user_id] || null,
+          email: emailData?.email || null,
           role: membership.role,
           status: membership.status,
           joined_at: membership.joined_at,
