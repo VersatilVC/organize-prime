@@ -55,8 +55,13 @@ export default function Users() {
         .from('profiles')
         .select('id, full_name, username, avatar_url, last_login_at');
 
+      console.log('Fetching profiles...');
       const { data: profiles, error: profileError } = await profileQuery;
-      if (profileError) throw profileError;
+      console.log('Profiles fetched:', profiles);
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
 
       if (!profiles || profiles.length === 0) {
         setUsers([]);
