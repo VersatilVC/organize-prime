@@ -62,7 +62,7 @@ export default function InviteAcceptance() {
           invited_by
         `)
         .eq('token', token)
-        .single();
+        .maybeSingle();
 
       if (invitationError) {
         console.error('Invitation fetch error:', invitationError);
