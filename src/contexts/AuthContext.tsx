@@ -57,22 +57,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const ensureProfile = async (user: User) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error: selectError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('Error checking profile:', selectError);
+        return;
+      }
 
       if (!profile) {
-        const { error } = await supabase.from('profiles').insert({
+        // Generate initial username from email
+        const baseUsername = user.email?.split('@')[0] || 'user';
+        
+        // Try creating profile with base username first
+        let { error } = await supabase.from('profiles').insert({
           id: user.id,
-          full_name: user.user_metadata?.full_name || '',
-          avatar_url: user.user_metadata?.avatar_url || '',
-          username: user.email?.split('@')[0] || '',
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+          username: baseUsername,
         });
 
-        if (error) {
+        // If username conflict, retry with user ID suffix
+        if (error?.code === '23505' && error.message?.includes('profiles_username_key')) {
+          const uniqueUsername = `${baseUsername}_${user.id.slice(0, 8)}`;
+          
+          const { error: retryError } = await supabase.from('profiles').insert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+            username: uniqueUsername,
+          });
+
+          if (retryError) {
+            console.error('Error creating profile with unique username:', retryError);
+          } else {
+            console.log('Profile created successfully with unique username:', uniqueUsername);
+          }
+        } else if (error) {
           console.error('Error creating profile:', error);
+        } else {
+          console.log('Profile created successfully with username:', baseUsername);
         }
       }
     } catch (error) {
