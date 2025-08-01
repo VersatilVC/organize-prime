@@ -57,7 +57,7 @@ export default function Users() {
 
       console.log('Fetching profiles...');
       const { data: profiles, error: profileError } = await profileQuery;
-      console.log('Profiles fetched:', profiles);
+      console.log('Profiles fetched:', JSON.stringify(profiles, null, 2));
       if (profileError) {
         console.error('Profile fetch error:', profileError);
         throw profileError;
@@ -191,6 +191,18 @@ export default function Users() {
         throw profileError;
       }
       console.log('Profile updated successfully');
+      
+      // Verify the update worked by fetching the specific user
+      const { data: verifyUpdate, error: verifyError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username')
+        .eq('id', userId)
+        .single();
+      
+      console.log('Verification fetch:', verifyUpdate);
+      if (verifyError) {
+        console.error('Verification error:', verifyError);
+      }
 
       // Update membership role if changed
       const currentUser = users.find(u => u.id === userId);
