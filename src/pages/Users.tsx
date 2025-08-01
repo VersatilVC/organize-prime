@@ -8,9 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
@@ -34,8 +32,7 @@ export default function Users() {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithMembership[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserWithMembership | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     full_name: '',
     username: '',
@@ -161,18 +158,15 @@ export default function Users() {
   };
 
   const handleEditUser = (user: UserWithMembership) => {
-    setEditingUser(user);
+    setEditingUserId(user.id);
     setEditForm({
       full_name: user.full_name || '',
       username: user.username || '',
       role: user.role
     });
-    setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingUser) return;
-
+  const handleSaveEdit = async (userId: string) => {
     try {
       // Update profile information
       const { error: profileError } = await supabase
@@ -181,27 +175,27 @@ export default function Users() {
           full_name: editForm.full_name,
           username: editForm.username
         })
-        .eq('id', editingUser.id);
+        .eq('id', userId);
 
       if (profileError) throw profileError;
 
       // Update membership role if changed
-      if (editForm.role !== editingUser.role) {
+      const currentUser = users.find(u => u.id === userId);
+      if (currentUser && editForm.role !== currentUser.role) {
         const { error: membershipError } = await supabase
           .from('memberships')
           .update({ role: editForm.role })
-          .eq('user_id', editingUser.id);
+          .eq('user_id', userId);
 
         if (membershipError) throw membershipError;
       }
 
       toast({
         title: "User Updated",
-        description: `${editForm.full_name || editForm.username} has been updated successfully.`,
+        description: `User has been updated successfully.`,
       });
 
-      setEditDialogOpen(false);
-      setEditingUser(null);
+      setEditingUserId(null);
       fetchUsers(); // Refresh the user list
     } catch (error) {
       console.error('Error updating user:', error);
@@ -211,6 +205,11 @@ export default function Users() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUserId(null);
+    setEditForm({ full_name: '', username: '', role: 'user' });
   };
 
   const handleDeleteUser = async (user: UserWithMembership) => {
@@ -331,8 +330,27 @@ export default function Users() {
                             )}
                           </div>
                           <div>
-                            <p className="font-medium">{user.full_name || user.username}</p>
-                            <p className="text-sm text-muted-foreground">@{user.username}</p>
+                            {editingUserId === user.id ? (
+                              <div className="space-y-1">
+                                <Input
+                                  value={editForm.full_name}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                                  placeholder="Full name"
+                                  className="h-8 text-sm"
+                                />
+                                <Input
+                                  value={editForm.username}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
+                                  placeholder="Username"
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <p className="font-medium">{user.full_name || user.username}</p>
+                                <p className="text-sm text-muted-foreground">@{user.username}</p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -347,9 +365,24 @@ export default function Users() {
                         </TableCell>
                       )}
                       <TableCell>
-                        <Badge variant={getRoleBadgeVariant(user.role)}>
-                          {user.role === 'admin' ? 'Admin' : 'User'}
-                        </Badge>
+                        {editingUserId === user.id ? (
+                          <Select
+                            value={editForm.role}
+                            onValueChange={(value) => setEditForm(prev => ({ ...prev, role: value }))}
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant={getRoleBadgeVariant(user.role)}>
+                            {user.role === 'admin' ? 'Admin' : 'User'}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {user.last_login_at 
@@ -364,26 +397,37 @@ export default function Users() {
                         }
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Icons.moreVertical className="h-3 w-3" />
+                        {editingUserId === user.id ? (
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" onClick={() => handleSaveEdit(user.id)}>
+                              ✓
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                              <Icons.edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteUser(user)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Icons.trash className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Icons.moreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                <Icons.edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteUser(user)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Icons.trash className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -393,63 +437,6 @@ export default function Users() {
           </CardContent>
         </Card>
 
-        {/* Edit User Dialog */}
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Make changes to the user's information here. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="full_name" className="text-right">
-                  Full Name
-                </Label>
-                <Input
-                  id="full_name"
-                  value={editForm.full_name}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="username" className="text-right">
-                  Username
-                </Label>
-                <Input
-                  id="username"
-                  value={editForm.username}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="role" className="text-right">
-                  Role
-                </Label>
-                <Select
-                  value={editForm.role}
-                  onValueChange={(value) => setEditForm(prev => ({ ...prev, role: value }))}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" onClick={handleSaveEdit}>
-                Save changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </AppLayout>
   );
