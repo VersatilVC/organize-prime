@@ -194,7 +194,9 @@ export default function InviteAcceptance() {
             .eq('id', invitation.id);
 
           if (invitationError) {
-            console.warn('⚠️ Could not mark invitation as accepted:', invitationError);
+            console.error('❌ Failed to mark invitation as accepted:', invitationError);
+          } else {
+            console.log('✅ Successfully marked invitation as accepted');
           }
 
           toast({
