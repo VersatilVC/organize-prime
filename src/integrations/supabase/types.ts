@@ -580,6 +580,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string | null
+          first_login_completed: boolean | null
           full_name: string | null
           id: string
           is_super_admin: boolean | null
@@ -596,6 +597,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          first_login_completed?: boolean | null
           full_name?: string | null
           id: string
           is_super_admin?: boolean | null
@@ -612,6 +614,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          first_login_completed?: boolean | null
           full_name?: string | null
           id?: string
           is_super_admin?: boolean | null
@@ -870,6 +873,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_templated_notification: {
+        Args: {
+          p_template_type: string
+          p_user_id: string
+          p_organization_id: string
+          p_variables?: Json
+          p_action_url?: string
+        }
+        Returns: string
+      }
       delete_feedback_with_files: {
         Args: { feedback_id: string }
         Returns: boolean
@@ -903,6 +916,10 @@ export type Database = {
           invited_by_name: string
           total_count: number
         }[]
+      }
+      get_notification_template: {
+        Args: { template_type: string }
+        Returns: Json
       }
       get_organization_users: {
         Args: {
@@ -966,6 +983,13 @@ export type Database = {
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      render_notification_template: {
+        Args: { template_type: string; variables?: Json }
+        Returns: {
+          title: string
+          message: string
+        }[]
       }
       update_user_profile_and_role: {
         Args: {
