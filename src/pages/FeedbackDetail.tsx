@@ -16,6 +16,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
+import { AttachmentViewer } from '@/components/ui/attachment-viewer';
 import { 
   Bug, 
   Lightbulb, 
@@ -52,6 +53,7 @@ interface FeedbackDetail {
   responded_by?: string;
   responded_at?: string;
   internal_notes?: string;
+  attachments?: string[] | null;
   status_history: any[];
   user_name?: string;
   user_email?: string;
@@ -466,6 +468,14 @@ export default function FeedbackDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Attachments Section */}
+            {feedback.attachments && feedback.attachments.length > 0 && (
+              <AttachmentViewer
+                attachments={feedback.attachments}
+                canDownload={role === 'super_admin' || (role === 'admin' && currentOrganization && feedback.organization_id === currentOrganization.id)}
+              />
+            )}
 
             {/* Status Timeline */}
             <Card>

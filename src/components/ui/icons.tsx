@@ -17,6 +17,7 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Home,
   Plus,
   Mail,
@@ -46,6 +47,9 @@ import {
   Zap,
   List,
   UserPlus,
+  Image,
+  AlertTriangle,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -70,6 +74,7 @@ export const Icons = {
   close: X,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+  chevronLeft: ChevronLeft,
   home: Home,
   plus: Plus,
   mail: Mail,
@@ -99,6 +104,9 @@ export const Icons = {
   zap: Zap,
   list: List,
   userPlus: UserPlus,
+  image: Image,
+  alertTriangle: AlertTriangle,
+  loader: Loader2,
   google: (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" {...props}>
       <path
