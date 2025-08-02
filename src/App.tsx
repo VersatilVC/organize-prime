@@ -1,11 +1,13 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { createOptimizedQueryClient } from "@/lib/query-client";
+import { initializeCacheCleanup } from "@/lib/local-storage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -22,7 +24,11 @@ import Feedback from "./pages/Feedback";
 import FeedbackDetail from "./pages/FeedbackDetail";
 import MyFeedback from "./pages/MyFeedback";
 
-const queryClient = new QueryClient();
+// Initialize cache cleanup on app start
+initializeCacheCleanup();
+
+// Create optimized query client with smart caching
+const queryClient = createOptimizedQueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
