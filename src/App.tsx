@@ -27,6 +27,7 @@ const SystemSettings = lazy(() => import("./pages/SystemSettings"));
 const Feedback = lazy(() => import("./pages/Feedback"));
 const FeedbackDetail = lazy(() => import("./pages/FeedbackDetail"));
 const MyFeedback = lazy(() => import("./pages/MyFeedback"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
 // Initialize cache cleanup on app start
 initializeCacheCleanup();
@@ -146,7 +147,15 @@ const App = () => (
                     <Feedback />
                   </ProtectedRoute>
                 } 
-              />
+                />
+                <Route 
+                  path="/notifications" 
+                  element={
+                    <ProtectedRoute>
+                      <Notifications />
+                    </ProtectedRoute>
+                  } 
+                />
               <Route 
                 path="/admin/*" 
                 element={

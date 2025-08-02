@@ -34,7 +34,10 @@ interface SidebarSection {
 const getSectionItems = (sectionKey: string, role: string) => {
   switch (sectionKey) {
     case 'main':
-      const mainItems = [{ name: 'Dashboard', href: '/', icon: Icons.home }];
+      const mainItems = [
+        { name: 'Dashboard', href: '/', icon: Icons.home },
+        { name: 'Notifications', href: '/notifications', icon: Icons.bell }
+      ];
       if (role === 'super_admin') {
         mainItems.push({ name: 'Organizations', href: '/organizations', icon: Icons.building });
       }
