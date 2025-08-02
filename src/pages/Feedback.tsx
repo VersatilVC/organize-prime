@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
+import { FileUpload } from '@/components/ui/file-upload';
 
 const feedbackSchema = z.object({
   type: z.enum(['bug', 'feature', 'improvement', 'other'], {
@@ -33,6 +34,7 @@ const feedbackSchema = z.object({
   description: z.string()
     .min(20, 'Description must be at least 20 characters')
     .max(1000, 'Description must be 1000 characters or less'),
+  attachments: z.array(z.string()).optional(),
 });
 
 type FeedbackFormData = z.infer<typeof feedbackSchema>;
@@ -93,6 +95,7 @@ export default function Feedback() {
   const { currentOrganization } = useOrganization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
 
   const form = useForm<FeedbackFormData>({
     resolver: zodResolver(feedbackSchema),
@@ -103,6 +106,7 @@ export default function Feedback() {
       priority: 'medium' as const,
       subject: '',
       description: '',
+      attachments: [],
     },
   });
 
@@ -133,12 +137,13 @@ export default function Feedback() {
           priority: data.priority,
           subject: data.subject,
           description: data.description,
-          status: 'pending',
+          attachments: uploadedFiles.length > 0 ? uploadedFiles : null,
         });
 
       if (error) throw error;
 
       setIsSubmitted(true);
+      setUploadedFiles([]);
       form.reset();
       
       toast({
@@ -160,6 +165,14 @@ export default function Feedback() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFileUploaded = (filePath: string, fileName: string) => {
+    setUploadedFiles(prev => [...prev, filePath]);
+  };
+
+  const handleFileRemoved = () => {
+    setUploadedFiles([]);
   };
 
   return (
@@ -352,6 +365,21 @@ export default function Feedback() {
                         </FormItem>
                       )}
                     />
+
+                    {/* Screenshot Upload */}
+                    <div className="space-y-3">
+                      <label className="text-base font-medium">
+                        Screenshot (Optional)
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        Attach a screenshot to help us understand your feedback better.
+                      </p>
+                      <FileUpload
+                        onFileUploaded={handleFileUploaded}
+                        onFileRemoved={handleFileRemoved}
+                        disabled={isSubmitting}
+                      />
+                    </div>
 
                     {/* Submit Button */}
                     <div className="space-y-2">
