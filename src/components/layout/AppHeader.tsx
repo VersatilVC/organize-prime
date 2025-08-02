@@ -111,13 +111,13 @@ export function AppHeader() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/profile">
+                <Link to="/settings/profile">
                   <Icons.user className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/settings">
+                <Link to="/settings/profile">
                   <Icons.settings className="mr-2 h-4 w-4" />
                   Settings
                 </Link>
