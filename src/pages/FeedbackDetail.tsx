@@ -289,18 +289,31 @@ export default function FeedbackDetail() {
   };
 
   const handleSendNotification = async (userId: string) => {
-    if (!userId) {
+    if (!userId || !feedback) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'User ID is missing.',
+        description: 'Missing feedback information.',
       });
       return;
     }
 
     setSaving(true);
     try {
-      // Placeholder for sending notification to user
+      const { data, error } = await supabase.functions.invoke('send-feedback-notification', {
+        body: {
+          feedbackId: feedback.id,
+          title: `Update on your feedback: ${feedback.subject}`,
+          message: adminResponse.trim() 
+            ? `Admin response: ${adminResponse.trim()}` 
+            : `Your feedback "${feedback.subject}" has been updated with status: ${newStatus.replace('_', ' ')}.`,
+          senderRole: role,
+          currentOrganizationId: currentOrganization?.id
+        }
+      });
+
+      if (error) throw error;
+
       toast({
         title: 'Notification Sent',
         description: 'User has been notified about the feedback update.',
