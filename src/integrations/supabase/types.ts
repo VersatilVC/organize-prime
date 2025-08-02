@@ -963,6 +963,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      update_user_profile_and_role: {
+        Args: {
+          p_user_id: string
+          p_full_name?: string
+          p_username?: string
+          p_new_role?: string
+          p_organization_id?: string
+          p_requesting_user_id?: string
+        }
+        Returns: Json
+      }
       user_has_org_access: {
         Args: { user_id: string; org_id: string }
         Returns: boolean
