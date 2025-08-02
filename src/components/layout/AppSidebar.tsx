@@ -30,8 +30,8 @@ interface SidebarSection {
   isVisible: (role: string) => boolean;
 }
 
-// Memoized helper function to get items for each section based on role
-const getSectionItems = useMemo(() => (sectionKey: string, role: string) => {
+// Helper function to get items for each section based on role
+const getSectionItems = (sectionKey: string, role: string) => {
   switch (sectionKey) {
     case 'main':
       const mainItems = [{ name: 'Dashboard', href: '/', icon: Icons.home }];
@@ -65,7 +65,7 @@ const getSectionItems = useMemo(() => (sectionKey: string, role: string) => {
     default:
       return [];
   }
-}, []);
+};
 
 const sidebarSections: SidebarSection[] = [
   {
