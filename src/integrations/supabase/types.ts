@@ -874,6 +874,28 @@ export type Database = {
         Args: { file_path: string }
         Returns: string
       }
+      get_invitations_optimized: {
+        Args: {
+          p_user_id: string
+          p_organization_id: string
+          p_page?: number
+          p_page_size?: number
+        }
+        Returns: {
+          invitation_id: string
+          email: string
+          role: string
+          token: string
+          message: string
+          created_at: string
+          expires_at: string
+          accepted_at: string
+          invited_by: string
+          organization_id: string
+          invited_by_name: string
+          total_count: number
+        }[]
+      }
       get_user_current_organization: {
         Args: { user_id: string }
         Returns: string
@@ -888,6 +910,30 @@ export type Database = {
       get_user_organizations: {
         Args: Record<PropertyKey, never>
         Returns: string[]
+      }
+      get_users_optimized: {
+        Args: {
+          p_user_id: string
+          p_organization_id?: string
+          p_role?: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+        }
+        Returns: {
+          user_id: string
+          full_name: string
+          username: string
+          avatar_url: string
+          last_login_at: string
+          email: string
+          role: string
+          status: string
+          joined_at: string
+          organization_id: string
+          organization_name: string
+          total_count: number
+        }[]
       }
       is_org_admin: {
         Args: { org_id: string }
