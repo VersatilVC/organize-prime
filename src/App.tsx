@@ -85,6 +85,14 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/feedback/manage" 
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <FeedbackManagement />
+                  </ProtectedRoute>
+                } 
+              />
               {/* Settings Routes */}
               <Route 
                 path="/settings/profile" 
