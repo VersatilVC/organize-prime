@@ -20,7 +20,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 
 const feedbackSchema = z.object({
-  type: z.enum(['bug_report', 'feature_request', 'improvement', 'other'], {
+  type: z.enum(['bug', 'feature', 'improvement', 'other'], {
     required_error: 'Please select a feedback type',
   }),
   category: z.string().optional(),
@@ -38,8 +38,8 @@ const feedbackSchema = z.object({
 type FeedbackFormData = z.infer<typeof feedbackSchema>;
 
 const feedbackTypes = [
-  { value: 'bug_report', label: 'Bug Report', icon: Bug, description: 'Report an issue or error' },
-  { value: 'feature_request', label: 'Feature Request', icon: Lightbulb, description: 'Suggest a new feature' },
+  { value: 'bug', label: 'Bug Report', icon: Bug, description: 'Report an issue or error' },
+  { value: 'feature', label: 'Feature Request', icon: Lightbulb, description: 'Suggest a new feature' },
   { value: 'improvement', label: 'Improvement', icon: TrendingUp, description: 'Suggest an enhancement' },
   { value: 'other', label: 'Other', icon: HelpCircle, description: 'General feedback' },
 ];
