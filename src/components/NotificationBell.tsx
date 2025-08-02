@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { isWelcomeNotification } from '@/lib/notification-templates';
+import { useNavigate } from 'react-router-dom';
 
 interface Notification {
   id: string;
@@ -30,6 +32,7 @@ interface Notification {
 export function NotificationBell() {
   const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -182,16 +185,27 @@ export function NotificationBell() {
       markAsRead(notification.id);
     }
     
+    setOpen(false); // Close dropdown
+    
     if (notification.action_url) {
-      window.open(notification.action_url, '_blank');
+      // Parse action_url for internal navigation
+      if (notification.action_url.startsWith('/')) {
+        navigate(notification.action_url);
+      } else {
+        window.open(notification.action_url, '_blank');
+      }
     }
   };
 
   // Get icon for notification type
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'invite':
+      case 'welcome_first_login':
+        return '🎉';
+      case 'user_invitation_accepted':
         return '👥';
+      case 'invite':
+        return '✉️';
       case 'feedback':
         return '💬';
       case 'system':
@@ -265,6 +279,8 @@ export function NotificationBell() {
               >
                 <div className={`w-full p-3 cursor-pointer transition-colors hover:bg-muted/50 ${
                   !notification.read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                } ${
+                  isWelcomeNotification(notification) ? 'border-l-4 border-l-green-500' : ''
                 }`}>
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0 mt-1">

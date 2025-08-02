@@ -6,6 +6,9 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { useOrganizationSetup } from '@/hooks/useOrganizationSetup';
 import { OrganizationSetup } from '@/components/OrganizationSetup';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { isWelcomeNotification } from '@/lib/notification-templates';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/ui/icons';
@@ -101,6 +104,26 @@ export default function Dashboard() {
   
   // Check for organization setup modal (personal domains)
   const { showSetup, onSetupSuccess, onSetupOpenChange } = useOrganizationSetup();
+
+  // Fetch welcome notifications for new users
+  const { data: welcomeNotifications } = useQuery({
+    queryKey: ['welcome-notifications', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('read', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data?.filter(notification => isWelcomeNotification(notification)) || [];
+    },
+    enabled: !!user,
+  });
 
 
   const getRoleBadgeVariant = (role: string) => {
@@ -270,6 +293,46 @@ export default function Dashboard() {
           </Card>
         ) : (
           <>
+            {/* Welcome Notifications for New Users */}
+            {welcomeNotifications && welcomeNotifications.length > 0 && (
+              <div className="space-y-3">
+                {welcomeNotifications.map((notification) => (
+                  <Card key={notification.id} className="border-l-4 border-l-green-500 bg-green-50/50 dark:bg-green-950/20">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          🎉 {notification.title}
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await supabase
+                              .from('notifications')
+                              .update({ read: true, read_at: new Date().toISOString() })
+                              .eq('id', notification.id);
+                          }}
+                        >
+                          <Icons.close className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{notification.message}</p>
+                      {notification.action_url && (
+                        <Button asChild className="mt-3" size="sm">
+                          <Link to={notification.action_url}>
+                            Get Started
+                            <Icons.arrowRight className="h-4 w-4 ml-2" />
+                          </Link>
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {stats.map((stat) => (

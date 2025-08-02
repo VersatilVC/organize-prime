@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
           avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
           username: baseUsername,
+          first_login_completed: false, // Track first login
         });
 
         // If username conflict, retry with user ID suffix
@@ -98,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
             avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
             username: uniqueUsername,
+            first_login_completed: false,
           });
 
           if (retryError) {
@@ -109,6 +111,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error creating profile:', error);
         } else {
           console.log('Profile created successfully with username:', baseUsername);
+        }
+      } else if (profile && !profile.first_login_completed) {
+        // Mark first login as completed - this will trigger the welcome notification via database trigger
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ first_login_completed: true })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error marking first login completed:', updateError);
+        } else {
+          console.log('First login completed for user:', user.id);
         }
       }
 

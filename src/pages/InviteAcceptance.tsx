@@ -17,6 +17,7 @@ interface InvitationData {
   organization_id: string;
   organization_name: string;
   invited_by_name: string;
+  invited_by: string;
 }
 
 export default function InviteAcceptance() {
@@ -244,6 +245,47 @@ export default function InviteAcceptance() {
         .eq('id', invitation.id);
 
       if (invitationError) throw invitationError;
+
+      // Trigger notification to admins about new user joining
+      try {
+        const { data: inviterProfile } = await supabase
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', invitation.invited_by)
+          .maybeSingle();
+
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+
+        // Get all admins in the organization
+        const { data: admins } = await supabase
+          .from('memberships')
+          .select('user_id')
+          .eq('organization_id', invitation.organization_id)
+          .eq('role', 'admin')
+          .eq('status', 'active');
+
+        // Send notification to each admin
+        if (admins && admins.length > 0) {
+          await supabase.rpc('create_templated_notification', {
+            p_template_type: 'user_invitation_accepted',
+            p_user_id: admins[0].user_id, // For now, just notify first admin
+            p_organization_id: invitation.organization_id,
+            p_variables: {
+              new_user_name: currentProfile?.full_name || currentProfile?.username || currentUser.email,
+              organization_name: invitation.organization_name,
+              inviter_name: inviterProfile?.full_name || inviterProfile?.username || 'Unknown'
+            },
+            p_action_url: '/users'
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending admin notification:', notificationError);
+        // Don't fail the invitation acceptance if notification fails
+      }
 
       toast({
         title: "Welcome to the team!",

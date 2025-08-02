@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Edit, Plus, Eye, Save, X, MoreHorizontal, Copy, Download, Upload } from 'lucide-react';
+import { TemplatePreview } from './TemplatePreview';
 
 interface NotificationTemplate {
   id: string;
@@ -55,6 +56,7 @@ export function NotificationTemplatesManager() {
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState({ title: '', message: '' });
+  const [previewVariables, setPreviewVariables] = useState({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importData, setImportData] = useState('');
   
@@ -569,22 +571,16 @@ export function NotificationTemplatesManager() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Template Preview</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Title</Label>
-              <p className="font-semibold text-lg">{previewData.title}</p>
-            </div>
-            <div>
-              <Label>Message</Label>
-              <p className="whitespace-pre-wrap">{previewData.message}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              This preview shows how the template will look with sample data.
-            </p>
+            <TemplatePreview
+              title={formData.title}
+              message={formData.message}
+              onVariableChange={setPreviewVariables}
+            />
           </div>
         </DialogContent>
       </Dialog>
