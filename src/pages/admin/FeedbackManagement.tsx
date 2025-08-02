@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Bug, Lightbulb, TrendingUp, HelpCircle, Eye, MessageSquare, Calendar, Search } from 'lucide-react';
+import { Bug, Lightbulb, TrendingUp, HelpCircle, Eye, MessageSquare, Calendar, Search, MoreHorizontal, Edit, Check, X } from 'lucide-react';
 
 interface FeedbackItem {
   id: string;
@@ -67,6 +68,8 @@ export default function FeedbackManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editingData, setEditingData] = useState<Partial<FeedbackItem>>({});
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('all');
@@ -221,6 +224,54 @@ export default function FeedbackManagement() {
       title: 'Feature Coming Soon',
       description: 'Feedback detail view will be available soon.',
     });
+  };
+
+  const handleEditStart = (item: FeedbackItem) => {
+    setEditingItem(item.id);
+    setEditingData({
+      subject: item.subject,
+      status: item.status,
+      priority: item.priority,
+    });
+  };
+
+  const handleEditCancel = () => {
+    setEditingItem(null);
+    setEditingData({});
+  };
+
+  const handleEditSave = async () => {
+    if (!editingItem) return;
+
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .update({
+          subject: editingData.subject,
+          status: editingData.status,
+          priority: editingData.priority,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingItem);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Feedback updated successfully.',
+      });
+
+      setEditingItem(null);
+      setEditingData({});
+      loadFeedback();
+    } catch (error) {
+      console.error('Error updating feedback:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update feedback.',
+      });
+    }
   };
 
   if (roleLoading) {
@@ -435,6 +486,8 @@ export default function FeedbackManagement() {
                   <TableBody>
                     {feedback.map((item) => {
                       const TypeIcon = typeConfig[item.type as keyof typeof typeConfig]?.icon || HelpCircle;
+                      const isEditing = editingItem === item.id;
+                      
                       return (
                         <TableRow key={item.id}>
                           <TableCell>
@@ -444,38 +497,110 @@ export default function FeedbackManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <button
-                              onClick={() => handleViewFeedback(item.id)}
-                              className="text-left hover:underline font-medium max-w-xs truncate block"
-                              title={item.subject}
-                            >
-                              {item.subject}
-                            </button>
+                            {isEditing ? (
+                              <Input
+                                value={editingData.subject || ''}
+                                onChange={(e) => setEditingData(prev => ({ ...prev, subject: e.target.value }))}
+                                className="max-w-xs"
+                              />
+                            ) : (
+                              <button
+                                onClick={() => handleViewFeedback(item.id)}
+                                className="text-left hover:underline font-medium max-w-xs truncate block"
+                                title={item.subject}
+                              >
+                                {item.subject}
+                              </button>
+                            )}
                           </TableCell>
                           <TableCell>{item.user_name}</TableCell>
                           <TableCell>{item.organization_name}</TableCell>
                           <TableCell>
-                            <Badge className={statusConfig[item.status as keyof typeof statusConfig]?.color}>
-                              {statusConfig[item.status as keyof typeof statusConfig]?.label}
-                            </Badge>
+                            {isEditing ? (
+                              <Select
+                                value={editingData.status || item.status}
+                                onValueChange={(value) => setEditingData(prev => ({ ...prev, status: value }))}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="reviewing">Reviewing</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="resolved">Resolved</SelectItem>
+                                  <SelectItem value="closed">Closed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge className={statusConfig[item.status as keyof typeof statusConfig]?.color}>
+                                {statusConfig[item.status as keyof typeof statusConfig]?.label}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Badge className={priorityConfig[item.priority as keyof typeof priorityConfig]?.color}>
-                              {priorityConfig[item.priority as keyof typeof priorityConfig]?.label}
-                            </Badge>
+                            {isEditing ? (
+                              <Select
+                                value={editingData.priority || item.priority}
+                                onValueChange={(value) => setEditingData(prev => ({ ...prev, priority: value }))}
+                              >
+                                <SelectTrigger className="w-28">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                  <SelectItem value="critical">Critical</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge className={priorityConfig[item.priority as keyof typeof priorityConfig]?.color}>
+                                {priorityConfig[item.priority as keyof typeof priorityConfig]?.label}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewFeedback(item.id)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            {isEditing ? (
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleEditSave}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleEditCancel}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleViewFeedback(item.id)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleEditStart(item)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
