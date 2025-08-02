@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -10,59 +11,133 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Icons } from '@/components/ui/icons';
+import { cn } from '@/lib/utils';
 
-// Define navigation items with role permissions
-const navigationItems = {
-  // Super Admin only
-  superAdminMain: [
-    { name: 'Organizations', href: '/organizations', icon: Icons.building },
-  ],
-  
-  // Super Admin + Company Admin
-  adminMain: [
-    { name: 'Users', href: '/users', icon: Icons.users },
-    { name: 'Files', href: '/files', icon: Icons.fileText },
-    { name: 'Analytics', href: '/analytics', icon: Icons.barChart },
-  ],
-  
-  // All users
-  commonMain: [
-    { name: 'Dashboard', href: '/', icon: Icons.home },
-  ],
-  
-  // User-specific main (only files for regular users)
-  userMain: [
-    { name: 'Files', href: '/files', icon: Icons.fileText },
-  ],
-  
-  // Super Admin + Company Admin management
-  adminManagement: [
-    { name: 'Feedback', href: '/feedback', icon: Icons.mail },
-    { name: 'Billing', href: '/billing', icon: Icons.creditCard },
-    { name: 'API Keys', href: '/api-keys', icon: Icons.key },
-    { name: 'Webhooks', href: '/webhooks', icon: Icons.webhook },
-  ],
-  
-  // Super Admin only system admin
-  superAdminSystem: [
-    { name: 'System Settings', href: '/admin/settings', icon: Icons.settings },
-    { name: 'Audit Logs', href: '/admin/audit', icon: Icons.shield },
-    { name: 'Help Articles', href: '/admin/help', icon: Icons.helpCircle },
-  ],
-  
-  // All users support
-  support: [
-    { name: 'Help Center', href: '/help', icon: Icons.helpCircle },
-    { name: 'Settings', href: '/settings', icon: Icons.settings },
-  ],
+// Define sidebar sections with their navigation items
+interface SidebarSection {
+  key: string;
+  title: string;
+  items: Array<{
+    name: string;
+    href: string;
+    icon: any;
+  }>;
+  isVisible: (role: string) => boolean;
+}
+
+// Helper function to get items for each section based on role
+const getSectionItems = (sectionKey: string, role: string) => {
+  switch (sectionKey) {
+    case 'main':
+      const mainItems = [{ name: 'Dashboard', href: '/', icon: Icons.home }];
+      if (role === 'super_admin') {
+        mainItems.push({ name: 'Organizations', href: '/organizations', icon: Icons.building });
+      }
+      if (role === 'admin' || role === 'super_admin') {
+        mainItems.push({ name: 'Users', href: '/users', icon: Icons.users });
+      }
+      return mainItems;
+    
+    case 'management':
+      return [
+        { name: 'Company Settings', href: '/company-settings', icon: Icons.settings },
+        { name: 'Billing', href: '/billing', icon: Icons.creditCard },
+        { name: 'Feature Marketplace', href: '/marketplace', icon: Icons.plus },
+      ];
+    
+    case 'system-admin':
+      return [
+        { name: 'System Settings', href: '/admin/settings', icon: Icons.settings },
+        { name: 'Feedback Management', href: '/admin/feedback', icon: Icons.mail },
+      ];
+    
+    case 'support':
+      return [
+        { name: 'Send Feedback', href: '/feedback', icon: Icons.mail },
+        { name: 'Help Center', href: '/help', icon: Icons.helpCircle },
+      ];
+    
+    default:
+      return [];
+  }
 };
+
+const sidebarSections: SidebarSection[] = [
+  {
+    key: 'main',
+    title: 'Main',
+    items: [], // Will be populated dynamically
+    isVisible: () => true,
+  },
+  {
+    key: 'management',
+    title: 'Management',
+    items: [], // Will be populated dynamically
+    isVisible: (role) => role === 'admin' || role === 'super_admin',
+  },
+  {
+    key: 'system-admin',
+    title: 'System Admin',
+    items: [], // Will be populated dynamically
+    isVisible: (role) => role === 'super_admin',
+  },
+  {
+    key: 'support',
+    title: 'Support',
+    items: [], // Will be populated dynamically
+    isVisible: () => true,
+  },
+];
+
+// Hook for managing sidebar section states
+function useSidebarSectionState() {
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const location = useLocation();
+
+  // Load initial state from localStorage
+  useEffect(() => {
+    const savedStates: Record<string, boolean> = {};
+    sidebarSections.forEach(section => {
+      const saved = localStorage.getItem(`sidebar_section_${section.key}_collapsed`);
+      savedStates[section.key] = saved === 'true';
+    });
+    setCollapsedSections(savedStates);
+  }, []);
+
+  // Auto-expand section if user navigates to a page within collapsed section
+  useEffect(() => {
+    sidebarSections.forEach(section => {
+      const hasActiveItem = section.items.some(item => {
+        if (item.href === '/') {
+          return location.pathname === '/';
+        }
+        return location.pathname.startsWith(item.href);
+      });
+
+      if (hasActiveItem && collapsedSections[section.key]) {
+        toggleSection(section.key);
+      }
+    });
+  }, [location.pathname]);
+
+  const toggleSection = (sectionKey: string) => {
+    setCollapsedSections(prev => {
+      const newState = { ...prev, [sectionKey]: !prev[sectionKey] };
+      localStorage.setItem(`sidebar_section_${sectionKey}_collapsed`, String(newState[sectionKey]));
+      return newState;
+    });
+  };
+
+  return { collapsedSections, toggleSection };
+}
 
 export function AppSidebar() {
   const { role } = useUserRole();
   const location = useLocation();
+  const { collapsedSections, toggleSection } = useSidebarSectionState();
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -74,108 +149,70 @@ export function AppSidebar() {
   const getNavClassName = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '';
 
-  // Helper function to get main navigation items based on role
-  const getMainNavigationItems = () => {
-    const items = [...navigationItems.commonMain]; // Dashboard for everyone
+  // Render a collapsible section
+  const renderSection = (section: SidebarSection) => {
+    if (!section.isVisible(role)) return null;
     
-    if (role === 'super_admin') {
-      // Super admin sees everything
-      items.push(...navigationItems.superAdminMain, ...navigationItems.adminMain);
-    } else if (role === 'admin') {
-      // Company admin sees admin main items but NOT organizations
-      items.push(...navigationItems.adminMain);
-    } else {
-      // Regular users only see files (in addition to dashboard)
-      items.push(...navigationItems.userMain);
-    }
+    const items = getSectionItems(section.key, role);
+    if (items.length === 0) return null;
     
-    return items;
-  };
+    const isCollapsed = collapsedSections[section.key];
+    const itemCount = items.length;
+    const activeItems = items.filter(item => isActive(item.href));
+    const hasActiveItem = activeItems.length > 0;
 
-  const mainItems = getMainNavigationItems();
+    return (
+      <Collapsible 
+        key={section.key} 
+        open={!isCollapsed} 
+        onOpenChange={() => toggleSection(section.key)}
+      >
+        <SidebarGroup>
+          <CollapsibleTrigger asChild>
+            <SidebarGroupLabel
+              className={cn(
+                "group flex w-full items-center justify-between py-2 px-2 text-sm font-medium transition-colors",
+                "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground cursor-pointer",
+                hasActiveItem && "text-sidebar-accent-foreground"
+              )}
+            >
+              <span>
+                {section.title}
+                {isCollapsed && ` (${itemCount})`}
+              </span>
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4 transition-transform duration-200" />
+              ) : (
+                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+              )}
+            </SidebarGroupLabel>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent className="transition-all duration-200 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                      <NavLink to={item.href} className={getNavClassName}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
+    );
+  };
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent>
-        {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainItems.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                    <NavLink to={item.href} className={getNavClassName}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Management Navigation - Show only for admin and super_admin */}
-        {(role === 'admin' || role === 'super_admin') && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Management</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navigationItems.adminManagement.map((item) => (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                      <NavLink to={item.href} className={getNavClassName}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.name}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* System Admin Navigation - Show ONLY for super_admin */}
-        {role === 'super_admin' && (
-          <SidebarGroup>
-            <SidebarGroupLabel>System Admin</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navigationItems.superAdminSystem.map((item) => (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                      <NavLink to={item.href} className={getNavClassName}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.name}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Support Navigation - Show for everyone */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Support</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigationItems.support.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                    <NavLink to={item.href} className={getNavClassName}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="space-y-1">
+        {sidebarSections.map(section => renderSection(section))}
       </SidebarContent>
     </Sidebar>
   );

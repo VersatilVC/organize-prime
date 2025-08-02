@@ -12,6 +12,10 @@ import NotFound from "./pages/NotFound";
 import Organizations from "./pages/Organizations";
 import Users from "./pages/Users";
 import InviteAcceptance from "./pages/InviteAcceptance";
+import CompanySettings from "./pages/CompanySettings";
+import Billing from "./pages/Billing";
+import Marketplace from "./pages/Marketplace";
+import FeedbackManagement from "./pages/admin/FeedbackManagement";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +45,40 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <Users />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Management Routes */}
+              <Route 
+                path="/company-settings" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <CompanySettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/billing" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <Billing />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/marketplace" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <Marketplace />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* System Admin Routes */}
+              <Route 
+                path="/admin/feedback" 
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <FeedbackManagement />
                   </ProtectedRoute>
                 } 
               />
