@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { debounce } from 'lodash';
 
-interface ValidationRule<T> {
+export interface ValidationRule<T> {
   field: keyof T;
   validate: (value: any, formData: T) => string | null;
 }
