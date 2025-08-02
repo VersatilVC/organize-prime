@@ -42,6 +42,31 @@ export function AppHeader() {
     enabled: !!user?.id
   });
 
+  // Fetch system settings for app branding
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings-branding'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['app_name', 'app_logo_url']);
+      
+      if (error) throw error;
+      
+      const settings: Record<string, any> = {};
+      data?.forEach(setting => {
+        settings[setting.key] = setting.value;
+      });
+      
+      return {
+        app_name: settings.app_name || 'SaaS Platform',
+        app_logo_url: settings.app_logo_url || null
+      };
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement global search
@@ -77,8 +102,26 @@ export function AppHeader() {
           <SidebarTrigger />
           
           <Link to="/" className="flex items-center space-x-2">
-            <Icons.building className="h-6 w-6" />
-            <span className="hidden font-bold sm:inline-block">SaaS Platform</span>
+            {systemSettings?.app_logo_url ? (
+              <img 
+                src={systemSettings.app_logo_url} 
+                alt="App logo" 
+                className="h-6 w-6 object-contain"
+                onError={(e) => {
+                  // Fallback to default icon if logo fails to load
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'block';
+                }}
+              />
+            ) : null}
+            <Icons.building 
+              className="h-6 w-6" 
+              style={{ display: systemSettings?.app_logo_url ? 'none' : 'block' }}
+            />
+            <span className="hidden font-bold sm:inline-block">
+              {systemSettings?.app_name || 'SaaS Platform'}
+            </span>
           </Link>
         </div>
 

@@ -15,11 +15,12 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Loader2, Users, Building, Clock, Mail } from 'lucide-react';
+import { Loader2, Users, Building, Clock, Mail, Upload, Image } from 'lucide-react';
 
 interface SystemSettings {
   app_name: string;
   app_description: string;
+  app_logo_url: string;
   allow_registration: boolean;
   require_verification: boolean;
   default_timezone: string;
@@ -50,6 +51,7 @@ const timezones = [
 const defaultSettings: SystemSettings = {
   app_name: 'SaaS Platform',
   app_description: '',
+  app_logo_url: '',
   allow_registration: true,
   require_verification: true,
   default_timezone: 'UTC',
@@ -65,6 +67,8 @@ export default function SystemSettings() {
   
   const [formData, setFormData] = useState<SystemSettings>(defaultSettings);
   const [isDirty, setIsDirty] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Check access permissions
   useEffect(() => {
@@ -85,7 +89,7 @@ export default function SystemSettings() {
       const { data, error } = await supabase
         .from('system_settings')
         .select('key, value')
-        .in('key', ['app_name', 'app_description', 'allow_registration', 'require_verification', 'default_timezone', 'max_users_per_org']);
+        .in('key', ['app_name', 'app_description', 'app_logo_url', 'allow_registration', 'require_verification', 'default_timezone', 'max_users_per_org']);
       
       if (error) throw error;
       
@@ -93,6 +97,7 @@ export default function SystemSettings() {
       data?.forEach(setting => {
         if (setting.key === 'app_name') settingsMap.app_name = setting.value as string;
         if (setting.key === 'app_description') settingsMap.app_description = setting.value as string;
+        if (setting.key === 'app_logo_url') settingsMap.app_logo_url = setting.value as string;
         if (setting.key === 'allow_registration') settingsMap.allow_registration = setting.value as boolean;
         if (setting.key === 'require_verification') settingsMap.require_verification = setting.value as boolean;
         if (setting.key === 'default_timezone') settingsMap.default_timezone = setting.value as string;
@@ -151,6 +156,7 @@ export default function SystemSettings() {
       const settingsToUpdate = [
         { key: 'app_name', value: newSettings.app_name },
         { key: 'app_description', value: newSettings.app_description },
+        { key: 'app_logo_url', value: newSettings.app_logo_url },
         { key: 'allow_registration', value: newSettings.allow_registration },
         { key: 'require_verification', value: newSettings.require_verification },
         { key: 'default_timezone', value: newSettings.default_timezone },
@@ -179,6 +185,7 @@ export default function SystemSettings() {
       });
       setIsDirty(false);
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['system-settings-branding'] });
     },
     onError: (error) => {
       toast({
@@ -198,6 +205,7 @@ export default function SystemSettings() {
       const defaultSettingsArray = [
         { key: 'app_name', value: defaultSettings.app_name },
         { key: 'app_description', value: defaultSettings.app_description },
+        { key: 'app_logo_url', value: defaultSettings.app_logo_url },
         { key: 'allow_registration', value: defaultSettings.allow_registration },
         { key: 'require_verification', value: defaultSettings.require_verification },
         { key: 'default_timezone', value: defaultSettings.default_timezone },
@@ -227,6 +235,7 @@ export default function SystemSettings() {
       setFormData(defaultSettings);
       setIsDirty(false);
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['system-settings-branding'] });
     },
     onError: (error) => {
       toast({
@@ -269,6 +278,82 @@ export default function SystemSettings() {
 
   const handleReset = () => {
     resetSettingsMutation.mutate();
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'User not authenticated',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validate file
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid File',
+        description: 'Please upload a JPG, PNG, or SVG image',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB
+      toast({
+        title: 'File Too Large',
+        description: 'Image must be smaller than 2MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      // Create system-level filename: /system/app-logo.[ext]
+      const fileExt = file.name.split('.').pop();
+      const fileName = `system/app-logo.${fileExt}`;
+      
+      // Upload to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('system-assets')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('system-assets')
+        .getPublicUrl(fileName);
+      
+      // Update form data and mark as dirty
+      setFormData(prev => ({ ...prev, app_logo_url: publicUrl }));
+      setIsDirty(true);
+      
+      toast({
+        title: 'Success',
+        description: 'Logo uploaded successfully. Click "Save System Settings" to apply changes.',
+      });
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'Failed to upload logo. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleLogoUpload(file);
+    }
   };
 
   if (roleLoading || role !== 'super_admin') {
@@ -354,6 +439,86 @@ export default function SystemSettings() {
                         <span className="text-sm text-muted-foreground">Pending Invitations</span>
                       </div>
                       <span className="font-semibold">{stats?.pendingInvitations || 0}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* App Branding Section */}
+          <div className="lg:col-span-3 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Application Branding
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+                    <div className="h-16 bg-muted rounded w-full"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>App Logo</Label>
+                      <div className="flex items-center gap-4">
+                        {/* Logo Preview */}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-10 h-10 bg-muted rounded border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
+                            {formData.app_logo_url ? (
+                              <img 
+                                src={formData.app_logo_url} 
+                                alt="App logo" 
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                                }}
+                              />
+                            ) : (
+                              <Image className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          {isUploading && (
+                            <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
+                              <Loader2 className="h-4 w-4 animate-spin text-white" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Upload Button */}
+                        <div className="flex-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="flex items-center gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            {formData.app_logo_url ? 'Replace Logo' : 'Upload Logo'}
+                          </Button>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            JPG, PNG or SVG. Max size 2MB. Recommended: Square image.
+                          </p>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/svg+xml"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                          />
+                        </div>
+                      </div>
+                      {formData.app_logo_url && (
+                        <p className="text-sm text-muted-foreground">
+                          Logo will appear in the header next to the application name.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
