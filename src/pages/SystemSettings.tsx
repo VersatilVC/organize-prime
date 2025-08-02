@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Loader2, Users, Building, Clock, Mail, Upload, Image } from 'lucide-react';
+import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedForm';
 
 interface SystemSettings {
   app_name: string;
@@ -65,8 +66,34 @@ export default function SystemSettings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  const [formData, setFormData] = useState<SystemSettings>(defaultSettings);
-  const [isDirty, setIsDirty] = useState(false);
+  // Validation rules for system settings
+  const validationRules = useMemo(() => [
+    {
+      field: 'app_name' as const,
+      validate: commonValidationRules.required('Application name is required')
+    },
+    {
+      field: 'max_users_per_org' as const,
+      validate: commonValidationRules.min(0, 'Maximum users per organization must be 0 or greater')
+    }
+  ], []);
+
+  // Optimized form with debouncing and validation caching
+  const {
+    formData,
+    handleChange,
+    getFieldState,
+    isDirty,
+    hasErrors,
+    isFormValidating,
+    validateAll,
+    reset
+  } = useOptimizedForm({
+    initialData: defaultSettings,
+    validationRules,
+    debounceMs: 300
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -141,13 +168,6 @@ export default function SystemSettings() {
     enabled: role === 'super_admin'
   });
 
-  // Initialize form data when settings load
-  useEffect(() => {
-    if (settings) {
-      setFormData(settings);
-    }
-  }, [settings]);
-
   // Update system settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (newSettings: SystemSettings) => {
@@ -183,7 +203,7 @@ export default function SystemSettings() {
         title: 'Success',
         description: 'System settings updated successfully',
       });
-      setIsDirty(false);
+      reset();
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
       queryClient.invalidateQueries({ queryKey: ['system-settings-branding'] });
     },
@@ -232,8 +252,7 @@ export default function SystemSettings() {
         title: 'Success',
         description: 'System settings reset to defaults',
       });
-      setFormData(defaultSettings);
-      setIsDirty(false);
+      reset();
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
       queryClient.invalidateQueries({ queryKey: ['system-settings-branding'] });
     },
@@ -247,40 +266,40 @@ export default function SystemSettings() {
     }
   });
 
-  const handleInputChange = (field: keyof SystemSettings, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true);
-  };
+  // Initialize form data when settings load - use the form's reset method
+  useEffect(() => {
+    if (settings) {
+      // Reset the optimized form with new data
+      reset();
+      setTimeout(() => {
+        Object.entries(settings).forEach(([key, value]) => {
+          handleChange(key as keyof SystemSettings, value);
+        });
+      }, 0);
+    }
+  }, [settings, reset, handleChange]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Optimized submit handler with validation
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.app_name.trim()) {
+    if (!validateAll()) {
       toast({
         title: 'Validation Error',
-        description: 'Application name is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (formData.max_users_per_org < 0) {
-      toast({
-        title: 'Validation Error',
-        description: 'Maximum users per organization must be 0 or greater',
+        description: 'Please fix the errors in the form',
         variant: 'destructive',
       });
       return;
     }
 
     updateSettingsMutation.mutate(formData);
-  };
+  }, [formData, validateAll, updateSettingsMutation, toast]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     resetSettingsMutation.mutate();
-  };
+  }, [resetSettingsMutation]);
 
-  const handleLogoUpload = async (file: File) => {
+  const handleLogoUpload = useCallback(async (file: File) => {
     if (!user?.id) {
       toast({
         title: 'Error',
@@ -330,8 +349,7 @@ export default function SystemSettings() {
         .getPublicUrl(fileName);
       
       // Update form data and mark as dirty
-      setFormData(prev => ({ ...prev, app_logo_url: publicUrl }));
-      setIsDirty(true);
+      handleChange('app_logo_url', publicUrl);
       
       toast({
         title: 'Success',
@@ -348,14 +366,15 @@ export default function SystemSettings() {
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [user?.id, handleChange, toast]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       handleLogoUpload(file);
     }
-  };
+  }, [handleLogoUpload]);
+
 
   if (roleLoading || role !== 'super_admin') {
     return (
@@ -557,11 +576,14 @@ export default function SystemSettings() {
                       <Input
                         id="app_name"
                         type="text"
-                        value={formData.app_name}
-                        onChange={(e) => handleInputChange('app_name', e.target.value)}
+                        value={getFieldState('app_name').value}
+                        onChange={(e) => handleChange('app_name', e.target.value)}
                         placeholder="Enter application name"
                         required
                       />
+                      {getFieldState('app_name').error && (
+                        <p className="text-sm text-destructive">{getFieldState('app_name').error}</p>
+                      )}
                     </div>
 
                     {/* Application Description */}
@@ -569,8 +591,8 @@ export default function SystemSettings() {
                       <Label htmlFor="app_description">Application Description</Label>
                       <Textarea
                         id="app_description"
-                        value={formData.app_description}
-                        onChange={(e) => handleInputChange('app_description', e.target.value)}
+                        value={getFieldState('app_description').value}
+                        onChange={(e) => handleChange('app_description', e.target.value)}
                         placeholder="Enter application description for login/registration pages"
                         className="min-h-[80px]"
                       />
@@ -586,8 +608,8 @@ export default function SystemSettings() {
                       </div>
                       <Switch
                         id="allow_registration"
-                        checked={formData.allow_registration}
-                        onCheckedChange={(checked) => handleInputChange('allow_registration', checked)}
+                        checked={getFieldState('allow_registration').value}
+                        onCheckedChange={(checked) => handleChange('allow_registration', checked)}
                       />
                     </div>
 
@@ -601,8 +623,8 @@ export default function SystemSettings() {
                       </div>
                       <Switch
                         id="require_verification"
-                        checked={formData.require_verification}
-                        onCheckedChange={(checked) => handleInputChange('require_verification', checked)}
+                        checked={getFieldState('require_verification').value}
+                        onCheckedChange={(checked) => handleChange('require_verification', checked)}
                       />
                     </div>
 
@@ -610,8 +632,8 @@ export default function SystemSettings() {
                     <div className="space-y-2">
                       <Label htmlFor="default_timezone">Default Timezone</Label>
                       <Select
-                        value={formData.default_timezone}
-                        onValueChange={(value) => handleInputChange('default_timezone', value)}
+                        value={getFieldState('default_timezone').value}
+                        onValueChange={(value) => handleChange('default_timezone', value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select timezone" />
@@ -633,10 +655,13 @@ export default function SystemSettings() {
                         id="max_users_per_org"
                         type="number"
                         min="0"
-                        value={formData.max_users_per_org}
-                        onChange={(e) => handleInputChange('max_users_per_org', parseInt(e.target.value) || 0)}
+                        value={getFieldState('max_users_per_org').value}
+                        onChange={(e) => handleChange('max_users_per_org', parseInt(e.target.value) || 0)}
                         placeholder="0 = unlimited"
                       />
+                      {getFieldState('max_users_per_org').error && (
+                        <p className="text-sm text-destructive">{getFieldState('max_users_per_org').error}</p>
+                      )}
                       <p className="text-sm text-muted-foreground">
                         Set to 0 for unlimited users per organization
                       </p>
@@ -672,7 +697,7 @@ export default function SystemSettings() {
 
                       <Button
                         type="submit"
-                        disabled={!isDirty || updateSettingsMutation.isPending || resetSettingsMutation.isPending}
+                        disabled={!isDirty || updateSettingsMutation.isPending || resetSettingsMutation.isPending || hasErrors || isFormValidating}
                         className={isDirty ? "bg-primary hover:bg-primary/90" : ""}
                       >
                         {updateSettingsMutation.isPending ? (

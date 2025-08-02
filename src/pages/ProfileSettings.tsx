@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Upload, Loader2 } from 'lucide-react';
+import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedForm';
 
 interface ProfileData {
   id: string;
@@ -31,12 +32,47 @@ export default function ProfileSettings() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [formData, setFormData] = useState({
-    full_name: '',
-    phone_number: '',
-    bio: ''
+  // Validation rules for the form
+  const validationRules = useMemo(() => [
+    {
+      field: 'full_name' as const,
+      validate: commonValidationRules.required('Full name is required')
+    },
+    {
+      field: 'bio' as const,
+      validate: commonValidationRules.maxLength(160, 'Bio must be 160 characters or less')
+    },
+    {
+      field: 'phone_number' as const,
+      validate: (value: string) => {
+        if (value && !/^[\+]?[1-9][\d\s\-\(\)]{7,20}$/.test(value)) {
+          return 'Please enter a valid phone number';
+        }
+        return null;
+      }
+    }
+  ], []);
+
+  // Optimized form with debouncing and validation caching
+  const {
+    formData,
+    handleChange,
+    getFieldState,
+    isDirty,
+    hasErrors,
+    isFormValidating,
+    validateAll,
+    reset
+  } = useOptimizedForm({
+    initialData: {
+      full_name: '',
+      phone_number: '',
+      bio: ''
+    },
+    validationRules,
+    debounceMs: 300
   });
-  const [isDirty, setIsDirty] = useState(false);
+
   const [isUploading, setIsUploading] = useState(false);
 
   // Fetch current profile data
@@ -57,16 +93,23 @@ export default function ProfileSettings() {
     enabled: !!user?.id
   });
 
-  // Initialize form data when profile loads
+  // Initialize form data when profile loads - use the form's reset method
   useEffect(() => {
     if (profile) {
-      setFormData({
+      const profileData = {
         full_name: profile.full_name || '',
         phone_number: profile.phone_number || '',
         bio: profile.bio || ''
-      });
+      };
+      // Reset the optimized form with new data
+      reset();
+      setTimeout(() => {
+        handleChange('full_name', profileData.full_name);
+        handleChange('phone_number', profileData.phone_number);
+        handleChange('bio', profileData.bio);
+      }, 0);
     }
-  }, [profile]);
+  }, [profile, reset, handleChange]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -88,7 +131,7 @@ export default function ProfileSettings() {
         title: 'Success',
         description: 'Profile updated successfully',
       });
-      setIsDirty(false);
+      reset();
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     },
     onError: (error) => {
@@ -101,36 +144,24 @@ export default function ProfileSettings() {
     }
   });
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Memoized event handlers to prevent child re-renders
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.full_name.trim()) {
+    // Validate all fields first
+    if (!validateAll()) {
       toast({
         title: 'Validation Error',
-        description: 'Full name is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (formData.bio.length > 160) {
-      toast({
-        title: 'Validation Error',
-        description: 'Bio must be 160 characters or less',
+        description: 'Please fix the errors in the form',
         variant: 'destructive',
       });
       return;
     }
 
     updateProfileMutation.mutate(formData);
-  };
+  }, [formData, validateAll, updateProfileMutation, toast]);
 
-  const handleAvatarUpload = async (file: File) => {
+  const handleAvatarUpload = useCallback(async (file: File) => {
     if (!user?.id || !currentOrganization?.id) {
       toast({
         title: 'Error',
@@ -196,14 +227,14 @@ export default function ProfileSettings() {
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [user?.id, currentOrganization?.id, updateProfileMutation, toast]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       handleAvatarUpload(file);
     }
-  };
+  }, [handleAvatarUpload]);
 
   // Warn about unsaved changes
   useEffect(() => {
@@ -304,11 +335,14 @@ export default function ProfileSettings() {
                 <Input
                   id="full_name"
                   type="text"
-                  value={formData.full_name}
-                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                  value={getFieldState('full_name').value}
+                  onChange={(e) => handleChange('full_name', e.target.value)}
                   placeholder="Enter your full name"
                   required
                 />
+                {getFieldState('full_name').error && (
+                  <p className="text-sm text-destructive">{getFieldState('full_name').error}</p>
+                )}
               </div>
 
               {/* Email (Read-only) */}
@@ -342,10 +376,13 @@ export default function ProfileSettings() {
                 <Input
                   id="phone_number"
                   type="tel"
-                  value={formData.phone_number}
-                  onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                  value={getFieldState('phone_number').value}
+                  onChange={(e) => handleChange('phone_number', e.target.value)}
                   placeholder="Enter your phone number"
                 />
+                {getFieldState('phone_number').error && (
+                  <p className="text-sm text-destructive">{getFieldState('phone_number').error}</p>
+                )}
               </div>
 
               {/* Bio */}
@@ -353,14 +390,21 @@ export default function ProfileSettings() {
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea
                   id="bio"
-                  value={formData.bio}
-                  onChange={(e) => handleInputChange('bio', e.target.value)}
+                  value={getFieldState('bio').value}
+                  onChange={(e) => handleChange('bio', e.target.value)}
                   placeholder="Tell us about yourself..."
                   className="min-h-[100px]"
                   maxLength={160}
                 />
-                <div className="text-sm text-muted-foreground text-right">
-                  {formData.bio.length}/160 characters
+                <div className="flex justify-between items-center text-sm">
+                  {getFieldState('bio').error ? (
+                    <span className="text-destructive">{getFieldState('bio').error}</span>
+                  ) : (
+                    <span></span>
+                  )}
+                  <span className="text-muted-foreground">
+                    {getFieldState('bio').value?.length || 0}/160 characters
+                  </span>
                 </div>
               </div>
 
@@ -376,7 +420,7 @@ export default function ProfileSettings() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!isDirty || updateProfileMutation.isPending}
+                  disabled={!isDirty || updateProfileMutation.isPending || hasErrors || isFormValidating}
                 >
                   {updateProfileMutation.isPending ? (
                     <>
