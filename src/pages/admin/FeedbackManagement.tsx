@@ -8,13 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Bug, Lightbulb, TrendingUp, HelpCircle, Eye, MessageSquare, Calendar, Search, MoreHorizontal, Edit, Check, X } from 'lucide-react';
+import { Bug, Lightbulb, TrendingUp, HelpCircle, Eye, MessageSquare, Calendar, Search, MoreHorizontal, Edit, Check, X, Trash2, User, Building } from 'lucide-react';
 
 interface FeedbackItem {
   id: string;
@@ -70,6 +72,8 @@ export default function FeedbackManagement() {
   const [totalItems, setTotalItems] = useState(0);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<Partial<FeedbackItem>>({});
+  const [viewingItem, setViewingItem] = useState<FeedbackItem | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('all');
@@ -218,12 +222,9 @@ export default function FeedbackManagement() {
     }
   };
 
-  const handleViewFeedback = (feedbackId: string) => {
-    // Navigate to feedback detail page (to be implemented)
-    toast({
-      title: 'Feature Coming Soon',
-      description: 'Feedback detail view will be available soon.',
-    });
+  const handleViewFeedback = (item: FeedbackItem) => {
+    setViewingItem(item);
+    setIsViewDialogOpen(true);
   };
 
   const handleEditStart = (item: FeedbackItem) => {
@@ -270,6 +271,31 @@ export default function FeedbackManagement() {
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to update feedback.',
+      });
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .delete()
+        .eq('id', feedbackId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Feedback deleted successfully.',
+      });
+
+      loadFeedback();
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete feedback.',
       });
     }
   };
@@ -505,7 +531,7 @@ export default function FeedbackManagement() {
                               />
                             ) : (
                               <button
-                                onClick={() => handleViewFeedback(item.id)}
+                                onClick={() => handleViewFeedback(item)}
                                 className="text-left hover:underline font-medium max-w-xs truncate block"
                                 title={item.subject}
                               >
@@ -590,7 +616,7 @@ export default function FeedbackManagement() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleViewFeedback(item.id)}>
+                                  <DropdownMenuItem onClick={() => handleViewFeedback(item)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View
                                   </DropdownMenuItem>
@@ -598,6 +624,31 @@ export default function FeedbackManagement() {
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This action cannot be undone. This will permanently delete the feedback item.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeleteFeedback(item.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -640,6 +691,93 @@ export default function FeedbackManagement() {
             )}
           </CardContent>
         </Card>
+
+        {/* Feedback Detail Modal */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2">
+                <MessageSquare className="h-5 w-5" />
+                <span>Feedback Details</span>
+              </DialogTitle>
+              <DialogDescription>
+                View detailed information about this feedback submission
+              </DialogDescription>
+            </DialogHeader>
+            
+            {viewingItem && (
+              <div className="space-y-6">
+                {/* Header Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Badge className={typeConfig[viewingItem.type as keyof typeof typeConfig]?.color}>
+                        {React.createElement(typeConfig[viewingItem.type as keyof typeof typeConfig]?.icon || HelpCircle, { className: "h-3 w-3 mr-1" })}
+                        {typeConfig[viewingItem.type as keyof typeof typeConfig]?.label}
+                      </Badge>
+                      <Badge className={priorityConfig[viewingItem.priority as keyof typeof priorityConfig]?.color}>
+                        {priorityConfig[viewingItem.priority as keyof typeof priorityConfig]?.label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Created {formatDistanceToNow(new Date(viewingItem.created_at), { addSuffix: true })}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Badge className={statusConfig[viewingItem.status as keyof typeof statusConfig]?.color}>
+                        {statusConfig[viewingItem.status as keyof typeof statusConfig]?.label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>{viewingItem.user_name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Building className="h-4 w-4" />
+                      <span>{viewingItem.organization_name}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Subject</h3>
+                  <p className="text-sm text-muted-foreground p-3 bg-muted/20 rounded-md">
+                    {viewingItem.subject}
+                  </p>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <div className="p-4 bg-muted/20 rounded-md">
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {viewingItem.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end space-x-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setIsViewDialogOpen(false);
+                      handleEditStart(viewingItem);
+                    }}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Feedback
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
