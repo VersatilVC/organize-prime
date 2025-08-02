@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -12,6 +12,83 @@ import { Icons } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+
+// Memoized StatCard component to prevent unnecessary re-renders
+const StatCard = React.memo(({ 
+  title, 
+  value, 
+  description, 
+  icon: Icon, 
+  loading 
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: any;
+  loading: boolean;
+}) => (
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <Icon className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      {loading ? (
+        <>
+          <Skeleton className="h-8 w-16 mb-1" />
+          <Skeleton className="h-3 w-24" />
+        </>
+      ) : (
+        <>
+          <div className="text-2xl font-bold">{value}</div>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </>
+      )}
+    </CardContent>
+  </Card>
+), (prevProps, nextProps) => {
+  // Only re-render if value or loading state changes
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.title === nextProps.title
+  );
+});
+
+StatCard.displayName = 'StatCard';
+
+// Memoized QuickActionButton component
+const QuickActionButton = React.memo(({ 
+  to, 
+  icon: Icon, 
+  label, 
+  badge 
+}: {
+  to: string;
+  icon: any;
+  label: string;
+  badge?: number;
+}) => (
+  <Button asChild variant="outline" className="h-auto flex-col py-4 relative">
+    <Link to={to}>
+      <Icon className="h-6 w-6 mb-2" />
+      <span className="text-sm">{label}</span>
+      {badge && badge > 0 && (
+        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs">
+          {badge}
+        </Badge>
+      )}
+    </Link>
+  </Button>
+), (prevProps, nextProps) => {
+  return (
+    prevProps.to === nextProps.to &&
+    prevProps.label === nextProps.label &&
+    prevProps.badge === nextProps.badge
+  );
+});
+
+QuickActionButton.displayName = 'QuickActionButton';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -48,7 +125,8 @@ export default function Dashboard() {
     }
   };
 
-  const getStatsForRole = () => {
+  // Memoized stats calculation to prevent recalculation on every render
+  const stats = useMemo(() => {
     if (role === 'super_admin') {
       return [
         {
@@ -143,9 +221,7 @@ export default function Dashboard() {
         },
       ];
     }
-  };
-
-  const stats = getStatsForRole();
+  }, [role, orgCount, users, notifications, files, feedback, currentOrganization?.name]);
 
   // Show empty state for users with no organizations
   const showEmptyState = organizations.length === 0 && !loading;
@@ -197,25 +273,14 @@ export default function Dashboard() {
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {stats.map((stat) => (
-                <Card key={stat.title}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                    <stat.icon className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    {loading ? (
-                      <>
-                        <Skeleton className="h-8 w-16 mb-1" />
-                        <Skeleton className="h-3 w-24" />
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                        <p className="text-xs text-muted-foreground">{stat.description}</p>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
+                <StatCard
+                  key={stat.title}
+                  title={stat.title}
+                  value={stat.value}
+                  description={stat.description}
+                  icon={stat.icon}
+                  loading={loading}
+                />
               ))}
             </div>
 
@@ -232,43 +297,35 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <Button asChild variant="outline" className="h-auto flex-col py-4">
-                    <Link to="/feedback">
-                      <Icons.messageSquare className="h-6 w-6 mb-2" />
-                      <span className="text-sm">Send Feedback</span>
-                    </Link>
-                  </Button>
+                  <QuickActionButton
+                    to="/feedback"
+                    icon={Icons.messageSquare}
+                    label="Send Feedback"
+                  />
                   
                   {role === 'user' && feedback > 0 && (
-                    <Button asChild variant="outline" className="h-auto flex-col py-4">
-                      <Link to="/feedback/my">
-                        <Icons.list className="h-6 w-6 mb-2" />
-                        <span className="text-sm">My Feedback</span>
-                      </Link>
-                    </Button>
+                    <QuickActionButton
+                      to="/feedback/my"
+                      icon={Icons.list}
+                      label="My Feedback"
+                    />
                   )}
                   
                   {(role === 'admin' || role === 'super_admin') && feedback > 0 && (
-                    <Button asChild variant="outline" className="h-auto flex-col py-4 relative">
-                      <Link to="/admin/feedback">
-                        <Icons.mail className="h-6 w-6 mb-2" />
-                        <span className="text-sm">Manage Feedback</span>
-                        {feedback > 0 && (
-                          <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs">
-                            {feedback}
-                          </Badge>
-                        )}
-                      </Link>
-                    </Button>
+                    <QuickActionButton
+                      to="/admin/feedback"
+                      icon={Icons.mail}
+                      label="Manage Feedback"
+                      badge={feedback}
+                    />
                   )}
                   
                   {role === 'admin' && (
-                    <Button asChild variant="outline" className="h-auto flex-col py-4">
-                      <Link to="/users">
-                        <Icons.userPlus className="h-6 w-6 mb-2" />
-                        <span className="text-sm">Invite Users</span>
-                      </Link>
-                    </Button>
+                    <QuickActionButton
+                      to="/users"
+                      icon={Icons.userPlus}
+                      label="Invite Users"
+                    />
                   )}
                 </div>
               </CardContent>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { 
@@ -25,6 +25,296 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
+
+// Memoized UserRow component to prevent unnecessary re-renders
+const UserRow = React.memo(({ 
+  user, 
+  role, 
+  editingUserId, 
+  editForm, 
+  setEditForm, 
+  onEdit, 
+  onSaveEdit, 
+  onCancelEdit, 
+  onDeleteUser,
+  updateUserMutation 
+}: {
+  user: UserWithMembership;
+  role: string;
+  editingUserId: string | null;
+  editForm: { full_name: string; username: string; role: string };
+  setEditForm: React.Dispatch<React.SetStateAction<{ full_name: string; username: string; role: string }>>;
+  onEdit: (user: UserWithMembership) => void;
+  onSaveEdit: (userId: string) => void;
+  onCancelEdit: () => void;
+  onDeleteUser: (user: UserWithMembership) => void;
+  updateUserMutation: any;
+}) => {
+  const getRoleBadgeVariant = useMemo(() => (userRole: string) => {
+    switch (userRole) {
+      case 'admin':
+        return 'default';
+      case 'user':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  }, []);
+
+  const isEditing = editingUserId === user.user_id;
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            {user.avatar_url ? (
+              <img 
+                src={user.avatar_url} 
+                alt={user.full_name || user.username || 'User'} 
+                className="h-8 w-8 rounded-full"
+              />
+            ) : (
+              <Icons.user className="h-4 w-4" />
+            )}
+          </div>
+          <div>
+            {isEditing ? (
+              <div className="space-y-1">
+                <Input
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  placeholder="Full name"
+                  className="h-8 text-sm"
+                />
+                <Input
+                  value={editForm.username}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="Username"
+                  className="h-8 text-sm"
+                />
+              </div>
+            ) : (
+              <>
+                <p className="font-medium">{user.full_name || user.username}</p>
+                <p className="text-sm text-muted-foreground">@{user.username}</p>
+              </>
+            )}
+          </div>
+        </div>
+      </TableCell>
+      {role === 'super_admin' && (
+        <TableCell>
+          <span className="text-sm">{user.email || 'N/A'}</span>
+        </TableCell>
+      )}
+      {role === 'super_admin' && (
+        <TableCell>
+          <span className="text-sm">{user.organization_name || 'N/A'}</span>
+        </TableCell>
+      )}
+      <TableCell>
+        {isEditing ? (
+          <Select
+            value={editForm.role}
+            onValueChange={(value) => setEditForm(prev => ({ ...prev, role: value }))}
+          >
+            <SelectTrigger className="w-24 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <Badge variant={getRoleBadgeVariant(user.role)}>
+            {user.role === 'admin' ? 'Admin' : 'User'}
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        {user.last_login_at 
+          ? new Date(user.last_login_at).toLocaleDateString()
+          : 'Never'
+        }
+      </TableCell>
+      <TableCell>
+        {user.joined_at
+          ? new Date(user.joined_at).toLocaleDateString()
+          : '-'
+        }
+      </TableCell>
+      <TableCell>
+        {isEditing ? (
+          <div className="flex items-center gap-1">
+            <Button 
+              size="sm" 
+              onClick={() => onSaveEdit(user.user_id)}
+              disabled={updateUserMutation.isPending}
+            >
+              {updateUserMutation.isPending ? (
+                <Icons.loader className="h-3 w-3 animate-spin" />
+              ) : (
+                '✓'
+              )}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={onCancelEdit}
+              disabled={updateUserMutation.isPending}
+            >
+              ✕
+            </Button>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Icons.moreVertical className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(user)}>
+                <Icons.edit className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onDeleteUser(user)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Icons.trash className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if user data or editing state changes
+  return (
+    prevProps.user.user_id === nextProps.user.user_id &&
+    prevProps.user.full_name === nextProps.user.full_name &&
+    prevProps.user.username === nextProps.user.username &&
+    prevProps.user.role === nextProps.user.role &&
+    prevProps.user.last_login_at === nextProps.user.last_login_at &&
+    prevProps.editingUserId === nextProps.editingUserId &&
+    prevProps.updateUserMutation.isPending === nextProps.updateUserMutation.isPending
+  );
+});
+
+UserRow.displayName = 'UserRow';
+
+// Memoized InvitationRow component
+const InvitationRow = React.memo(({ 
+  invitation, 
+  onResend, 
+  onCancel, 
+  onCopyLink,
+  resendMutation,
+  cancelMutation 
+}: {
+  invitation: Invitation;
+  onResend: (invitation: Invitation) => void;
+  onCancel: (invitation: Invitation) => void;
+  onCopyLink: (invitation: Invitation) => void;
+  resendMutation: any;
+  cancelMutation: any;
+}) => {
+  const getInvitationStatus = useCallback((inv: Invitation) => {
+    if (inv.accepted_at) return 'Accepted';
+    if (new Date(inv.expires_at) < new Date()) return 'Expired';
+    return 'Pending';
+  }, []);
+
+  const getStatusBadgeVariant = useCallback((status: string) => {
+    switch (status) {
+      case 'Accepted':
+        return 'default';
+      case 'Expired':
+        return 'destructive';
+      case 'Pending':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  }, []);
+
+  const status = getInvitationStatus(invitation);
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <Icons.mail className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="font-medium">{invitation.email}</p>
+            <p className="text-sm text-muted-foreground">Invited by {invitation.invited_by_name || 'Admin'}</p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant={getStatusBadgeVariant(status)}>
+          {status}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        {new Date(invitation.created_at).toLocaleDateString()}
+      </TableCell>
+      <TableCell>
+        {new Date(invitation.expires_at).toLocaleDateString()}
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Icons.moreVertical className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onCopyLink(invitation)}>
+              <Icons.copy className="h-4 w-4 mr-2" />
+              Copy Link
+            </DropdownMenuItem>
+            {status === 'Pending' && (
+              <DropdownMenuItem 
+                onClick={() => onResend(invitation)}
+                disabled={resendMutation.isPending}
+              >
+                <Icons.mail className="h-4 w-4 mr-2" />
+                Resend
+              </DropdownMenuItem>
+            )}
+            {(status === 'Pending' || status === 'Expired') && (
+              <DropdownMenuItem 
+                onClick={() => onCancel(invitation)}
+                className="text-destructive focus:text-destructive"
+                disabled={cancelMutation.isPending}
+              >
+                <Icons.trash className="h-4 w-4 mr-2" />
+                Cancel
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.invitation.invitation_id === nextProps.invitation.invitation_id &&
+    prevProps.invitation.accepted_at === nextProps.invitation.accepted_at &&
+    prevProps.resendMutation.isPending === nextProps.resendMutation.isPending &&
+    prevProps.cancelMutation.isPending === nextProps.cancelMutation.isPending
+  );
+});
+
+InvitationRow.displayName = 'InvitationRow';
 
 export default function Users() {
   const { role, loading: roleLoading } = useUserRole();
@@ -71,24 +361,25 @@ export default function Users() {
   const resendInvitationMutation = useResendInvitationMutation();
   const cancelInvitationMutation = useCancelInvitationMutation();
 
-  const users = usersData?.users || [];
-  const totalUsers = usersData?.totalCount || 0;
-  const invitations = invitationsData?.invitations || [];
-  const totalInvitations = invitationsData?.totalCount || 0;
+  // Memoized data processing
+  const { users, totalUsers, invitations, totalInvitations } = useMemo(() => ({
+    users: usersData?.users || [],
+    totalUsers: usersData?.totalCount || 0,
+    invitations: invitationsData?.invitations || [],
+    totalInvitations: invitationsData?.totalCount || 0,
+  }), [usersData, invitationsData]);
 
-  const totalPages = Math.ceil(totalUsers / pageSize);
-  const totalInvitationPages = Math.ceil(totalInvitations / pageSize);
-
-  const handleEditUser = (user: UserWithMembership) => {
+  // Memoized callbacks to prevent unnecessary re-renders
+  const handleEditUser = useCallback((user: UserWithMembership) => {
     setEditingUserId(user.user_id);
     setEditForm({
       full_name: user.full_name || '',
       username: user.username || '',
       role: user.role
     });
-  };
+  }, []);
 
-  const handleSaveEdit = async (userId: string) => {
+  const handleSaveEdit = useCallback(async (userId: string) => {
     const currentUser = users.find(u => u.user_id === userId);
     if (!currentUser) return;
 
@@ -112,34 +403,34 @@ export default function Users() {
         }
       }
     );
-  };
+  }, [users, editForm, updateUserMutation]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingUserId(null);
     setEditForm({ full_name: '', username: '', role: 'user' });
-  };
+  }, []);
 
-  const handleDeleteUser = async (user: UserWithMembership) => {
+  const handleDeleteUser = useCallback(async (user: UserWithMembership) => {
     if (!confirm(`Are you sure you want to delete ${user.full_name || user.username}?`)) {
       return;
     }
 
     deleteUserMutation.mutate(user.user_id);
-  };
+  }, [deleteUserMutation]);
 
-  const handleResendInvitation = (invitation: Invitation) => {
+  const handleResendInvitation = useCallback((invitation: Invitation) => {
     resendInvitationMutation.mutate(invitation);
-  };
+  }, [resendInvitationMutation]);
 
-  const handleCancelInvitation = (invitation: Invitation) => {
+  const handleCancelInvitation = useCallback((invitation: Invitation) => {
     if (!confirm(`Are you sure you want to cancel the invitation for ${invitation.email}?`)) {
       return;
     }
 
     cancelInvitationMutation.mutate(invitation.invitation_id);
-  };
+  }, [cancelInvitationMutation]);
 
-  const handleCopyInvitationLink = async (invitation: Invitation) => {
+  const handleCopyInvitationLink = useCallback(async (invitation: Invitation) => {
     const currentOrigin = window.location.origin;
     const inviteLink = `${currentOrigin}/invite/${invitation.token}`;
     
@@ -156,37 +447,11 @@ export default function Users() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const getInvitationStatus = (invitation: Invitation) => {
-    if (invitation.accepted_at) return 'Accepted';
-    if (new Date(invitation.expires_at) < new Date()) return 'Expired';
-    return 'Pending';
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'Accepted':
-        return 'default';
-      case 'Expired':
-        return 'destructive';
-      case 'Pending':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getRoleBadgeVariant = (userRole: string) => {
-    switch (userRole) {
-      case 'admin':
-        return 'default';
-      case 'user':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
+  // Memoized computed values
+  const totalPages = useMemo(() => Math.ceil(totalUsers / pageSize), [totalUsers, pageSize]);
+  const totalInvitationPages = useMemo(() => Math.ceil(totalInvitations / pageSize), [totalInvitations, pageSize]);
 
   if (roleLoading) {
     return (
@@ -311,134 +576,19 @@ export default function Users() {
                       </TableHeader>
                       <TableBody>
                         {users.map((user) => (
-                          <TableRow key={user.user_id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                  {user.avatar_url ? (
-                                    <img 
-                                      src={user.avatar_url} 
-                                      alt={user.full_name || user.username || 'User'} 
-                                      className="h-8 w-8 rounded-full"
-                                    />
-                                  ) : (
-                                    <Icons.user className="h-4 w-4" />
-                                  )}
-                                </div>
-                                <div>
-                                  {editingUserId === user.user_id ? (
-                                    <div className="space-y-1">
-                                      <Input
-                                        value={editForm.full_name}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
-                                        placeholder="Full name"
-                                        className="h-8 text-sm"
-                                      />
-                                      <Input
-                                        value={editForm.username}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
-                                        placeholder="Username"
-                                        className="h-8 text-sm"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <p className="font-medium">{user.full_name || user.username}</p>
-                                      <p className="text-sm text-muted-foreground">@{user.username}</p>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            {role === 'super_admin' && (
-                              <TableCell>
-                                <span className="text-sm">{user.email || 'N/A'}</span>
-                              </TableCell>
-                            )}
-                            {role === 'super_admin' && (
-                              <TableCell>
-                                <span className="text-sm">{user.organization_name || 'N/A'}</span>
-                              </TableCell>
-                            )}
-                            <TableCell>
-                              {editingUserId === user.user_id ? (
-                                <Select
-                                  value={editForm.role}
-                                  onValueChange={(value) => setEditForm(prev => ({ ...prev, role: value }))}
-                                >
-                                  <SelectTrigger className="w-24 h-8">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="user">User</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Badge variant={getRoleBadgeVariant(user.role)}>
-                                  {user.role === 'admin' ? 'Admin' : 'User'}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {user.last_login_at 
-                                ? new Date(user.last_login_at).toLocaleDateString()
-                                : 'Never'
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {user.joined_at
-                                ? new Date(user.joined_at).toLocaleDateString()
-                                : '-'
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {editingUserId === user.user_id ? (
-                                <div className="flex items-center gap-1">
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => handleSaveEdit(user.user_id)}
-                                    disabled={updateUserMutation.isPending}
-                                  >
-                                    {updateUserMutation.isPending ? (
-                                      <Icons.loader className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      '✓'
-                                    )}
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={handleCancelEdit}
-                                    disabled={updateUserMutation.isPending}
-                                  >
-                                    ✕
-                                  </Button>
-                                </div>
-                              ) : (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      <Icons.moreVertical className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                      <Icons.edit className="h-4 w-4 mr-2" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                      onClick={() => handleDeleteUser(user)}
-                                      className="text-destructive focus:text-destructive"
-                                    >
-                                      <Icons.trash className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </TableCell>
-                          </TableRow>
+                          <UserRow
+                            key={user.user_id}
+                            user={user}
+                            role={role}
+                            editingUserId={editingUserId}
+                            editForm={editForm}
+                            setEditForm={setEditForm}
+                            onEdit={handleEditUser}
+                            onSaveEdit={handleSaveEdit}
+                            onCancelEdit={handleCancelEdit}
+                            onDeleteUser={handleDeleteUser}
+                            updateUserMutation={updateUserMutation}
+                          />
                         ))}
                       </TableBody>
                     </Table>
@@ -514,60 +664,17 @@ export default function Users() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {invitations.map((invitation) => {
-                          const status = getInvitationStatus(invitation);
-                          return (
-                            <TableRow key={invitation.invitation_id}>
-                              <TableCell className="font-medium">{invitation.email}</TableCell>
-                              <TableCell>
-                                <Badge variant={getRoleBadgeVariant(invitation.role)}>
-                                  {invitation.role === 'admin' ? 'Admin' : 'User'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={getStatusBadgeVariant(status)}>
-                                  {status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {new Date(invitation.created_at).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                <span className="text-sm">{invitation.invited_by_name}</span>
-                              </TableCell>
-                              <TableCell>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      <Icons.moreVertical className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {status === 'Pending' && (
-                                      <>
-                                        <DropdownMenuItem onClick={() => handleResendInvitation(invitation)}>
-                                          <Icons.mail className="h-4 w-4 mr-2" />
-                                          Resend
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleCopyInvitationLink(invitation)}>
-                                          <Icons.copy className="h-4 w-4 mr-2" />
-                                          Copy Link
-                                        </DropdownMenuItem>
-                                      </>
-                                    )}
-                                    <DropdownMenuItem 
-                                      onClick={() => handleCancelInvitation(invitation)}
-                                      className="text-destructive focus:text-destructive"
-                                    >
-                                      <Icons.trash className="h-4 w-4 mr-2" />
-                                      {status === 'Pending' ? 'Cancel' : 'Delete'}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                        {invitations.map((invitation) => (
+                          <InvitationRow
+                            key={invitation.invitation_id}
+                            invitation={invitation}
+                            onResend={handleResendInvitation}
+                            onCancel={handleCancelInvitation}
+                            onCopyLink={handleCopyInvitationLink}
+                            resendMutation={resendInvitationMutation}
+                            cancelMutation={cancelInvitationMutation}
+                          />
+                        ))}
                       </TableBody>
                     </Table>
 

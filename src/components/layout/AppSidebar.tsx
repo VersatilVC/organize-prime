@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -30,8 +30,8 @@ interface SidebarSection {
   isVisible: (role: string) => boolean;
 }
 
-// Helper function to get items for each section based on role
-const getSectionItems = (sectionKey: string, role: string) => {
+// Memoized helper function to get items for each section based on role
+const getSectionItems = useMemo(() => (sectionKey: string, role: string) => {
   switch (sectionKey) {
     case 'main':
       const mainItems = [{ name: 'Dashboard', href: '/', icon: Icons.home }];
@@ -65,7 +65,7 @@ const getSectionItems = (sectionKey: string, role: string) => {
     default:
       return [];
   }
-};
+}, []);
 
 const sidebarSections: SidebarSection[] = [
   {
@@ -136,89 +136,138 @@ function useSidebarSectionState() {
   return { collapsedSections, toggleSection };
 }
 
+// Memoized NavigationItem component
+const NavigationItem = React.memo(({ 
+  item, 
+  isActive, 
+  feedbackCount 
+}: {
+  item: { name: string; href: string; icon: any };
+  isActive: boolean;
+  feedbackCount: number;
+}) => (
+  <SidebarMenuItem>
+    <SidebarMenuButton asChild isActive={isActive}>
+      <NavLink 
+        to={item.href} 
+        className={isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
+      >
+        <item.icon className="h-4 w-4" />
+        <span>{item.name}</span>
+        {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedbackCount > 0 && (
+          <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
+            {feedbackCount}
+          </Badge>
+        )}
+      </NavLink>
+    </SidebarMenuButton>
+  </SidebarMenuItem>
+), (prevProps, nextProps) => {
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.feedbackCount === nextProps.feedbackCount
+  );
+});
+
+NavigationItem.displayName = 'NavigationItem';
+
+// Memoized SidebarSection component
+const SidebarSectionComponent = React.memo(({ 
+  section, 
+  role, 
+  collapsedSections, 
+  toggleSection, 
+  feedback, 
+  isActive 
+}: {
+  section: SidebarSection;
+  role: string;
+  collapsedSections: Record<string, boolean>;
+  toggleSection: (key: string) => void;
+  feedback: number;
+  isActive: (path: string) => boolean;
+}) => {
+  if (!section.isVisible(role)) return null;
+  
+  const items = getSectionItems(section.key, role);
+  if (items.length === 0) return null;
+  
+  const isCollapsed = collapsedSections[section.key];
+  const itemCount = items.length;
+  const activeItems = items.filter(item => isActive(item.href));
+  const hasActiveItem = activeItems.length > 0;
+
+  return (
+    <Collapsible 
+      open={!isCollapsed} 
+      onOpenChange={() => toggleSection(section.key)}
+    >
+      <SidebarGroup>
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel
+            className={cn(
+              "group flex w-full items-center justify-between py-2 px-2 text-sm font-medium transition-colors",
+              "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground cursor-pointer",
+              hasActiveItem && "text-sidebar-accent-foreground"
+            )}
+          >
+            <span>
+              {section.title}
+              {isCollapsed && ` (${itemCount})`}
+            </span>
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4 transition-transform duration-300 ease-in-out" />
+            ) : (
+              <ChevronDown className="h-4 w-4 transition-transform duration-300 ease-in-out" />
+            )}
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="overflow-hidden transition-all duration-300 ease-in-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => (
+                <NavigationItem
+                  key={item.name}
+                  item={item}
+                  isActive={isActive(item.href)}
+                  feedbackCount={feedback}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.role === nextProps.role &&
+    prevProps.feedback === nextProps.feedback &&
+    JSON.stringify(prevProps.collapsedSections) === JSON.stringify(nextProps.collapsedSections)
+  );
+});
+
+SidebarSectionComponent.displayName = 'SidebarSectionComponent';
+
 export function AppSidebar() {
   const { role, loading: roleLoading } = useUserRole();
   const { feedback } = useDashboardData();
   const location = useLocation();
   const { collapsedSections, toggleSection } = useSidebarSectionState();
 
-  const isActive = (path: string) => {
+  // Memoized isActive function to prevent recreation on every render
+  const isActive = useCallback((path: string) => {
     if (path === '/') {
       return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
-  };
+  }, [location.pathname]);
 
-  const getNavClassName = ({ isActive }: { isActive: boolean }) =>
-    isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '';
-
-  // Render a collapsible section
-  const renderSection = (section: SidebarSection) => {
-    // Don't render anything while role is loading to prevent flickering
-    if (roleLoading) return null;
-    
-    if (!section.isVisible(role)) return null;
-    
-    const items = getSectionItems(section.key, role);
-    if (items.length === 0) return null;
-    
-    const isCollapsed = collapsedSections[section.key];
-    const itemCount = items.length;
-    const activeItems = items.filter(item => isActive(item.href));
-    const hasActiveItem = activeItems.length > 0;
-
-    return (
-      <Collapsible 
-        key={section.key} 
-        open={!isCollapsed} 
-        onOpenChange={() => toggleSection(section.key)}
-      >
-        <SidebarGroup>
-          <CollapsibleTrigger asChild>
-            <SidebarGroupLabel
-              className={cn(
-                "group flex w-full items-center justify-between py-2 px-2 text-sm font-medium transition-colors",
-                "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground cursor-pointer",
-                hasActiveItem && "text-sidebar-accent-foreground"
-              )}
-            >
-              <span>
-                {section.title}
-                {isCollapsed && ` (${itemCount})`}
-              </span>
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4 transition-transform duration-300 ease-in-out" />
-              ) : (
-                <ChevronDown className="h-4 w-4 transition-transform duration-300 ease-in-out" />
-              )}
-            </SidebarGroupLabel>
-          </CollapsibleTrigger>
-          
-          <CollapsibleContent className="overflow-hidden transition-all duration-300 ease-in-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {items.map((item) => (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                      <NavLink to={item.href} className={getNavClassName}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.name}</span>
-                        {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedback > 0 && (
-                          <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
-                            {feedback}
-                          </Badge>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
-      </Collapsible>
-    );
-  };
+  // Memoized visible sections to prevent filtering on every render
+  const visibleSections = useMemo(() => {
+    return sidebarSections.filter(section => section.isVisible(role));
+  }, [role]);
 
   return (
     <Sidebar collapsible="icon">
@@ -237,7 +286,17 @@ export function AppSidebar() {
             </div>
           </div>
         ) : (
-          sidebarSections.map(section => renderSection(section))
+          visibleSections.map(section => (
+            <SidebarSectionComponent
+              key={section.key}
+              section={section}
+              role={role}
+              collapsedSections={collapsedSections}
+              toggleSection={toggleSection}
+              feedback={feedback}
+              isActive={isActive}
+            />
+          ))
         )}
       </SidebarContent>
     </Sidebar>
