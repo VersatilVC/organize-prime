@@ -77,11 +77,46 @@ export function NotificationTemplatesManager() {
       
       if (error) throw error;
       
-      return data.map(setting => ({
+      const mappedTemplates = data.map(setting => ({
         id: setting.key,
         key: setting.key,
         value: setting.value as any
       })) as NotificationTemplate[];
+
+      // Ensure welcome template exists
+      const welcomeTemplate = mappedTemplates.find(t => t.key === 'notification_template_welcome_first_login');
+      if (!welcomeTemplate) {
+        // Create default welcome template
+        const defaultWelcomeTemplate = {
+          name: 'Welcome First Login',
+          type: 'welcome_first_login',
+          title: 'Welcome to {{app_name}}!',
+          message: 'Hello {{user_name}},\n\nWelcome to {{app_name}}! We\'re excited to have you join {{organization_name}}.\n\nIf you have any questions, please don\'t hesitate to reach out to our support team.\n\nBest regards,\nThe {{app_name}} Team',
+          active: true,
+          variables: ['{{user_name}}', '{{organization_name}}', '{{app_name}}']
+        };
+
+        // Save to database
+        await supabase
+          .from('system_settings')
+          .upsert({
+            key: 'notification_template_welcome_first_login',
+            value: defaultWelcomeTemplate,
+            category: 'notifications',
+            updated_by: user?.id,
+          }, {
+            onConflict: 'key'
+          });
+
+        // Add to templates array
+        mappedTemplates.unshift({
+          id: 'notification_template_welcome_first_login',
+          key: 'notification_template_welcome_first_login',
+          value: defaultWelcomeTemplate
+        });
+      }
+      
+      return mappedTemplates;
     }
   });
 

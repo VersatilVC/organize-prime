@@ -14,8 +14,7 @@ import {
   SendAnnouncementForm, 
   NotificationTemplatesManager, 
   NotificationHistory, 
-  BulkNotificationActions,
-  FirstLoginTemplateManager 
+  BulkNotificationActions
 } from '@/components/notifications';
 
 export default function NotificationManagement() {
@@ -77,7 +76,7 @@ export default function NotificationManagement() {
         <Card>
           <CardContent className="p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="send" className="flex items-center gap-2">
                   <Send className="h-4 w-4" />
                   Send Announcement
@@ -85,10 +84,6 @@ export default function NotificationManagement() {
                 <TabsTrigger value="templates" className="flex items-center gap-2" disabled={role !== 'super_admin'}>
                   <FileText className="h-4 w-4" />
                   Templates
-                </TabsTrigger>
-                <TabsTrigger value="welcome" className="flex items-center gap-2" disabled={role !== 'super_admin'}>
-                  <FileText className="h-4 w-4" />
-                  Welcome Template
                 </TabsTrigger>
                 <TabsTrigger value="history" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
@@ -117,15 +112,6 @@ export default function NotificationManagement() {
                 )}
               </TabsContent>
 
-              <TabsContent value="welcome">
-                {role === 'super_admin' ? (
-                  <FirstLoginTemplateManager />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Only super administrators can manage the welcome template.
-                  </div>
-                )}
-              </TabsContent>
 
               <TabsContent value="history">
                 <NotificationHistory 
