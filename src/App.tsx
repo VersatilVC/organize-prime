@@ -3,26 +3,30 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { createOptimizedQueryClient } from "@/lib/query-client";
 import { initializeCacheCleanup } from "@/lib/local-storage";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import Organizations from "./pages/Organizations";
-import Users from "./pages/Users";
-import InviteAcceptance from "./pages/InviteAcceptance";
-import CompanySettings from "./pages/CompanySettings";
-import Billing from "./pages/Billing";
-import Marketplace from "./pages/Marketplace";
-import FeedbackManagement from "./pages/admin/FeedbackManagement";
-import ProfileSettings from "./pages/ProfileSettings";
-import SystemSettings from "./pages/SystemSettings";
-import Feedback from "./pages/Feedback";
-import FeedbackDetail from "./pages/FeedbackDetail";
-import MyFeedback from "./pages/MyFeedback";
+import { PageLoadingSpinner } from "@/components/LoadingSkeletons";
+
+// Lazy load all page components for code splitting
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Organizations = lazy(() => import("./pages/Organizations"));
+const Users = lazy(() => import("./pages/Users"));
+const InviteAcceptance = lazy(() => import("./pages/InviteAcceptance"));
+const CompanySettings = lazy(() => import("./pages/CompanySettings"));
+const Billing = lazy(() => import("./pages/Billing"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const FeedbackManagement = lazy(() => import("./pages/admin/FeedbackManagement"));
+const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
+const SystemSettings = lazy(() => import("./pages/SystemSettings"));
+const Feedback = lazy(() => import("./pages/Feedback"));
+const FeedbackDetail = lazy(() => import("./pages/FeedbackDetail"));
+const MyFeedback = lazy(() => import("./pages/MyFeedback"));
 
 // Initialize cache cleanup on app start
 initializeCacheCleanup();
@@ -38,7 +42,8 @@ const App = () => (
       <AuthProvider>
         <OrganizationProvider>
           <BrowserRouter>
-            <Routes>
+            <Suspense fallback={<PageLoadingSpinner />}>
+              <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/invite/:token" element={<InviteAcceptance />} />
@@ -150,9 +155,10 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </OrganizationProvider>
       </AuthProvider>
