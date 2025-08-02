@@ -387,10 +387,9 @@ export default function SystemSettings() {
           <h1 className="text-3xl font-bold mt-4">System Settings</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* System Stats */}
-          <div className="lg:col-span-1">
-            <Card>
+        <div className="space-y-6">
+          {/* System Stats - Full Width */}
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
@@ -442,12 +441,12 @@ export default function SystemSettings() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* App Branding Section */}
-          <div className="lg:col-span-3 mb-6">
+          {/* App Branding and System Configuration - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* App Branding Section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -524,10 +523,8 @@ export default function SystemSettings() {
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* System Configuration */}
-          <div className="lg:col-span-2">
+            {/* System Configuration */}
             <Card>
               <CardHeader>
                 <CardTitle>System Configuration</CardTitle>
@@ -679,10 +676,10 @@ export default function SystemSettings() {
                         )}
                       </Button>
                     </div>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
+                </form>
+              )}
+            </CardContent>
+          </Card>
           </div>
         </div>
       </div>
