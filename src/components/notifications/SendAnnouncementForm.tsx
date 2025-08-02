@@ -167,6 +167,16 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
 
   // Handle template selection
   const handleTemplateSelect = (templateKey: string) => {
+    if (templateKey === 'none') {
+      setFormData(prev => ({
+        ...prev,
+        title: '',
+        message: '',
+        selectedTemplate: undefined
+      }));
+      return;
+    }
+    
     const template = templates?.find(t => t.key === templateKey);
     if (template) {
       setFormData(prev => ({
@@ -326,14 +336,14 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
             <div className="space-y-2">
               <Label>Template (Optional)</Label>
               <Select
-                value={formData.selectedTemplate || ''}
+                value={formData.selectedTemplate || 'none'}
                 onValueChange={handleTemplateSelect}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a template or create custom message" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Custom Message</SelectItem>
+                  <SelectItem value="none">Custom Message</SelectItem>
                   {templates?.map((template) => (
                     <SelectItem key={template.key} value={template.key}>
                       <div className="flex items-center gap-2">
