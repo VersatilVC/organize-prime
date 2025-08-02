@@ -35,7 +35,7 @@ interface CompanyData {
 export default function CompanySettings() {
   const { user } = useAuth();
   const { currentOrganization, refreshOrganizations } = useOrganization();
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -53,9 +53,9 @@ export default function CompanySettings() {
   const [isDirty, setIsDirty] = useState(false);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
 
-  // Redirect non-admin users
+  // Redirect non-admin users (only after role has loaded)
   useEffect(() => {
-    if (role && role !== 'admin' && role !== 'super_admin') {
+    if (!roleLoading && role && role !== 'admin' && role !== 'super_admin') {
       toast({
         title: 'Access Denied',
         description: 'You need admin permissions to access company settings',
@@ -63,7 +63,7 @@ export default function CompanySettings() {
       });
       navigate('/settings/profile');
     }
-  }, [role, navigate, toast]);
+  }, [role, roleLoading, navigate, toast]);
 
   // Fetch current organization data
   const { data: companyData, isLoading } = useQuery({
