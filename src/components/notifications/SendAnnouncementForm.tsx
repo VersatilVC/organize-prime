@@ -73,7 +73,7 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
     queryKey: ['users-for-notifications', formData.organizationId, userRole],
     queryFn: async () => {
       if (userRole === 'super_admin') {
-        if (formData.recipientType === 'specific_users' && !formData.organizationId) {
+        if (formData.recipientType === 'specific_users' && (!formData.organizationId || formData.organizationId === 'all')) {
           // All users for super admin
           const { data, error } = await supabase
             .from('profiles')
@@ -82,7 +82,7 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
           
           if (error) throw error;
           return data;
-        } else if (formData.organizationId) {
+        } else if (formData.organizationId && formData.organizationId !== 'all') {
           // Users from specific organization - simplified query
           const { data: membershipData, error: membershipError } = await supabase
             .from('memberships')
@@ -365,7 +365,7 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
                           <SelectValue placeholder="All organizations" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All organizations</SelectItem>
+                          <SelectItem value="all">All organizations</SelectItem>
                           {organizations?.map((org) => (
                             <SelectItem key={org.id} value={org.id}>
                               {org.name}
