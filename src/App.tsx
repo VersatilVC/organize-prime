@@ -17,6 +17,7 @@ import Billing from "./pages/Billing";
 import Marketplace from "./pages/Marketplace";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import ProfileSettings from "./pages/ProfileSettings";
+import SystemSettings from "./pages/SystemSettings";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <ProfileSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings/system" 
+                element={
+                  <ProtectedRoute requiredRole="super_admin">
+                    <SystemSettings />
                   </ProtectedRoute>
                 } 
               />
