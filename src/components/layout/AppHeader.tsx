@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +23,24 @@ export function AppHeader() {
   const { user, signOut } = useAuth();
   const { role } = useUserRole();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch current user profile for avatar and display name
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,9 +113,9 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || user?.email} />
                   <AvatarFallback>
-                    {user?.email?.charAt(0).toUpperCase()}
+                    {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -103,7 +123,12 @@ export function AppHeader() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.email}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {profile?.full_name || user?.email}
+                  </p>
+                  {profile?.full_name && (
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  )}
                   <Badge variant={getRoleBadgeVariant(role)} className="w-fit">
                     {getRoleDisplayName(role)}
                   </Badge>
