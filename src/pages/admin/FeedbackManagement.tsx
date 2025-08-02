@@ -285,16 +285,20 @@ export default function FeedbackManagement() {
 
   const handleDeleteFeedback = async (feedbackId: string) => {
     try {
-      const { error } = await supabase
-        .from('feedback')
-        .delete()
-        .eq('id', feedbackId);
+      // Use the database function that handles file cleanup
+      const { data, error } = await supabase.rpc('delete_feedback_with_files', {
+        feedback_id: feedbackId
+      });
 
       if (error) throw error;
 
+      if (!data) {
+        throw new Error('Feedback not found or could not be deleted');
+      }
+
       toast({
         title: 'Success',
-        description: 'Feedback deleted successfully.',
+        description: 'Feedback and all attachments deleted successfully.',
       });
 
       loadFeedback();
@@ -303,7 +307,7 @@ export default function FeedbackManagement() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to delete feedback.',
+        description: error instanceof Error ? error.message : 'Failed to delete feedback.',
       });
     }
   };

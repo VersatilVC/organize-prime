@@ -870,6 +870,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_feedback_with_files: {
+        Args: { feedback_id: string }
+        Returns: boolean
+      }
       extract_org_id_from_path: {
         Args: { file_path: string }
         Returns: string
