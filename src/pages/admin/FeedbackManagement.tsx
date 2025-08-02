@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Bug, Lightbulb, TrendingUp, HelpCircle, Eye, MessageSquare, Calendar, Search, MoreHorizontal, Edit, Check, X, Trash2, User, Building } from 'lucide-react';
+import { Bug, Lightbulb, TrendingUp, HelpCircle, Eye, MessageSquare, Calendar, Search, MoreHorizontal, Edit, Check, X, Trash2, User, Building, Paperclip } from 'lucide-react';
 
 interface FeedbackItem {
   id: string;
@@ -28,6 +28,7 @@ interface FeedbackItem {
   created_at: string;
   user_id: string;
   organization_id: string;
+  attachments?: string[];
   user_name?: string;
   organization_name?: string;
 }
@@ -79,6 +80,7 @@ export default function FeedbackManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [attachmentFilter, setAttachmentFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState('all');
 
@@ -102,7 +104,7 @@ export default function FeedbackManagement() {
       loadFeedback();
       loadStats();
     }
-  }, [role, currentPage, statusFilter, typeFilter, priorityFilter, searchTerm, dateRange]);
+  }, [role, currentPage, statusFilter, typeFilter, priorityFilter, attachmentFilter, searchTerm, dateRange]);
 
   const loadFeedback = async () => {
     setLoading(true);
@@ -118,7 +120,8 @@ export default function FeedbackManagement() {
           priority,
           created_at,
           user_id,
-          organization_id
+          organization_id,
+          attachments
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
@@ -132,6 +135,11 @@ export default function FeedbackManagement() {
       }
       if (priorityFilter !== 'all') {
         query = query.eq('priority', priorityFilter);
+      }
+      if (attachmentFilter === 'has_attachments') {
+        query = query.not('attachments', 'is', null);
+      } else if (attachmentFilter === 'no_attachments') {
+        query = query.is('attachments', null);
       }
       if (searchTerm) {
         query = query.or(`subject.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -388,7 +396,7 @@ export default function FeedbackManagement() {
             <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -439,6 +447,17 @@ export default function FeedbackManagement() {
                 </SelectContent>
               </Select>
 
+              <Select value={attachmentFilter} onValueChange={setAttachmentFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Attachments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  <SelectItem value="has_attachments">Has Attachments</SelectItem>
+                  <SelectItem value="no_attachments">No Attachments</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Date Range" />
@@ -456,6 +475,7 @@ export default function FeedbackManagement() {
                   setStatusFilter('all');
                   setTypeFilter('all');
                   setPriorityFilter('all');
+                  setAttachmentFilter('all');
                   setSearchTerm('');
                   setDateRange('all');
                   setCurrentPage(1);
@@ -496,19 +516,20 @@ export default function FeedbackManagement() {
               </div>
             ) : (
               <div className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Organization</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>📎</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {feedback.map((item) => {
                       const TypeIcon = typeConfig[item.type as keyof typeof typeConfig]?.icon || HelpCircle;
@@ -584,6 +605,16 @@ export default function FeedbackManagement() {
                               <Badge className={priorityConfig[item.priority as keyof typeof priorityConfig]?.color}>
                                 {priorityConfig[item.priority as keyof typeof priorityConfig]?.label}
                               </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {item.attachments && item.attachments.length > 0 ? (
+                              <div className="flex items-center space-x-1 text-muted-foreground">
+                                <Paperclip className="h-4 w-4" />
+                                <span className="text-xs">{item.attachments.length}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground/50">-</span>
                             )}
                           </TableCell>
                           <TableCell>
