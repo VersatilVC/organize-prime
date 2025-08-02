@@ -12,7 +12,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Bug, Lightbulb, TrendingUp, HelpCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Bug, Lightbulb, TrendingUp, HelpCircle, Loader2, CheckCircle, AlertTriangle, Circle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -23,6 +24,9 @@ const feedbackSchema = z.object({
     required_error: 'Please select a feedback type',
   }),
   category: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical'], {
+    required_error: 'Please select a priority level',
+  }),
   subject: z.string()
     .min(1, 'Subject is required')
     .max(100, 'Subject must be 100 characters or less'),
@@ -49,6 +53,41 @@ const categories = [
   'Other'
 ];
 
+const priorityLevels = [
+  { 
+    value: 'low', 
+    label: 'Low', 
+    description: 'Minor issue or suggestion',
+    color: 'bg-gray-500',
+    textColor: 'text-gray-600',
+    icon: Circle
+  },
+  { 
+    value: 'medium', 
+    label: 'Medium', 
+    description: 'Standard priority',
+    color: 'bg-yellow-500',
+    textColor: 'text-yellow-600',
+    icon: Circle
+  },
+  { 
+    value: 'high', 
+    label: 'High', 
+    description: 'Important issue',
+    color: 'bg-orange-500',
+    textColor: 'text-orange-600',
+    icon: AlertTriangle
+  },
+  { 
+    value: 'critical', 
+    label: 'Critical', 
+    description: 'Urgent issue requiring immediate attention',
+    color: 'bg-red-500',
+    textColor: 'text-red-600',
+    icon: AlertTriangle
+  },
+];
+
 export default function Feedback() {
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
@@ -60,6 +99,7 @@ export default function Feedback() {
     defaultValues: {
       type: undefined,
       category: '',
+      priority: 'medium' as const,
       subject: '',
       description: '',
     },
@@ -89,10 +129,10 @@ export default function Feedback() {
           organization_id: currentOrganization.id,
           type: data.type,
           category: data.category || null,
+          priority: data.priority,
           subject: data.subject,
           description: data.description,
           status: 'pending',
-          priority: 'medium',
         });
 
       if (error) throw error;
@@ -184,6 +224,44 @@ export default function Feedback() {
                                     <div>
                                       <div className="font-medium">{type.label}</div>
                                       <div className="text-sm text-muted-foreground">{type.description}</div>
+                                    </div>
+                                  </Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Priority */}
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-medium">
+                            Priority <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                            >
+                              {priorityLevels.map((priority) => (
+                                <div key={priority.value} className="flex items-center space-x-2">
+                                  <RadioGroupItem value={priority.value} id={`priority-${priority.value}`} />
+                                  <Label
+                                    htmlFor={`priority-${priority.value}`}
+                                    className="flex items-center space-x-3 cursor-pointer flex-1 p-3 border rounded-lg hover:bg-muted/50"
+                                  >
+                                    <div className={`h-3 w-3 rounded-full ${priority.color}`} />
+                                    <priority.icon className={`h-4 w-4 ${priority.textColor}`} />
+                                    <div className="flex-1">
+                                      <div className="font-medium">{priority.label}</div>
+                                      <div className="text-sm text-muted-foreground">{priority.description}</div>
                                     </div>
                                   </Label>
                                 </div>
