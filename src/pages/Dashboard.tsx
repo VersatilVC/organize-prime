@@ -11,12 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
-  const { organizations: orgCount, users, notifications, files, loading } = useDashboardData();
+  const { organizations: orgCount, users, notifications, files, feedback, loading } = useDashboardData();
   
   // Check for automatic organization creation (business domains)
   useOrganizationCreation();
@@ -74,6 +75,12 @@ export default function Dashboard() {
           description: 'Total files',
           icon: Icons.fileText,
         },
+        {
+          title: 'Pending Feedback',
+          value: feedback,
+          description: 'Needs attention',
+          icon: Icons.messageSquare,
+        },
       ];
     } else if (role === 'admin') {
       return [
@@ -101,6 +108,12 @@ export default function Dashboard() {
           description: 'Shared documents',
           icon: Icons.fileText,
         },
+        {
+          title: 'Pending Feedback',
+          value: feedback,
+          description: 'Needs review',
+          icon: Icons.messageSquare,
+        },
       ];
     } else {
       return [
@@ -123,10 +136,10 @@ export default function Dashboard() {
           icon: Icons.fileText,
         },
         {
-          title: 'Activity',
-          value: 0, // TODO: Add activity count
-          description: 'Recent actions',
-          icon: Icons.barChart,
+          title: 'My Feedback',
+          value: feedback,
+          description: 'Submitted feedback',
+          icon: Icons.messageSquare,
         },
       ];
     }
@@ -205,6 +218,61 @@ export default function Dashboard() {
                 </Card>
               ))}
             </div>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icons.zap className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+                <CardDescription>
+                  Common tasks and shortcuts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                  <Button asChild variant="outline" className="h-auto flex-col py-4">
+                    <Link to="/feedback">
+                      <Icons.messageSquare className="h-6 w-6 mb-2" />
+                      <span className="text-sm">Send Feedback</span>
+                    </Link>
+                  </Button>
+                  
+                  {role === 'user' && feedback > 0 && (
+                    <Button asChild variant="outline" className="h-auto flex-col py-4">
+                      <Link to="/feedback/my">
+                        <Icons.list className="h-6 w-6 mb-2" />
+                        <span className="text-sm">My Feedback</span>
+                      </Link>
+                    </Button>
+                  )}
+                  
+                  {(role === 'admin' || role === 'super_admin') && feedback > 0 && (
+                    <Button asChild variant="outline" className="h-auto flex-col py-4 relative">
+                      <Link to="/admin/feedback">
+                        <Icons.mail className="h-6 w-6 mb-2" />
+                        <span className="text-sm">Manage Feedback</span>
+                        {feedback > 0 && (
+                          <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs">
+                            {feedback}
+                          </Badge>
+                        )}
+                      </Link>
+                    </Button>
+                  )}
+                  
+                  {role === 'admin' && (
+                    <Button asChild variant="outline" className="h-auto flex-col py-4">
+                      <Link to="/users">
+                        <Icons.userPlus className="h-6 w-6 mb-2" />
+                        <span className="text-sm">Invite Users</span>
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Role-specific content */}
             {role === 'super_admin' && (

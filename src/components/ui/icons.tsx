@@ -42,6 +42,10 @@ import {
   MoreHorizontal,
   Pause,
   Play,
+  MessageSquare,
+  Zap,
+  List,
+  UserPlus,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -91,6 +95,10 @@ export const Icons = {
   moreHorizontal: MoreHorizontal,
   pause: Pause,
   play: Play,
+  messageSquare: MessageSquare,
+  zap: Zap,
+  list: List,
+  userPlus: UserPlus,
   google: (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" {...props}>
       <path

@@ -164,7 +164,7 @@ export default function Feedback() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 sm:p-6 space-y-6">
         <div className="space-y-4">
           <Breadcrumb>
             <BreadcrumbList>
@@ -181,7 +181,7 @@ export default function Feedback() {
           <h1 className="text-3xl font-bold">Send Feedback</h1>
         </div>
 
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto px-4 sm:px-0">
           <Card>
             <CardHeader>
               <CardTitle>We value your feedback</CardTitle>
@@ -212,7 +212,7 @@ export default function Feedback() {
                             <RadioGroup
                               onValueChange={field.onChange}
                               value={field.value}
-                              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                              className="grid grid-cols-1 gap-3"
                             >
                               {feedbackTypes.map((type) => (
                                 <div key={type.value} className="flex items-center space-x-2">
@@ -249,7 +249,7 @@ export default function Feedback() {
                             <RadioGroup
                               onValueChange={field.onChange}
                               value={field.value}
-                              className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                             >
                               {priorityLevels.map((priority) => (
                                 <div key={priority.value} className="flex items-center space-x-2">

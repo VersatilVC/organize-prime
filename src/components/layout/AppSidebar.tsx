@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Sidebar,
@@ -136,6 +138,7 @@ function useSidebarSectionState() {
 
 export function AppSidebar() {
   const { role, loading: roleLoading } = useUserRole();
+  const { feedback } = useDashboardData();
   const location = useLocation();
   const { collapsedSections, toggleSection } = useSidebarSectionState();
 
@@ -200,6 +203,11 @@ export function AppSidebar() {
                       <NavLink to={item.href} className={getNavClassName}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.name}</span>
+                        {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedback > 0 && (
+                          <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
+                            {feedback}
+                          </Badge>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

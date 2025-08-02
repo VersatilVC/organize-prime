@@ -9,6 +9,7 @@ interface DashboardStats {
   users: number;
   notifications: number;
   files: number;
+  feedback: number;
   loading: boolean;
 }
 
@@ -21,6 +22,7 @@ export function useDashboardData(): DashboardStats {
     users: 0,
     notifications: 0,
     files: 0,
+    feedback: 0,
     loading: true,
   });
 
@@ -43,24 +45,27 @@ export function useDashboardData(): DashboardStats {
         let usersCount = 0;
         let notificationsCount = 0;
         let filesCount = 0;
+        let feedbackCount = 0;
 
         if (role === 'super_admin') {
           // Super Admin sees system-wide stats
-          const [orgsResult, usersResult, notificationsResult, filesResult] = await Promise.all([
+          const [orgsResult, usersResult, notificationsResult, filesResult, feedbackResult] = await Promise.all([
             supabase.from('organizations').select('id', { count: 'exact', head: true }),
             supabase.from('profiles').select('id', { count: 'exact', head: true }),
             supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('read', false),
             supabase.from('files').select('id', { count: 'exact', head: true }),
+            supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
           ]);
 
           organizationsCount = orgsResult.count || 0;
           usersCount = usersResult.count || 0;
           notificationsCount = notificationsResult.count || 0;
           filesCount = filesResult.count || 0;
+          feedbackCount = feedbackResult.count || 0;
 
         } else if (role === 'admin' && currentOrganization) {
           // Company Admin sees organization-specific stats
-          const [membershipsResult, invitationsResult, notificationsResult, filesResult] = await Promise.all([
+          const [membershipsResult, invitationsResult, notificationsResult, filesResult, feedbackResult] = await Promise.all([
             supabase.from('memberships').select('id', { count: 'exact', head: true })
               .eq('organization_id', currentOrganization.id)
               .eq('status', 'active'),
@@ -72,16 +77,20 @@ export function useDashboardData(): DashboardStats {
               .eq('read', false),
             supabase.from('files').select('id', { count: 'exact', head: true })
               .eq('organization_id', currentOrganization.id),
+            supabase.from('feedback').select('id', { count: 'exact', head: true })
+              .eq('organization_id', currentOrganization.id)
+              .eq('status', 'pending'),
           ]);
 
           organizationsCount = 1; // Current organization
           usersCount = membershipsResult.count || 0;
           notificationsCount = notificationsResult.count || 0;
           filesCount = filesResult.count || 0;
+          feedbackCount = feedbackResult.count || 0;
 
         } else {
           // Regular user sees personal stats
-          const [orgsResult, notificationsResult, filesResult] = await Promise.all([
+          const [orgsResult, notificationsResult, filesResult, feedbackResult] = await Promise.all([
             supabase.from('memberships').select('id', { count: 'exact', head: true })
               .eq('user_id', user.id)
               .eq('status', 'active'),
@@ -90,12 +99,15 @@ export function useDashboardData(): DashboardStats {
               .eq('read', false),
             supabase.from('files').select('id', { count: 'exact', head: true })
               .eq('uploaded_by', user.id),
+            supabase.from('feedback').select('id', { count: 'exact', head: true })
+              .eq('user_id', user.id),
           ]);
 
           organizationsCount = orgsResult.count || 0;
           usersCount = 0; // Users don't see other users
           notificationsCount = notificationsResult.count || 0;
           filesCount = filesResult.count || 0;
+          feedbackCount = feedbackResult.count || 0;
         }
 
         setStats({
@@ -103,12 +115,13 @@ export function useDashboardData(): DashboardStats {
           users: usersCount,
           notifications: notificationsCount,
           files: filesCount,
+          feedback: feedbackCount,
           loading: false,
         });
 
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
-        setStats({ organizations: 0, users: 0, notifications: 0, files: 0, loading: false });
+        setStats({ organizations: 0, users: 0, notifications: 0, files: 0, feedback: 0, loading: false });
       }
     };
 

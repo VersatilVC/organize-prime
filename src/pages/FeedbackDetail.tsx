@@ -260,7 +260,7 @@ export default function FeedbackDetail() {
 
       toast({
         title: 'Success',
-        description: 'Feedback updated successfully.',
+        description: `Feedback status updated to ${newStatus.replace('_', ' ')}.`,
       });
 
       loadFeedback(); // Reload to get updated data
