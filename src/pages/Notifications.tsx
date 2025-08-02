@@ -29,6 +29,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 interface Notification {
   id: string;
@@ -43,7 +44,7 @@ interface Notification {
 
 const NOTIFICATIONS_PER_PAGE = 20;
 
-export default function Notifications() {
+function NotificationsContent() {
   const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -429,5 +430,13 @@ export default function Notifications() {
         </>
       )}
     </div>
+  );
+}
+
+export default function Notifications() {
+  return (
+    <AppLayout>
+      <NotificationsContent />
+    </AppLayout>
   );
 }
