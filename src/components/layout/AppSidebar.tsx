@@ -135,7 +135,7 @@ function useSidebarSectionState() {
 }
 
 export function AppSidebar() {
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const { collapsedSections, toggleSection } = useSidebarSectionState();
 
@@ -151,6 +151,9 @@ export function AppSidebar() {
 
   // Render a collapsible section
   const renderSection = (section: SidebarSection) => {
+    // Don't render anything while role is loading to prevent flickering
+    if (roleLoading) return null;
+    
     if (!section.isVisible(role)) return null;
     
     const items = getSectionItems(section.key, role);
@@ -212,7 +215,22 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent className="space-y-1">
-        {sidebarSections.map(section => renderSection(section))}
+        {roleLoading ? (
+          // Show loading skeleton while role is being determined
+          <div className="space-y-4 p-4">
+            <div className="animate-pulse space-y-2">
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+              <div className="h-8 bg-muted rounded"></div>
+              <div className="h-8 bg-muted rounded"></div>
+            </div>
+            <div className="animate-pulse space-y-2">
+              <div className="h-4 bg-muted rounded w-1/3"></div>
+              <div className="h-8 bg-muted rounded"></div>
+            </div>
+          </div>
+        ) : (
+          sidebarSections.map(section => renderSection(section))
+        )}
       </SidebarContent>
     </Sidebar>
   );
