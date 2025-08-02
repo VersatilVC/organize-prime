@@ -1,12 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
+// Split auth context into methods and data for better performance
+interface AuthMethodsContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
@@ -14,6 +12,17 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
 
+interface UserDataContextType {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+}
+
+// Legacy interface for backward compatibility
+interface AuthContextType extends AuthMethodsContextType, UserDataContextType {}
+
+const AuthMethodsContext = createContext<AuthMethodsContextType | undefined>(undefined);
+const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -215,7 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // For personal domains, we'll handle this in the UI
   };
 
-  const signUp = async (email: string, password: string) => {
+  // Memoize auth methods to prevent unnecessary re-renders
+  const signUp = useCallback(async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -240,9 +250,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     return { error };
-  };
+  }, [toast]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -257,9 +267,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     return { error };
-  };
+  }, [toast]);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -276,9 +286,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     return { error };
-  };
+  }, [toast]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast({
@@ -287,9 +297,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -308,22 +318,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     return { error };
-  };
+  }, [toast]);
 
-  const value = {
-    user,
-    session,
-    loading,
+  // Memoize context values to prevent unnecessary re-renders
+  const authMethods = useMemo(() => ({
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     resetPassword,
-  };
+  }), [signUp, signIn, signInWithGoogle, signOut, resetPassword]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const userData = useMemo(() => ({
+    user,
+    session,
+    loading,
+  }), [user, session, loading]);
+
+  // Legacy combined value for backward compatibility
+  const legacyValue = useMemo(() => ({
+    ...userData,
+    ...authMethods,
+  }), [userData, authMethods]);
+
+  return (
+    <AuthMethodsContext.Provider value={authMethods}>
+      <UserDataContext.Provider value={userData}>
+        <AuthContext.Provider value={legacyValue}>
+          {children}
+        </AuthContext.Provider>
+      </UserDataContext.Provider>
+    </AuthMethodsContext.Provider>
+  );
 }
 
+// Optimized hooks for selective context subscriptions
+export function useAuthMethods() {
+  const context = useContext(AuthMethodsContext);
+  if (context === undefined) {
+    throw new Error('useAuthMethods must be used within an AuthProvider');
+  }
+  return context;
+}
+
+export function useUserData() {
+  const context = useContext(UserDataContext);
+  if (context === undefined) {
+    throw new Error('useUserData must be used within an AuthProvider');
+  }
+  return context;
+}
+
+// Legacy hook for backward compatibility
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

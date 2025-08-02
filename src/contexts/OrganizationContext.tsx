@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './AuthContext';
+import { useUserData } from './AuthContext';
 
 interface Organization {
   id: string;
@@ -12,26 +12,49 @@ interface Organization {
   updated_at: string;
 }
 
-interface OrganizationContextType {
-  currentOrganization: Organization | null;
-  organizations: Organization[];
-  loading: boolean;
+// Split organization context into methods and data for better performance
+interface OrganizationMethodsContextType {
   setCurrentOrganization: (org: Organization | null) => void;
   refreshOrganizations: () => Promise<void>;
 }
 
+interface OrganizationDataContextType {
+  currentOrganization: Organization | null;
+  organizations: Organization[];
+  loading: boolean;
+}
+
+// Legacy interface for backward compatibility
+interface OrganizationContextType extends OrganizationMethodsContextType, OrganizationDataContextType {}
+
+const OrganizationMethodsContext = createContext<OrganizationMethodsContextType | undefined>(undefined);
+const OrganizationDataContext = createContext<OrganizationDataContextType | undefined>(undefined);
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
 
+// Organization cache to prevent unnecessary refetching
+let organizationCache: { data: Organization[]; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useUserData();
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshOrganizations = async () => {
+  // Optimized refresh with caching
+  const refreshOrganizations = useCallback(async () => {
     if (!user) {
       setOrganizations([]);
       setCurrentOrganization(null);
+      setLoading(false);
+      organizationCache = null;
+      return;
+    }
+
+    // Check cache first
+    const now = Date.now();
+    if (organizationCache && (now - organizationCache.timestamp) < CACHE_DURATION) {
+      setOrganizations(organizationCache.data);
       setLoading(false);
       return;
     }
@@ -56,6 +79,13 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
         .eq('status', 'active');
 
       const userOrgs = memberships?.map(m => m.organizations).filter(Boolean) as Organization[] || [];
+      
+      // Update cache
+      organizationCache = {
+        data: userOrgs,
+        timestamp: now
+      };
+      
       setOrganizations(userOrgs);
 
       // Set current organization from localStorage or first available
@@ -77,36 +107,68 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     refreshOrganizations();
-  }, [user]);
+  }, [refreshOrganizations]);
 
-  const handleSetCurrentOrganization = (org: Organization | null) => {
+  const handleSetCurrentOrganization = useCallback((org: Organization | null) => {
     setCurrentOrganization(org);
     if (org) {
       localStorage.setItem('currentOrganizationId', org.id);
     } else {
       localStorage.removeItem('currentOrganizationId');
     }
-  };
+  }, []);
 
-  const value = {
+  // Memoize context values to prevent unnecessary re-renders
+  const organizationMethods = useMemo(() => ({
+    setCurrentOrganization: handleSetCurrentOrganization,
+    refreshOrganizations,
+  }), [handleSetCurrentOrganization, refreshOrganizations]);
+
+  const organizationData = useMemo(() => ({
     currentOrganization,
     organizations,
     loading,
-    setCurrentOrganization: handleSetCurrentOrganization,
-    refreshOrganizations,
-  };
+  }), [currentOrganization, organizations, loading]);
+
+  // Legacy combined value for backward compatibility
+  const legacyValue = useMemo(() => ({
+    ...organizationData,
+    ...organizationMethods,
+  }), [organizationData, organizationMethods]);
 
   return (
-    <OrganizationContext.Provider value={value}>
-      {children}
-    </OrganizationContext.Provider>
+    <OrganizationMethodsContext.Provider value={organizationMethods}>
+      <OrganizationDataContext.Provider value={organizationData}>
+        <OrganizationContext.Provider value={legacyValue}>
+          {children}
+        </OrganizationContext.Provider>
+      </OrganizationDataContext.Provider>
+    </OrganizationMethodsContext.Provider>
   );
 }
 
+// Optimized hooks for selective context subscriptions
+export function useOrganizationMethods() {
+  const context = useContext(OrganizationMethodsContext);
+  if (context === undefined) {
+    throw new Error('useOrganizationMethods must be used within an OrganizationProvider');
+  }
+  return context;
+}
+
+export function useOrganizationData() {
+  const context = useContext(OrganizationDataContext);
+  if (context === undefined) {
+    throw new Error('useOrganizationData must be used within an OrganizationProvider');
+  }
+  return context;
+}
+
+// Legacy hook for backward compatibility
 export function useOrganization() {
   const context = useContext(OrganizationContext);
   if (context === undefined) {
