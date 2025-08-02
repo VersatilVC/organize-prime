@@ -18,6 +18,7 @@ import Marketplace from "./pages/Marketplace";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import ProfileSettings from "./pages/ProfileSettings";
 import SystemSettings from "./pages/SystemSettings";
+import Feedback from "./pages/Feedback";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <SystemSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/feedback" 
+                element={
+                  <ProtectedRoute>
+                    <Feedback />
                   </ProtectedRoute>
                 } 
               />
