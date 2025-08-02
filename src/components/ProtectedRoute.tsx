@@ -14,7 +14,20 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
   const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
 
+  // Debug logging to understand authentication state
+  React.useEffect(() => {
+    console.log('ProtectedRoute state:', {
+      user: !!user,
+      authLoading,
+      roleLoading,
+      role,
+      pathname: location.pathname,
+      requiredRole
+    });
+  }, [user, authLoading, roleLoading, role, location.pathname, requiredRole]);
+
   if (authLoading || roleLoading) {
+    console.log('ProtectedRoute: Still loading auth state');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="space-y-4 w-full max-w-md">
@@ -27,6 +40,7 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
   }
 
   if (!user) {
+    console.log('ProtectedRoute: No user found, redirecting to auth');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

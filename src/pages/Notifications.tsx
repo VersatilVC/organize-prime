@@ -206,14 +206,39 @@ function NotificationsContent() {
   };
 
   // Handle notification click
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
+    console.log('Notification clicked:', {
+      notification,
+      user: !!user,
+      currentOrganization: !!currentOrganization,
+      action_url: notification.action_url
+    });
+
     if (!notification.read) {
-      markAsRead(notification.id);
+      try {
+        await markAsRead(notification.id);
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
     }
     
     if (notification.action_url) {
-      // Use navigate instead of window.open to preserve authentication context
-      navigate(notification.action_url);
+      // Validate authentication state before navigation
+      if (!user) {
+        console.error('No user found during notification navigation');
+        return;
+      }
+
+      console.log('Navigating to:', notification.action_url);
+      
+      // Add small delay to ensure auth state is stable
+      setTimeout(() => {
+        try {
+          navigate(notification.action_url);
+        } catch (error) {
+          console.error('Navigation error:', error);
+        }
+      }, 100);
     }
   };
 
