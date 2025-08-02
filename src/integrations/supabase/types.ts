@@ -874,6 +874,10 @@ export type Database = {
         Args: { file_path: string }
         Returns: string
       }
+      get_dashboard_stats: {
+        Args: { p_user_id: string; p_organization_id?: string; p_role?: string }
+        Returns: Json
+      }
       get_invitations_optimized: {
         Args: {
           p_user_id: string
@@ -895,6 +899,18 @@ export type Database = {
           invited_by_name: string
           total_count: number
         }[]
+      }
+      get_organization_users: {
+        Args: {
+          p_organization_id: string
+          p_requesting_user_id: string
+          p_include_emails?: boolean
+        }
+        Returns: Json
+      }
+      get_system_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_user_current_organization: {
         Args: { user_id: string }
