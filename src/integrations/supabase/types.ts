@@ -864,6 +864,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      extract_org_id_from_path: {
+        Args: { file_path: string }
+        Returns: string
+      }
+      get_user_current_organization: {
+        Args: { user_id: string }
+        Returns: string
+      }
       get_user_emails_for_super_admin: {
         Args: { user_ids: string[] }
         Returns: {
@@ -879,8 +887,16 @@ export type Database = {
         Args: { org_id: string }
         Returns: boolean
       }
+      is_org_admin_for_org: {
+        Args: { user_id: string; org_id: string }
+        Returns: boolean
+      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      user_has_org_access: {
+        Args: { user_id: string; org_id: string }
         Returns: boolean
       }
     }

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Upload, Loader2 } from 'lucide-react';
@@ -23,6 +24,7 @@ interface ProfileData {
 
 export default function ProfileSettings() {
   const { user } = useAuth();
+  const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -128,7 +130,14 @@ export default function ProfileSettings() {
   };
 
   const handleAvatarUpload = async (file: File) => {
-    if (!user?.id) return;
+    if (!user?.id || !currentOrganization?.id) {
+      toast({
+        title: 'Error',
+        description: 'User or organization not available. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     // Validate file
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
@@ -153,9 +162,9 @@ export default function ProfileSettings() {
     setIsUploading(true);
     
     try {
-      // Create unique filename
+      // Create organization-scoped filename: /[organization_id]/[user_id]/avatar.[ext]
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      const fileName = `${currentOrganization.id}/${user.id}/avatar.${fileExt}`;
       
       // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
