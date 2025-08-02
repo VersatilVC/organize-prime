@@ -262,8 +262,8 @@ export function AppSidebar() {
     const location = useLocation();
     const { collapsedSections, toggleSection } = useSidebarSectionState();
 
-    // Debug logging to identify the issue
-    console.log('AppSidebar rendering:', { role, roleLoading, feedback });
+    // Debug logging to identify the issue (removed to prevent excessive logging)
+    // console.log('AppSidebar rendering:', { role, roleLoading, feedback });
 
     // Memoized isActive function to prevent recreation on every render
     const isActive = useCallback((path: string) => {
