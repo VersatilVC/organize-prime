@@ -18,6 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/ui/icons';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
@@ -139,17 +140,9 @@ export function AppHeader() {
           </form>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Icons.bell className="h-4 w-4" />
-            <Badge
-              variant="destructive"
-              className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
-            >
-              3
-            </Badge>
-          </Button>
+          <NotificationBell />
 
           {/* User Menu */}
           <DropdownMenu>
