@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   MessageSquare, 
@@ -48,6 +48,7 @@ function NotificationsContent() {
   const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +212,8 @@ function NotificationsContent() {
     }
     
     if (notification.action_url) {
-      window.open(notification.action_url, '_blank');
+      // Use navigate instead of window.open to preserve authentication context
+      navigate(notification.action_url);
     }
   };
 
