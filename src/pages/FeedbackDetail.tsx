@@ -629,7 +629,7 @@ export default function FeedbackDetail() {
                     </p>
                   </div>
                   
-                  <div className="flex space-x-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       onClick={handleSaveResponse} 
                       disabled={saving}
@@ -642,6 +642,7 @@ export default function FeedbackDetail() {
                       variant="outline" 
                       onClick={() => handleSendNotification(feedback.user_id)}
                       disabled={saving}
+                      className="sm:w-auto"
                     >
                       <Bell className="mr-2 h-4 w-4" />
                       Send Notification
