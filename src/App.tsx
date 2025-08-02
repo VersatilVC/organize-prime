@@ -51,7 +51,7 @@ const App = () => (
               />
               {/* Management Routes */}
               <Route 
-                path="/company-settings" 
+                path="/settings/company" 
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <CompanySettings />

@@ -43,7 +43,7 @@ const getSectionItems = (sectionKey: string, role: string) => {
     
     case 'management':
       return [
-        { name: 'Company Settings', href: '/company-settings', icon: Icons.settings },
+        { name: 'Company Settings', href: '/settings/company', icon: Icons.settings },
         { name: 'Billing', href: '/billing', icon: Icons.creditCard },
         { name: 'Feature Marketplace', href: '/marketplace', icon: Icons.plus },
       ];
