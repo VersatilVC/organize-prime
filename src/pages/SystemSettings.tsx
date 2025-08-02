@@ -335,7 +335,8 @@ export default function SystemSettings() {
       
       toast({
         title: 'Success',
-        description: 'Logo uploaded successfully. Click "Save System Settings" to apply changes.',
+        description: 'Logo uploaded successfully. Remember to save your settings to apply changes permanently.',
+        duration: 5000,
       });
     } catch (error) {
       console.error('Logo upload error:', error);
@@ -445,9 +446,9 @@ export default function SystemSettings() {
           </Card>
 
           {/* App Branding and System Configuration - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* App Branding Section */}
-            <Card>
+            <Card className="h-fit">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Image className="h-5 w-5" />
@@ -514,9 +515,16 @@ export default function SystemSettings() {
                         </div>
                       </div>
                       {formData.app_logo_url && (
-                        <p className="text-sm text-muted-foreground">
-                          Logo will appear in the header next to the application name.
-                        </p>
+                        <div className="mt-3 p-3 bg-muted/50 rounded-md">
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Note:</strong> Logo will appear in the header next to the application name after saving system settings.
+                          </p>
+                          {isDirty && (
+                            <p className="text-sm text-amber-600 font-medium mt-1">
+                              ⚠️ Don't forget to save your settings to apply the logo permanently.
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -525,7 +533,7 @@ export default function SystemSettings() {
             </Card>
 
             {/* System Configuration */}
-            <Card>
+            <Card className="h-fit">
               <CardHeader>
                 <CardTitle>System Configuration</CardTitle>
               </CardHeader>
@@ -635,7 +643,7 @@ export default function SystemSettings() {
                     </div>
 
                     {/* Form Actions */}
-                    <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center justify-between pt-6 border-t">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -665,6 +673,7 @@ export default function SystemSettings() {
                       <Button
                         type="submit"
                         disabled={!isDirty || updateSettingsMutation.isPending || resetSettingsMutation.isPending}
+                        className={isDirty ? "bg-primary hover:bg-primary/90" : ""}
                       >
                         {updateSettingsMutation.isPending ? (
                           <>
@@ -672,7 +681,10 @@ export default function SystemSettings() {
                             Saving...
                           </>
                         ) : (
-                          'Save System Settings'
+                          <>
+                            Save System Settings
+                            {isDirty && <span className="ml-2 text-xs">•</span>}
+                          </>
                         )}
                       </Button>
                     </div>
