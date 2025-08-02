@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,8 +14,8 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Upload, Loader2 } from 'lucide-react';
-import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedForm';
+import { Upload, Loader2, User, Bell } from 'lucide-react';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 
 interface ProfileData {
   id: string;
@@ -30,49 +31,14 @@ export default function ProfileSettings() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  // Validation rules for the form
-  const validationRules = useMemo(() => [
-    {
-      field: 'full_name' as const,
-      validate: commonValidationRules.required('Full name is required')
-    },
-    {
-      field: 'bio' as const,
-      validate: commonValidationRules.maxLength(160, 'Bio must be 160 characters or less')
-    },
-    {
-      field: 'phone_number' as const,
-      validate: (value: string) => {
-        if (value && !/^[\+]?[1-9][\d\s\-\(\)]{7,20}$/.test(value)) {
-          return 'Please enter a valid phone number';
-        }
-        return null;
-      }
-    }
-  ], []);
-
-  // Optimized form with debouncing and validation caching
-  const {
-    formData,
-    handleChange,
-    getFieldState,
-    isDirty,
-    hasErrors,
-    isFormValidating,
-    validateAll,
-    reset
-  } = useOptimizedForm({
-    initialData: {
-      full_name: '',
-      phone_number: '',
-      bio: ''
-    },
-    validationRules,
-    debounceMs: 300
+  const [formData, setFormData] = useState({
+    full_name: '',
+    phone_number: '',
+    bio: ''
   });
-
+  
   const [isUploading, setIsUploading] = useState(false);
 
   // Fetch current profile data
@@ -93,23 +59,16 @@ export default function ProfileSettings() {
     enabled: !!user?.id
   });
 
-  // Initialize form data when profile loads - use the form's reset method
-  useEffect(() => {
+  // Initialize form data when profile loads
+  React.useEffect(() => {
     if (profile) {
-      const profileData = {
+      setFormData({
         full_name: profile.full_name || '',
         phone_number: profile.phone_number || '',
         bio: profile.bio || ''
-      };
-      // Reset the optimized form with new data
-      reset();
-      setTimeout(() => {
-        handleChange('full_name', profileData.full_name);
-        handleChange('phone_number', profileData.phone_number);
-        handleChange('bio', profileData.bio);
-      }, 0);
+      });
     }
-  }, [profile, reset, handleChange]);
+  }, [profile]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -131,7 +90,6 @@ export default function ProfileSettings() {
         title: 'Success',
         description: 'Profile updated successfully',
       });
-      reset();
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     },
     onError: (error) => {
@@ -144,24 +102,22 @@ export default function ProfileSettings() {
     }
   });
 
-  // Memoized event handlers to prevent child re-renders
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all fields first
-    if (!validateAll()) {
+    if (!formData.full_name.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Please fix the errors in the form',
+        description: 'Full name is required',
         variant: 'destructive',
       });
       return;
     }
 
     updateProfileMutation.mutate(formData);
-  }, [formData, validateAll, updateProfileMutation, toast]);
+  };
 
-  const handleAvatarUpload = useCallback(async (file: File) => {
+  const handleAvatarUpload = async (file: File) => {
     if (!user?.id || !currentOrganization?.id) {
       toast({
         title: 'Error',
@@ -227,27 +183,14 @@ export default function ProfileSettings() {
     } finally {
       setIsUploading(false);
     }
-  }, [user?.id, currentOrganization?.id, updateProfileMutation, toast]);
+  };
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       handleAvatarUpload(file);
     }
-  }, [handleAvatarUpload]);
-
-  // Warn about unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
+  };
 
   if (isLoading) {
     return (
@@ -276,165 +219,178 @@ export default function ProfileSettings() {
             </BreadcrumbList>
           </Breadcrumb>
           <h1 className="text-3xl font-bold mt-4">Profile Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your account settings and set notification preferences
+          </p>
         </div>
 
-        {/* Profile Information Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Avatar Upload */}
-              <div className="flex items-center space-x-6">
-                <div className="relative">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage 
-                      src={profile?.avatar_url || undefined} 
-                      alt="Profile avatar" 
-                    />
-                    <AvatarFallback className="text-lg">
-                      {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isUploading && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+        {/* Tabbed Settings */}
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="profile" className="flex items-center space-x-2">
+              <User className="h-4 w-4" />
+              <span>Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center space-x-2">
+              <Bell className="h-4 w-4" />
+              <span>Notifications</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Avatar Upload */}
+                  <div className="flex items-center space-x-6">
+                    <div className="relative">
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage 
+                          src={profile?.avatar_url || undefined} 
+                          alt="Profile avatar" 
+                        />
+                        <AvatarFallback className="text-lg">
+                          {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isUploading && (
+                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex items-center space-x-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>Upload New Photo</span>
-                  </Button>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    JPG, PNG or GIF. Max size 5MB.
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="flex items-center space-x-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>Upload New Photo</span>
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        JPG, PNG or GIF. Max size 5MB.
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
 
-              {/* Full Name */}
-              <div className="space-y-2">
-                <Label htmlFor="full_name">
-                  Full Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="full_name"
-                  type="text"
-                  value={getFieldState('full_name').value}
-                  onChange={(e) => handleChange('full_name', e.target.value)}
-                  placeholder="Enter your full name"
-                  required
-                />
-                {getFieldState('full_name').error && (
-                  <p className="text-sm text-destructive">{getFieldState('full_name').error}</p>
-                )}
-              </div>
+                  {/* Full Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name">
+                      Full Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="full_name"
+                      type="text"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
 
-              {/* Email (Read-only) */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toast({
-                      title: 'Coming Soon',
-                      description: 'Email change functionality will be available soon',
-                    })}
-                  >
-                    Change Email
-                  </Button>
-                </div>
-              </div>
+                  {/* Email (Read-only) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={user?.email || ''}
+                        disabled
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toast({
+                          title: 'Coming Soon',
+                          description: 'Email change functionality will be available soon',
+                        })}
+                      >
+                        Change Email
+                      </Button>
+                    </div>
+                  </div>
 
-              {/* Phone Number */}
-              <div className="space-y-2">
-                <Label htmlFor="phone_number">Phone Number</Label>
-                <Input
-                  id="phone_number"
-                  type="tel"
-                  value={getFieldState('phone_number').value}
-                  onChange={(e) => handleChange('phone_number', e.target.value)}
-                  placeholder="Enter your phone number"
-                />
-                {getFieldState('phone_number').error && (
-                  <p className="text-sm text-destructive">{getFieldState('phone_number').error}</p>
-                )}
-              </div>
+                  {/* Phone Number */}
+                  <div className="space-y-2">
+                    <Label htmlFor="phone_number">Phone Number</Label>
+                    <Input
+                      id="phone_number"
+                      type="tel"
+                      value={formData.phone_number}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
 
-              {/* Bio */}
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={getFieldState('bio').value}
-                  onChange={(e) => handleChange('bio', e.target.value)}
-                  placeholder="Tell us about yourself..."
-                  className="min-h-[100px]"
-                  maxLength={160}
-                />
-                <div className="flex justify-between items-center text-sm">
-                  {getFieldState('bio').error ? (
-                    <span className="text-destructive">{getFieldState('bio').error}</span>
-                  ) : (
-                    <span></span>
-                  )}
-                  <span className="text-muted-foreground">
-                    {getFieldState('bio').value?.length || 0}/160 characters
-                  </span>
-                </div>
-              </div>
+                  {/* Bio */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      value={formData.bio}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                      placeholder="Tell us about yourself..."
+                      className="min-h-[100px]"
+                      maxLength={160}
+                    />
+                    <div className="flex justify-end">
+                      <span className="text-muted-foreground text-sm">
+                        {formData.bio?.length || 0}/160 characters
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Form Actions */}
-              <div className="flex items-center justify-end space-x-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/')}
-                  disabled={updateProfileMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!isDirty || updateProfileMutation.isPending || hasErrors || isFormValidating}
-                >
-                  {updateProfileMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  {/* Form Actions */}
+                  <div className="flex items-center justify-end space-x-4 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate('/')}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications">
+            <NotificationPreferences />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
