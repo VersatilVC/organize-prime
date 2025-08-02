@@ -287,6 +287,16 @@ export default function FeedbackDetail() {
   };
 
   const handleSendNotification = async (userId: string) => {
+    if (!userId) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'User ID is missing.',
+      });
+      return;
+    }
+
+    setSaving(true);
     try {
       // Placeholder for sending notification to user
       toast({
@@ -300,6 +310,8 @@ export default function FeedbackDetail() {
         title: 'Error',
         description: 'Failed to send notification.',
       });
+    } finally {
+      setSaving(false);
     }
   };
 
