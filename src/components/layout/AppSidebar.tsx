@@ -56,6 +56,7 @@ const getSectionItems = (sectionKey: string, role: string) => {
     case 'system-admin':
       return [
         { name: 'System Settings', href: '/settings/system', icon: Icons.settings },
+        { name: 'Notification Management', href: '/settings/notifications', icon: Icons.bell },
         { name: 'Feedback Management', href: '/admin/feedback', icon: Icons.mail },
       ];
     
