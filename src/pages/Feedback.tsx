@@ -96,6 +96,7 @@ export default function Feedback() {
 
   const form = useForm<FeedbackFormData>({
     resolver: zodResolver(feedbackSchema),
+    mode: 'onChange', // Enable real-time validation
     defaultValues: {
       type: undefined,
       category: '',
@@ -105,7 +106,7 @@ export default function Feedback() {
     },
   });
 
-  const { watch, setValue, formState: { isValid } } = form;
+  const { watch, formState: { isValid, errors } } = form;
   const watchedSubject = watch('subject') || '';
   const watchedDescription = watch('description') || '';
 
@@ -353,20 +354,30 @@ export default function Feedback() {
                     />
 
                     {/* Submit Button */}
-                    <Button
-                      type="submit"
-                      disabled={!isValid || isSubmitting}
-                      className="w-full"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        'Submit Feedback'
+                    <div className="space-y-2">
+                      {/* Debug info - remove in production */}
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                          Form valid: {isValid ? 'Yes' : 'No'} | 
+                          Errors: {Object.keys(errors).length > 0 ? Object.keys(errors).join(', ') : 'None'}
+                        </div>
                       )}
-                    </Button>
+                      
+                      <Button
+                        type="submit"
+                        disabled={!isValid || isSubmitting}
+                        className="w-full"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          'Submit Feedback'
+                        )}
+                      </Button>
+                    </div>
                   </form>
                 </Form>
               )}
