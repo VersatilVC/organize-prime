@@ -223,7 +223,7 @@ export default function ProfileSettings() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+              <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -356,7 +356,7 @@ export default function ProfileSettings() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/')}
                 disabled={updateProfileMutation.isPending}
               >
                 Cancel
