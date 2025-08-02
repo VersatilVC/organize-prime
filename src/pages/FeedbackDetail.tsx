@@ -118,9 +118,19 @@ export default function FeedbackDetail() {
         .from('feedback')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (feedbackError) throw feedbackError;
+      
+      if (!feedbackData) {
+        toast({
+          variant: 'destructive',
+          title: 'Feedback Not Found',
+          description: 'The feedback you are looking for does not exist.',
+        });
+        navigate(role === 'super_admin' ? '/admin/feedback' : '/');
+        return;
+      }
 
       // Check access permissions
       const hasAccess = checkAccess(feedbackData);
@@ -231,7 +241,7 @@ export default function FeedbackDetail() {
         updated_at: new Date().toISOString(),
       };
 
-      if (role === 'super_admin') {
+      if (role === 'super_admin' || (role === 'admin' && currentOrganization && feedback.organization_id === currentOrganization.id)) {
         if (adminResponse.trim()) {
           updates.admin_response = adminResponse.trim();
           updates.responded_by = user.id;
@@ -553,8 +563,8 @@ export default function FeedbackDetail() {
               </CardContent>
             </Card>
 
-            {/* Admin Response Section - Only for Super Admins */}
-            {role === 'super_admin' && (
+            {/* Admin Response Section - For Super Admins and Org Admins */}
+            {(role === 'super_admin' || (role === 'admin' && currentOrganization && feedback.organization_id === currentOrganization.id)) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
