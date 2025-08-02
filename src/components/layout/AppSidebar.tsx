@@ -251,54 +251,71 @@ const SidebarSectionComponent = React.memo(({
 SidebarSectionComponent.displayName = 'SidebarSectionComponent';
 
 export function AppSidebar() {
-  const { role, loading: roleLoading } = useUserRole();
-  const { feedback } = useDashboardData();
-  const location = useLocation();
-  const { collapsedSections, toggleSection } = useSidebarSectionState();
+  // Add early return if React context is not available
+  try {
+    const { role, loading: roleLoading } = useUserRole();
+    const { feedback } = useDashboardData();
+    const location = useLocation();
+    const { collapsedSections, toggleSection } = useSidebarSectionState();
 
-  // Memoized isActive function to prevent recreation on every render
-  const isActive = useCallback((path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
-  }, [location.pathname]);
+    // Debug logging to identify the issue
+    console.log('AppSidebar rendering:', { role, roleLoading, feedback });
 
-  // Memoized visible sections to prevent filtering on every render
-  const visibleSections = useMemo(() => {
-    return sidebarSections.filter(section => section.isVisible(role));
-  }, [role]);
+    // Memoized isActive function to prevent recreation on every render
+    const isActive = useCallback((path: string) => {
+      if (path === '/') {
+        return location.pathname === '/';
+      }
+      return location.pathname.startsWith(path);
+    }, [location.pathname]);
 
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarContent className="space-y-1">
-        {roleLoading ? (
-          // Show loading skeleton while role is being determined
-          <div className="space-y-4 p-4">
-            <div className="animate-pulse space-y-2">
-              <div className="h-4 bg-muted rounded w-1/2"></div>
-              <div className="h-8 bg-muted rounded"></div>
-              <div className="h-8 bg-muted rounded"></div>
+    // Memoized visible sections to prevent filtering on every render
+    const visibleSections = useMemo(() => {
+      if (!role) return [];
+      return sidebarSections.filter(section => section.isVisible(role));
+    }, [role]);
+
+    return (
+      <Sidebar collapsible="icon">
+        <SidebarContent className="space-y-1">
+          {roleLoading ? (
+            // Show loading skeleton while role is being determined
+            <div className="space-y-4 p-4">
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-8 bg-muted rounded"></div>
+                <div className="h-8 bg-muted rounded"></div>
+              </div>
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 bg-muted rounded w-1/3"></div>
+                <div className="h-8 bg-muted rounded"></div>
+              </div>
             </div>
-            <div className="animate-pulse space-y-2">
-              <div className="h-4 bg-muted rounded w-1/3"></div>
-              <div className="h-8 bg-muted rounded"></div>
-            </div>
-          </div>
-        ) : (
-          visibleSections.map(section => (
-            <SidebarSectionComponent
-              key={section.key}
-              section={section}
-              role={role}
-              collapsedSections={collapsedSections}
-              toggleSection={toggleSection}
-              feedback={feedback}
-              isActive={isActive}
-            />
-          ))
-        )}
-      </SidebarContent>
-    </Sidebar>
-  );
+          ) : (
+            visibleSections.map(section => (
+              <SidebarSectionComponent
+                key={section.key}
+                section={section}
+                role={role}
+                collapsedSections={collapsedSections}
+                toggleSection={toggleSection}
+                feedback={feedback}
+                isActive={isActive}
+              />
+            ))
+          )}
+        </SidebarContent>
+      </Sidebar>
+    );
+  } catch (error) {
+    console.error('AppSidebar error:', error);
+    // Fallback UI
+    return (
+      <div className="w-60 h-screen bg-sidebar border-r">
+        <div className="p-4">
+          <div className="text-sm text-muted-foreground">Loading sidebar...</div>
+        </div>
+      </div>
+    );
+  }
 }
