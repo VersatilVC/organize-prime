@@ -181,14 +181,14 @@ export function AppSidebar() {
                 {isCollapsed && ` (${itemCount})`}
               </span>
               {isCollapsed ? (
-                <ChevronRight className="h-4 w-4 transition-transform duration-200" />
+                <ChevronRight className="h-4 w-4 transition-transform duration-300 ease-in-out" />
               ) : (
-                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                <ChevronDown className="h-4 w-4 transition-transform duration-300 ease-in-out" />
               )}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           
-          <CollapsibleContent className="transition-all duration-200 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+          <CollapsibleContent className="overflow-hidden transition-all duration-300 ease-in-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => (
