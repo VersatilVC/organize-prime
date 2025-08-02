@@ -19,6 +19,7 @@ import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import ProfileSettings from "./pages/ProfileSettings";
 import SystemSettings from "./pages/SystemSettings";
 import Feedback from "./pages/Feedback";
+import FeedbackDetail from "./pages/FeedbackDetail";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="super_admin">
                     <SystemSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/feedback/:id" 
+                element={
+                  <ProtectedRoute>
+                    <FeedbackDetail />
                   </ProtectedRoute>
                 } 
               />

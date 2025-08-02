@@ -175,12 +175,14 @@ export type Database = {
           created_at: string | null
           description: string
           id: string
+          internal_notes: string | null
           organization_id: string | null
           priority: string | null
           resolution_notes: string | null
           responded_at: string | null
           responded_by: string | null
           status: string | null
+          status_history: Json | null
           subject: string
           type: string
           updated_at: string | null
@@ -193,12 +195,14 @@ export type Database = {
           created_at?: string | null
           description: string
           id?: string
+          internal_notes?: string | null
           organization_id?: string | null
           priority?: string | null
           resolution_notes?: string | null
           responded_at?: string | null
           responded_by?: string | null
           status?: string | null
+          status_history?: Json | null
           subject: string
           type: string
           updated_at?: string | null
@@ -211,12 +215,14 @@ export type Database = {
           created_at?: string | null
           description?: string
           id?: string
+          internal_notes?: string | null
           organization_id?: string | null
           priority?: string | null
           resolution_notes?: string | null
           responded_at?: string | null
           responded_by?: string | null
           status?: string | null
+          status_history?: Json | null
           subject?: string
           type?: string
           updated_at?: string | null

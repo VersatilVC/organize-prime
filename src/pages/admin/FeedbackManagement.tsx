@@ -531,7 +531,7 @@ export default function FeedbackManagement() {
                               />
                             ) : (
                               <button
-                                onClick={() => handleViewFeedback(item)}
+                                onClick={() => navigate(`/feedback/${item.id}`)}
                                 className="text-left hover:underline font-medium max-w-xs truncate block"
                                 title={item.subject}
                               >
@@ -616,7 +616,7 @@ export default function FeedbackManagement() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleViewFeedback(item)}>
+                                  <DropdownMenuItem onClick={() => navigate(`/feedback/${item.id}`)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View
                                   </DropdownMenuItem>
