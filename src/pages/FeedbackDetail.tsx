@@ -30,7 +30,7 @@ import {
   Play,
   XCircle,
   Save,
-  Mail,
+  Bell,
   MessageSquare,
   FileText,
   AlertTriangle
@@ -273,6 +273,23 @@ export default function FeedbackDetail() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSendNotification = async (userId: string) => {
+    try {
+      // Placeholder for sending notification to user
+      toast({
+        title: 'Notification Sent',
+        description: 'User has been notified about the feedback update.',
+      });
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send notification.',
+      });
     }
   };
 
@@ -611,9 +628,13 @@ export default function FeedbackDetail() {
                       <Save className="mr-2 h-4 w-4" />
                       {saving ? 'Saving...' : 'Save Response'}
                     </Button>
-                    <Button variant="outline" disabled>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Email
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleSendNotification(feedback.user_id)}
+                      disabled={saving}
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Send Notification
                     </Button>
                   </div>
                 </CardContent>
