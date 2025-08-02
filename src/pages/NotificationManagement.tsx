@@ -10,10 +10,13 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Loader2, Send, FileText, History, Settings } from 'lucide-react';
-import { SendAnnouncementForm } from '@/components/notifications/SendAnnouncementForm';
-import { NotificationTemplatesManager } from '@/components/notifications/NotificationTemplatesManager';
-import { NotificationHistory } from '@/components/notifications/NotificationHistory';
-import { BulkNotificationActions } from '@/components/notifications/BulkNotificationActions';
+import { 
+  SendAnnouncementForm, 
+  NotificationTemplatesManager, 
+  NotificationHistory, 
+  BulkNotificationActions,
+  FirstLoginTemplateManager 
+} from '@/components/notifications';
 
 export default function NotificationManagement() {
   const { user } = useAuth();
@@ -74,7 +77,7 @@ export default function NotificationManagement() {
         <Card>
           <CardContent className="p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="send" className="flex items-center gap-2">
                   <Send className="h-4 w-4" />
                   Send Announcement
@@ -82,6 +85,10 @@ export default function NotificationManagement() {
                 <TabsTrigger value="templates" className="flex items-center gap-2" disabled={role !== 'super_admin'}>
                   <FileText className="h-4 w-4" />
                   Templates
+                </TabsTrigger>
+                <TabsTrigger value="welcome" className="flex items-center gap-2" disabled={role !== 'super_admin'}>
+                  <FileText className="h-4 w-4" />
+                  Welcome Template
                 </TabsTrigger>
                 <TabsTrigger value="history" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
@@ -106,6 +113,16 @@ export default function NotificationManagement() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     Only super administrators can manage notification templates.
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="welcome">
+                {role === 'super_admin' ? (
+                  <FirstLoginTemplateManager />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Only super administrators can manage the welcome template.
                   </div>
                 )}
               </TabsContent>

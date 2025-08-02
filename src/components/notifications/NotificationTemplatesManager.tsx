@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Edit, Plus, Eye, Save, X } from 'lucide-react';
+import { Loader2, Edit, Plus, Eye, Save, X, MoreHorizontal, Copy, Download, Upload } from 'lucide-react';
 
 interface NotificationTemplate {
   id: string;
@@ -33,6 +34,7 @@ const TEMPLATE_TYPES = [
   { value: 'user_invitation_accepted', label: 'User Invitation Accepted' },
   { value: 'feedback_response', label: 'Feedback Response' },
   { value: 'system_maintenance', label: 'System Maintenance' },
+  { value: 'custom_announcement', label: 'Custom Announcement' },
 ];
 
 const AVAILABLE_VARIABLES = [
@@ -53,6 +55,8 @@ export function NotificationTemplatesManager() {
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState({ title: '', message: '' });
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importData, setImportData] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -138,6 +142,71 @@ export function NotificationTemplatesManager() {
     });
   };
 
+  const handleDuplicate = (template: NotificationTemplate) => {
+    setEditingTemplate(null);
+    setFormData({
+      name: `${template.value.name} (Copy)`,
+      type: template.value.type,
+      title: template.value.title,
+      message: template.value.message,
+      active: template.value.active,
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleExport = (template: NotificationTemplate) => {
+    const exportData = {
+      name: template.value.name,
+      type: template.value.type,
+      title: template.value.title,
+      message: template.value.message,
+      active: template.value.active,
+      variables: template.value.variables,
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template.value.name.replace(/\s+/g, '-').toLowerCase()}-template.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = () => {
+    try {
+      const templateData = JSON.parse(importData);
+      
+      // Validate required fields
+      if (!templateData.name || !templateData.type || !templateData.title || !templateData.message) {
+        throw new Error('Invalid template format. Missing required fields.');
+      }
+      
+      setFormData({
+        name: templateData.name,
+        type: templateData.type,
+        title: templateData.title,
+        message: templateData.message,
+        active: templateData.active !== false,
+      });
+      
+      setImportDialogOpen(false);
+      setImportData('');
+      setIsCreateDialogOpen(true);
+      
+      toast({
+        title: 'Success',
+        description: 'Template imported successfully. Review and save to add it.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Invalid template format. Please check the JSON structure.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSave = () => {
     if (!formData.name.trim() || !formData.type || !formData.title.trim() || !formData.message.trim()) {
       toast({
@@ -150,7 +219,7 @@ export function NotificationTemplatesManager() {
 
     const templateKey = editingTemplate 
       ? editingTemplate.key 
-      : `notification_template_${formData.type}`;
+      : `notification_template_${formData.type}_${Date.now()}`;
 
     const templateData = {
       name: formData.name,
@@ -205,10 +274,16 @@ export function NotificationTemplatesManager() {
             Manage system-wide notification templates with customizable variables
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Create Template
-        </Button>
+        <div className="flex justify-between items-center">
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Template
+          </Button>
+          <Button onClick={() => setImportDialogOpen(true)} variant="outline" className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Import Template
+          </Button>
+        </div>
       </div>
 
       {/* Templates Table */}
@@ -266,15 +341,27 @@ export function NotificationTemplatesManager() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(template)}
-                        className="flex items-center gap-1"
-                      >
-                        <Edit className="h-3 w-3" />
-                        Edit
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(template)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicate(template)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExport(template)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Export
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -283,6 +370,41 @@ export function NotificationTemplatesManager() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Import Template Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="importData">Template JSON</Label>
+              <Textarea
+                id="importData"
+                placeholder="Paste the exported template JSON here..."
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+                rows={10}
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste the JSON content from an exported template file.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleImport} disabled={!importData.trim()}>
+                Import Template
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setImportDialogOpen(false);
+                setImportData('');
+              }}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Create/Edit Template Dialog */}
       <Dialog 

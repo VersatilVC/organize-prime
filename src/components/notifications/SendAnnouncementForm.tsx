@@ -8,24 +8,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/hooks/useUserRole';
-// Use the organization data structure from context
-import { Loader2, Eye, Send, Clock, Users, Building2, User } from 'lucide-react';
+import { Loader2, Eye, Send, Clock, Users, Building2, User, Calendar, FileText } from 'lucide-react';
 
 interface SendAnnouncementFormProps {
   userRole: UserRole;
   currentOrganization: any | null;
 }
 
-interface User {
+interface UserData {
   id: string;
   full_name: string;
   username: string;
   email?: string;
+}
+
+interface NotificationTemplate {
+  id: string;
+  key: string;
+  value: {
+    name: string;
+    type: string;
+    title: string;
+    message: string;
+    active: boolean;
+    variables?: string[];
+  };
 }
 
 interface AnnouncementData {
@@ -35,6 +48,8 @@ interface AnnouncementData {
   organizationId?: string;
   specificUsers: string[];
   scheduleFor?: Date;
+  sendImmediately: boolean;
+  selectedTemplate?: string;
 }
 
 export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnnouncementFormProps) {
@@ -47,10 +62,33 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
     message: '',
     recipientType: 'all_users',
     specificUsers: [],
+    sendImmediately: true,
   });
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserData[]>([]);
+  const [scheduleDateTime, setScheduleDateTime] = useState('');
+
+  // Fetch notification templates for selection
+  const { data: templates } = useQuery({
+    queryKey: ['notification-templates-for-announcement'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .like('key', 'notification_template_%');
+      
+      if (error) throw error;
+      
+      return data
+        .filter(setting => setting.value && typeof setting.value === 'object' && (setting.value as any).active)
+        .map(setting => ({
+          id: setting.key,
+          key: setting.key,
+          value: setting.value as NotificationTemplate['value']
+        })) as NotificationTemplate[];
+    }
+  });
 
   // Fetch organizations (for super admin)
   const { data: organizations } = useQuery({
@@ -127,6 +165,37 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
     enabled: formData.recipientType === 'specific_users' || (userRole === 'admin')
   });
 
+  // Handle template selection
+  const handleTemplateSelect = (templateKey: string) => {
+    const template = templates?.find(t => t.key === templateKey);
+    if (template) {
+      setFormData(prev => ({
+        ...prev,
+        title: template.value.title,
+        message: template.value.message,
+        selectedTemplate: templateKey
+      }));
+    }
+  };
+
+  // Replace variables in template with actual data
+  const replaceTemplateVariables = (text: string) => {
+    const sampleData = {
+      '{{user_name}}': 'John Doe',
+      '{{organization_name}}': currentOrganization?.name || 'Your Organization',
+      '{{app_name}}': 'SaaS Platform',
+      '{{sender_name}}': (user as any)?.full_name || 'Admin Team',
+      '{{date}}': new Date().toLocaleDateString(),
+      '{{time}}': new Date().toLocaleTimeString(),
+    };
+
+    let result = text;
+    Object.entries(sampleData).forEach(([variable, value]) => {
+      result = result.replace(new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g'), value);
+    });
+    return result;
+  };
+
   // Send announcement mutation
   const sendAnnouncementMutation = useMutation({
     mutationFn: async (announcementData: AnnouncementData) => {
@@ -138,8 +207,10 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
           organizationId: announcementData.organizationId,
           specificUsers: announcementData.specificUsers,
           scheduleFor: announcementData.scheduleFor?.toISOString(),
+          sendImmediately: announcementData.sendImmediately,
           senderRole: userRole,
-          currentOrganizationId: currentOrganization?.id
+          currentOrganizationId: currentOrganization?.id,
+          templateUsed: announcementData.selectedTemplate
         }
       });
 
@@ -149,7 +220,7 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
     onSuccess: () => {
       toast({
         title: 'Success',
-        description: 'Announcement sent successfully',
+        description: formData.sendImmediately ? 'Announcement sent successfully' : 'Announcement scheduled successfully',
       });
       // Reset form
       setFormData({
@@ -157,8 +228,10 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
         message: '',
         recipientType: 'all_users',
         specificUsers: [],
+        sendImmediately: true,
       });
       setSelectedUsers([]);
+      setScheduleDateTime('');
       queryClient.invalidateQueries({ queryKey: ['notification-history'] });
     },
     onError: (error) => {
@@ -211,7 +284,21 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
       return;
     }
 
-    sendAnnouncementMutation.mutate(formData);
+    if (!formData.sendImmediately && !scheduleDateTime) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a date and time for scheduling',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const finalData = {
+      ...formData,
+      scheduleFor: formData.sendImmediately ? undefined : new Date(scheduleDateTime)
+    };
+
+    sendAnnouncementMutation.mutate(finalData);
   };
 
   const getRecipientTypeIcon = (type: string) => {
@@ -235,6 +322,35 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Template Selection */}
+            <div className="space-y-2">
+              <Label>Template (Optional)</Label>
+              <Select
+                value={formData.selectedTemplate || ''}
+                onValueChange={handleTemplateSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template or create custom message" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Custom Message</SelectItem>
+                  {templates?.map((template) => (
+                    <SelectItem key={template.key} value={template.key}>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        {template.value.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formData.selectedTemplate && (
+                <p className="text-xs text-muted-foreground">
+                  Template variables will be automatically replaced when sent
+                </p>
+              )}
+            </div>
+
             {/* Title and Message */}
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
@@ -407,6 +523,36 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
               )}
             </div>
 
+            {/* Scheduling Options */}
+            <div className="space-y-4">
+              <Label>Scheduling</Label>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="sendImmediately"
+                  checked={formData.sendImmediately}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, sendImmediately: checked }))}
+                />
+                <Label htmlFor="sendImmediately">Send immediately</Label>
+              </div>
+
+              {!formData.sendImmediately && (
+                <div className="space-y-2">
+                  <Label htmlFor="scheduleDateTime">Schedule Date & Time</Label>
+                  <Input
+                    id="scheduleDateTime"
+                    type="datetime-local"
+                    value={scheduleDateTime}
+                    onChange={(e) => setScheduleDateTime(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {scheduleDateTime && `Will be sent on ${new Date(scheduleDateTime).toLocaleString()}`}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-4">
               <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
@@ -423,11 +569,15 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
                   <div className="space-y-4">
                     <div>
                       <Label>Title</Label>
-                      <p className="font-semibold text-lg">{formData.title || 'Enter title...'}</p>
+                      <p className="font-semibold text-lg">
+                        {formData.selectedTemplate ? replaceTemplateVariables(formData.title) : formData.title || 'Enter title...'}
+                      </p>
                     </div>
                     <div>
                       <Label>Message</Label>
-                      <p className="whitespace-pre-wrap">{formData.message || 'Enter message...'}</p>
+                      <p className="whitespace-pre-wrap">
+                        {formData.selectedTemplate ? replaceTemplateVariables(formData.message) : formData.message || 'Enter message...'}
+                      </p>
                     </div>
                     <div>
                       <Label>Recipients</Label>
@@ -441,6 +591,22 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
                         </span>
                       </div>
                     </div>
+                    <div>
+                      <Label>Delivery</Label>
+                      <div className="flex items-center gap-2">
+                        {formData.sendImmediately ? (
+                          <>
+                            <Send className="h-4 w-4" />
+                            <span>Send immediately</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-4 w-4" />
+                            <span>Scheduled for {scheduleDateTime ? new Date(scheduleDateTime).toLocaleString() : 'Select date & time'}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -452,10 +618,12 @@ export function SendAnnouncementForm({ userRole, currentOrganization }: SendAnno
               >
                 {sendAnnouncementMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
+                ) : formData.sendImmediately ? (
                   <Send className="h-4 w-4" />
+                ) : (
+                  <Clock className="h-4 w-4" />
                 )}
-                Send Announcement
+                {formData.sendImmediately ? 'Send Now' : 'Schedule Announcement'}
               </Button>
             </div>
           </form>
