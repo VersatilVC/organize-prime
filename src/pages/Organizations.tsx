@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
@@ -37,6 +38,9 @@ export default function Organizations() {
   const [creating, setCreating] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [selectedOrgForInvite, setSelectedOrgForInvite] = useState<Organization | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedOrgForDelete, setSelectedOrgForDelete] = useState<Organization | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchOrganizations();
@@ -217,6 +221,43 @@ export default function Organizations() {
     setInviteDialogOpen(true);
   };
 
+  const handleDeleteOrganization = (org: Organization) => {
+    setSelectedOrgForDelete(org);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteOrganization = async () => {
+    if (!selectedOrgForDelete) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('id', selectedOrgForDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Organization "${selectedOrgForDelete.name}" has been deleted`,
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedOrgForDelete(null);
+      fetchOrganizations();
+    } catch (error) {
+      console.error('Error deleting organization:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete organization",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (roleLoading) {
     return (
       <AppLayout>
@@ -375,6 +416,13 @@ export default function Organizations() {
                                  <Icons.externalLink className="h-4 w-4 mr-2" />
                                  View Details
                                </DropdownMenuItem>
+                               <DropdownMenuItem 
+                                 onClick={() => handleDeleteOrganization(org)}
+                                 className="text-destructive focus:text-destructive"
+                               >
+                                 <Icons.trash className="h-4 w-4 mr-2" />
+                                 Delete
+                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -458,6 +506,35 @@ export default function Organizations() {
             }}
           />
         )}
+
+        {/* Delete Organization Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Organization</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{selectedOrgForDelete?.name}"? This action cannot be undone and will permanently remove all associated data including users, files, and settings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteOrganization}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? (
+                  <>
+                    <Icons.loader className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Organization'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
