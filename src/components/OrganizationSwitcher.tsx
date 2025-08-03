@@ -30,6 +30,13 @@ export function OrganizationSwitcher() {
   }
 
   const canInviteUsers = role === 'admin' || role === 'super_admin';
+  
+  console.log('OrganizationSwitcher debug:', { 
+    role, 
+    canInviteUsers, 
+    currentOrganization: currentOrganization?.name,
+    organizationsCount: organizations.length 
+  });
 
   return (
     <>
