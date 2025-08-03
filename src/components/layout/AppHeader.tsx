@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/ui/icons';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
+import { OrganizationSwitcher } from '@/components/OrganizationSwitcher';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
@@ -124,6 +125,9 @@ export function AppHeader() {
               {systemSettings?.app_name || 'SaaS Platform'}
             </span>
           </Link>
+          
+          <div className="border-l border-border h-6" />
+          <OrganizationSwitcher />
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4">
