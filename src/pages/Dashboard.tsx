@@ -6,7 +6,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { useOrganizationSetup } from '@/hooks/useOrganizationSetup';
 import { OrganizationSetup } from '@/components/OrganizationSetup';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { isWelcomeNotification } from '@/lib/notification-templates';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -98,6 +98,7 @@ export default function Dashboard() {
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
   const { organizations: orgCount, users, notifications, files, feedback, loading } = useDashboardData();
+  const queryClient = useQueryClient();
   
   // Check for automatic organization creation (business domains)
   useOrganizationCreation();
@@ -311,6 +312,9 @@ export default function Dashboard() {
                               .from('notifications')
                               .update({ read: true, read_at: new Date().toISOString() })
                               .eq('id', notification.id);
+                            
+                            // Invalidate the query to refetch and update the UI
+                            queryClient.invalidateQueries({ queryKey: ['welcome-notifications', user?.id] });
                           }}
                         >
                           <Icons.close className="h-4 w-4" />
