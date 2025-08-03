@@ -15,11 +15,21 @@ interface InviteUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onInviteSent?: () => void;
+  organizationOverride?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url?: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at?: string;
+  };
 }
 
-export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUserDialogProps) {
+export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizationOverride }: InviteUserDialogProps) {
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
+  const targetOrganization = organizationOverride || currentOrganization;
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [invitationLink, setInvitationLink] = useState<string | null>(null);
@@ -39,7 +49,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrganization) {
+    if (!targetOrganization) {
       toast({
         title: "Error",
         description: "No organization selected",
@@ -60,7 +70,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
       const { data: existingMembership } = await supabase
         .from('memberships')
         .select('id')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', targetOrganization.id)
         .eq('user_id', formData.email) // This would need to be changed to check by email
         .eq('status', 'active')
         .single();
@@ -70,7 +80,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
         .from('invitations')
         .select('id')
         .eq('email', formData.email)
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', targetOrganization.id)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
         .single();
@@ -105,7 +115,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
           message: formData.message || null,
           expires_at: expiresAt.toISOString(),
           invited_by: user.id,
-          organization_id: currentOrganization.id
+          organization_id: targetOrganization.id
         })
         .select()
         .single();
@@ -118,7 +128,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
           body: {
             email: formData.email,
             inviterName,
-            organizationName: currentOrganization.name,
+            organizationName: targetOrganization.name,
             role: formData.role,
             message: formData.message,
             inviteToken: token,
@@ -246,7 +256,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite User to {currentOrganization?.name}</DialogTitle>
+          <DialogTitle>Invite User to {targetOrganization?.name}</DialogTitle>
           <DialogDescription>
             Send an invitation to join your organization. The user will receive a secure link to accept the invitation.
           </DialogDescription>

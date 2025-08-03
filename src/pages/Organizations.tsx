@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
+import { InviteUserDialog } from '@/components/InviteUserDialog';
 
 interface Organization {
   id: string;
@@ -19,6 +20,7 @@ interface Organization {
   slug: string;
   is_active: boolean;
   created_at: string;
+  updated_at?: string;
   admin_count?: number;
   user_count?: number;
 }
@@ -33,6 +35,8 @@ export default function Organizations() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', slug: '' });
   const [creating, setCreating] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [selectedOrgForInvite, setSelectedOrgForInvite] = useState<Organization | null>(null);
 
   useEffect(() => {
     fetchOrganizations();
@@ -208,6 +212,11 @@ export default function Organizations() {
     }));
   };
 
+  const handleInviteUser = (org: Organization) => {
+    setSelectedOrgForInvite(org);
+    setInviteDialogOpen(true);
+  };
+
   if (roleLoading) {
     return (
       <AppLayout>
@@ -335,31 +344,37 @@ export default function Organizations() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={() => handleEditOrganization(org)}
-                              >
-                                <Icons.edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
-                              >
-                                {org.is_active ? (
-                                  <>
-                                    <Icons.pause className="h-4 w-4 mr-2" />
-                                    Deactivate
-                                  </>
-                                ) : (
-                                  <>
-                                    <Icons.play className="h-4 w-4 mr-2" />
-                                    Activate
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Icons.externalLink className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
+                               <DropdownMenuItem 
+                                 onClick={() => handleEditOrganization(org)}
+                               >
+                                 <Icons.edit className="h-4 w-4 mr-2" />
+                                 Edit
+                               </DropdownMenuItem>
+                               <DropdownMenuItem 
+                                 onClick={() => handleInviteUser(org)}
+                               >
+                                 <Icons.mail className="h-4 w-4 mr-2" />
+                                 Invite User
+                               </DropdownMenuItem>
+                               <DropdownMenuItem 
+                                 onClick={() => toggleOrganizationStatus(org.id, org.is_active)}
+                               >
+                                 {org.is_active ? (
+                                   <>
+                                     <Icons.pause className="h-4 w-4 mr-2" />
+                                     Deactivate
+                                   </>
+                                 ) : (
+                                   <>
+                                     <Icons.play className="h-4 w-4 mr-2" />
+                                     Activate
+                                   </>
+                                 )}
+                               </DropdownMenuItem>
+                               <DropdownMenuItem>
+                                 <Icons.externalLink className="h-4 w-4 mr-2" />
+                                 View Details
+                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -428,6 +443,21 @@ export default function Organizations() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Invite User Dialog */}
+        {selectedOrgForInvite && (
+          <InviteUserDialog
+            open={inviteDialogOpen}
+            onOpenChange={(open) => {
+              setInviteDialogOpen(open);
+              if (!open) setSelectedOrgForInvite(null);
+            }}
+            organizationOverride={selectedOrgForInvite}
+            onInviteSent={() => {
+              // Optional: Refresh org data if needed
+            }}
+          />
+        )}
       </div>
     </AppLayout>
   );
