@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (profile && !profile.first_login_completed) {
         // Mark first login as completed - this will trigger the welcome notification via database trigger
+        console.log('DEBUG: User exists but first_login_completed is false, marking as completed for user:', user.id);
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ first_login_completed: true })
@@ -124,6 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           console.log('First login completed for user:', user.id);
         }
+      } else if (profile && profile.first_login_completed) {
+        console.log('DEBUG: User exists and first_login_completed is already true for user:', user.id);
       }
 
       // Handle organization logic after profile creation
