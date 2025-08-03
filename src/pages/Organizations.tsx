@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,6 +30,9 @@ export default function Organizations() {
   const [loading, setLoading] = useState(true);
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '', slug: '' });
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', slug: '' });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     fetchOrganizations();
@@ -146,6 +151,63 @@ export default function Organizations() {
     setEditForm({ name: '', slug: '' });
   };
 
+  const handleCreateOrganization = async () => {
+    if (!createForm.name.trim() || !createForm.slug.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .insert({
+          name: createForm.name.trim(),
+          slug: createForm.slug.trim(),
+          is_active: true,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Organization created successfully",
+      });
+
+      setShowCreateDialog(false);
+      setCreateForm({ name: '', slug: '' });
+      fetchOrganizations();
+    } catch (error) {
+      console.error('Error creating organization:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create organization",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  const handleNameChange = (name: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      name,
+      slug: generateSlug(name)
+    }));
+  };
+
   if (roleLoading) {
     return (
       <AppLayout>
@@ -187,7 +249,7 @@ export default function Organizations() {
               Manage all organizations in the system
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
             <Icons.plus className="h-4 w-4 mr-2" />
             Create Organization
           </Button>
@@ -309,6 +371,63 @@ export default function Organizations() {
             )}
           </CardContent>
         </Card>
+
+        {/* Create Organization Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Organization</DialogTitle>
+              <DialogDescription>
+                Add a new organization to the system. The domain will be auto-generated from the name.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="org-name">Organization Name</Label>
+                <Input
+                  id="org-name"
+                  placeholder="Enter organization name"
+                  value={createForm.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="org-slug">Domain/Slug</Label>
+                <Input
+                  id="org-slug"
+                  placeholder="organization-domain"
+                  value={createForm.slug}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, slug: e.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  setCreateForm({ name: '', slug: '' });
+                }}
+                disabled={creating}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateOrganization}
+                disabled={creating}
+              >
+                {creating ? (
+                  <>
+                    <Icons.loader className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Organization'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
