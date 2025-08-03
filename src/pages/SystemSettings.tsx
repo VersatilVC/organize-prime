@@ -409,123 +409,124 @@ export default function SystemSettings() {
           <h1 className="text-3xl font-bold mt-4">System Settings</h1>
         </div>
 
-        <div className="space-y-6">
-          {/* System Stats - Full Width */}
-          <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  System Statistics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-muted rounded w-full"></div>
-                        <div className="h-6 bg-muted rounded w-1/2 mt-2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Total Organizations</span>
-                      </div>
-                      <span className="font-semibold">{stats?.totalOrganizations || 0}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Total Users</span>
-                      </div>
-                      <span className="font-semibold">{stats?.totalUsers || 0}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Active Users (30d)</span>
-                      </div>
-                      <span className="font-semibold">{stats?.activeUsersLast30Days || 0}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Pending Invitations</span>
-                      </div>
-                      <span className="font-semibold">{stats?.pendingInvitations || 0}</span>
-                    </div>
-                  </div>
-                )}
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="application" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="application">Application</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          </TabsList>
 
-          {/* App Branding and System Configuration - Side by Side */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* App Branding Section */}
-            <Card className="h-fit">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Image className="h-5 w-5" />
-                  Application Branding
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                    <div className="h-16 bg-muted rounded w-full"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>App Logo</Label>
-                      <div className="flex items-center gap-4">
-                        {/* Logo Preview */}
-                        <div className="relative flex-shrink-0">
-                          <div className="w-10 h-10 bg-muted rounded border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
-                            {formData.app_logo_url ? (
+          <TabsContent value="application" className="space-y-6">
+            {/* System Stats - Full Width */}
+            <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    System Statistics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-muted rounded w-full"></div>
+                          <div className="h-6 bg-muted rounded w-1/2 mt-2"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Total Organizations</span>
+                        </div>
+                        <span className="font-semibold">{stats?.totalOrganizations || 0}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Total Users</span>
+                        </div>
+                        <span className="font-semibold">{stats?.totalUsers || 0}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Active Users (30d)</span>
+                        </div>
+                        <span className="font-semibold">{stats?.activeUsersLast30Days || 0}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Pending Invitations</span>
+                        </div>
+                        <span className="font-semibold">{stats?.pendingInvitations || 0}</span>
+                      </div>
+                    </div>
+                  )}
+              </CardContent>
+            </Card>
+
+            {/* App Branding and System Configuration - Side by Side */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* App Branding Section */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Image className="h-5 w-5" />
+                    Application Branding
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+                      <div className="h-16 bg-muted rounded w-full"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>App Logo</Label>
+                        <div className="flex items-center gap-4">
+                          {formData.app_logo_url && (
+                            <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-muted">
                               <img 
                                 src={formData.app_logo_url} 
-                                alt="App logo" 
+                                alt="App Logo" 
                                 className="w-full h-full object-contain"
                                 onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
                                 }}
                               />
-                            ) : (
-                              <Image className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          {isUploading && (
-                            <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
-                              <Loader2 className="h-4 w-4 animate-spin text-white" />
                             </div>
                           )}
-                        </div>
-                        
-                        {/* Upload Button */}
-                        <div className="flex-1">
                           <Button
                             type="button"
                             variant="outline"
+                            size="sm"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
                             className="flex items-center gap-2"
                           >
-                            <Upload className="h-4 w-4" />
-                            {formData.app_logo_url ? 'Replace Logo' : 'Upload Logo'}
+                            {isUploading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4" />
+                                Upload Logo
+                              </>
+                            )}
                           </Button>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            JPG, PNG or SVG. Max size 2MB. Recommended: Square image.
-                          </p>
                           <input
                             ref={fileInputRef}
                             type="file"
@@ -534,193 +535,200 @@ export default function SystemSettings() {
                             className="hidden"
                           />
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG or SVG. Max file size 2MB.
+                        </p>
                       </div>
-                      {formData.app_logo_url && (
-                        <div className="mt-3 p-3 bg-muted/50 rounded-md">
-                          <p className="text-sm text-muted-foreground">
-                            <strong>Note:</strong> Logo will appear in the header next to the application name after saving system settings.
-                          </p>
-                          {isDirty && (
-                            <p className="text-sm text-amber-600 font-medium mt-1">
-                              ⚠️ Don't forget to save your settings to apply the logo permanently.
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* System Configuration */}
-            <Card className="h-fit">
+              {/* System Configuration Form */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle>System Configuration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+                          <div className="h-10 bg-muted rounded w-full"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      {/* Application Name */}
+                      <div className="space-y-2">
+                        <Label htmlFor="app_name">Application Name</Label>
+                        <Input
+                          id="app_name"
+                          value={formData.app_name}
+                          onChange={(e) => handleChange('app_name', e.target.value)}
+                          placeholder="Enter application name"
+                        />
+                        {getFieldState('app_name').error && (
+                          <p className="text-sm text-destructive">{getFieldState('app_name').error}</p>
+                        )}
+                      </div>
+
+                      {/* Application Description */}
+                      <div className="space-y-2">
+                        <Label htmlFor="app_description">Application Description</Label>
+                        <Textarea
+                          id="app_description"
+                          value={formData.app_description}
+                          onChange={(e) => handleChange('app_description', e.target.value)}
+                          placeholder="Describe your application"
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Registration Settings */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="allow_registration">Allow User Registration</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Allow new users to register accounts
+                            </p>
+                          </div>
+                          <Switch
+                            id="allow_registration"
+                            checked={formData.allow_registration}
+                            onCheckedChange={(checked) => handleChange('allow_registration', checked)}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="require_verification">Require Email Verification</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Require email verification for new accounts
+                            </p>
+                          </div>
+                          <Switch
+                            id="require_verification"
+                            checked={formData.require_verification}
+                            onCheckedChange={(checked) => handleChange('require_verification', checked)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Default Timezone */}
+                      <div className="space-y-2">
+                        <Label htmlFor="default_timezone">Default Timezone</Label>
+                        <Select
+                          value={formData.default_timezone}
+                          onValueChange={(value) => handleChange('default_timezone', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select timezone" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {timezones.map((timezone) => (
+                              <SelectItem key={timezone} value={timezone}>
+                                {timezone}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Max Users Per Organization */}
+                      <div className="space-y-2">
+                        <Label htmlFor="max_users_per_org">Max Users Per Organization</Label>
+                        <Input
+                          id="max_users_per_org"
+                          type="number"
+                          min="0"
+                          value={formData.max_users_per_org}
+                          onChange={(e) => handleChange('max_users_per_org', parseInt(e.target.value) || 0)}
+                          placeholder="0 for unlimited"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Set to 0 for unlimited users
+                        </p>
+                        {getFieldState('max_users_per_org').error && (
+                          <p className="text-sm text-destructive">{getFieldState('max_users_per_org').error}</p>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              disabled={resetSettingsMutation.isPending || updateSettingsMutation.isPending}
+                              className="sm:order-1"
+                            >
+                              Reset to Defaults
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Reset System Settings</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will reset all system settings to their default values. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={handleReset}
+                                disabled={resetSettingsMutation.isPending}
+                              >
+                                {resetSettingsMutation.isPending ? 'Resetting...' : 'Reset Settings'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        <Button 
+                          type="submit"
+                          disabled={!isDirty || updateSettingsMutation.isPending || resetSettingsMutation.isPending || hasErrors || isFormValidating}
+                          className={isDirty ? "bg-primary hover:bg-primary/90 sm:order-2" : "sm:order-2"}
+                        >
+                          {updateSettingsMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              Save System Settings
+                              {isDirty && <span className="ml-2 text-xs">•</span>}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                  </form>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <FeatureCategoryManagement />
+          </TabsContent>
+
+          <TabsContent value="statistics">
+            <Card>
               <CardHeader>
-                <CardTitle>System Configuration</CardTitle>
+                <CardTitle>System Statistics</CardTitle>
               </CardHeader>
               <CardContent>
-                {isLoading ? (
-                  <div className="space-y-6">
-                    {[...Array(6)].map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                        <div className="h-10 bg-muted rounded w-full"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Application Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="app_name">
-                        Application Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="app_name"
-                        type="text"
-                        value={getFieldState('app_name').value}
-                        onChange={(e) => handleChange('app_name', e.target.value)}
-                        placeholder="Enter application name"
-                        required
-                      />
-                      {getFieldState('app_name').error && (
-                        <p className="text-sm text-destructive">{getFieldState('app_name').error}</p>
-                      )}
-                    </div>
-
-                    {/* Application Description */}
-                    <div className="space-y-2">
-                      <Label htmlFor="app_description">Application Description</Label>
-                      <Textarea
-                        id="app_description"
-                        value={getFieldState('app_description').value}
-                        onChange={(e) => handleChange('app_description', e.target.value)}
-                        placeholder="Enter application description for login/registration pages"
-                        className="min-h-[80px]"
-                      />
-                    </div>
-
-                    {/* Allow User Registration */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Label htmlFor="allow_registration">Allow User Registration</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Controls if new users can register for accounts
-                        </p>
-                      </div>
-                      <Switch
-                        id="allow_registration"
-                        checked={getFieldState('allow_registration').value}
-                        onCheckedChange={(checked) => handleChange('allow_registration', checked)}
-                      />
-                    </div>
-
-                    {/* Require Email Verification */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Label htmlFor="require_verification">Require Email Verification</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Requires email verification for all new registrations
-                        </p>
-                      </div>
-                      <Switch
-                        id="require_verification"
-                        checked={getFieldState('require_verification').value}
-                        onCheckedChange={(checked) => handleChange('require_verification', checked)}
-                      />
-                    </div>
-
-                    {/* Default Timezone */}
-                    <div className="space-y-2">
-                      <Label htmlFor="default_timezone">Default Timezone</Label>
-                      <Select
-                        value={getFieldState('default_timezone').value}
-                        onValueChange={(value) => handleChange('default_timezone', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select timezone" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timezones.map((timezone) => (
-                            <SelectItem key={timezone} value={timezone}>
-                              {timezone}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Maximum Users Per Organization */}
-                    <div className="space-y-2">
-                      <Label htmlFor="max_users_per_org">Maximum Users Per Organization</Label>
-                      <Input
-                        id="max_users_per_org"
-                        type="number"
-                        min="0"
-                        value={getFieldState('max_users_per_org').value}
-                        onChange={(e) => handleChange('max_users_per_org', parseInt(e.target.value) || 0)}
-                        placeholder="0 = unlimited"
-                      />
-                      {getFieldState('max_users_per_org').error && (
-                        <p className="text-sm text-destructive">{getFieldState('max_users_per_org').error}</p>
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        Set to 0 for unlimited users per organization
-                      </p>
-                    </div>
-
-                    {/* Form Actions */}
-                    <div className="flex items-center justify-between pt-6 border-t">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={updateSettingsMutation.isPending || resetSettingsMutation.isPending}
-                          >
-                            Reset to Defaults
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Reset System Settings</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action will reset all system settings to their default values. This cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleReset}>
-                              Reset Settings
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-
-                      <Button
-                        type="submit"
-                        disabled={!isDirty || updateSettingsMutation.isPending || resetSettingsMutation.isPending || hasErrors || isFormValidating}
-                        className={isDirty ? "bg-primary hover:bg-primary/90" : ""}
-                      >
-                        {updateSettingsMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            Save System Settings
-                            {isDirty && <span className="ml-2 text-xs">•</span>}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                </form>
-              )}
-            </CardContent>
-          </Card>
-          </div>
-        </div>
+                <p className="text-muted-foreground">Advanced statistics and reporting coming soon.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
