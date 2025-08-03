@@ -21,6 +21,7 @@ const InviteAcceptance = lazy(() => import("./pages/InviteAcceptance"));
 const CompanySettings = lazy(() => import("./pages/CompanySettings"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
+const FeatureDetail = lazy(() => import("./pages/FeatureDetail"));
 const FeedbackManagement = lazy(() => import("./pages/admin/FeedbackManagement"));
 const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
 const SystemSettings = lazy(() => import("./pages/SystemSettings"));
@@ -88,6 +89,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <Marketplace />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/marketplace/feature/:slug" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <FeatureDetail />
                   </ProtectedRoute>
                 } 
               />

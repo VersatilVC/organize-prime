@@ -16,11 +16,9 @@ interface MarketplaceFeature {
   slug: string;
   displayName: string;
   description: string;
-  category: 'productivity' | 'analytics' | 'automation' | 'intelligence';
+  category: string;
   iconName: keyof typeof Icons;
-  pricing: 'free' | 'premium' | 'enterprise';
-  rating: number; // 0-5
-  installCount: number;
+  pricing: 'free' | 'premium';
   status: 'available' | 'installed' | 'requires_upgrade';
   featured: boolean;
   isNew: boolean;
@@ -33,12 +31,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '1',
     slug: 'knowledge-base',
     displayName: 'Knowledge Base',
-    description: 'Create and manage comprehensive documentation and knowledge articles',
+    description: 'Create and manage comprehensive documentation and knowledge articles for your team',
     category: 'productivity',
     iconName: 'book',
     pricing: 'free',
-    rating: 4.8,
-    installCount: 15420,
     status: 'available',
     featured: true,
     isNew: false
@@ -47,12 +43,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '2',
     slug: 'usage-analytics',
     displayName: 'Usage Analytics',
-    description: 'Advanced insights into user behavior and platform performance',
+    description: 'Advanced insights into user behavior and platform performance with detailed reports',
     category: 'analytics',
     iconName: 'barChart',
     pricing: 'premium',
-    rating: 4.9,
-    installCount: 8930,
     status: 'installed',
     featured: true,
     isNew: false
@@ -61,12 +55,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '3',
     slug: 'workflow-builder',
     displayName: 'Workflow Builder',
-    description: 'Visual workflow automation with drag-and-drop interface',
+    description: 'Visual workflow automation with drag-and-drop interface for complex processes',
     category: 'automation',
     iconName: 'workflow',
-    pricing: 'enterprise',
-    rating: 4.7,
-    installCount: 5640,
+    pricing: 'premium',
     status: 'requires_upgrade',
     featured: true,
     isNew: true
@@ -76,12 +68,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '4',
     slug: 'market-research',
     displayName: 'Market Research',
-    description: 'AI-powered market analysis and competitor intelligence',
+    description: 'AI-powered market analysis and competitor intelligence for strategic planning',
     category: 'intelligence',
     iconName: 'trendingUp',
     pricing: 'premium',
-    rating: 4.6,
-    installCount: 2340,
     status: 'available',
     featured: false,
     isNew: true
@@ -90,12 +80,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '5',
     slug: 'content-creation',
     displayName: 'Content Creation',
-    description: 'AI-assisted content generation and editing tools',
+    description: 'AI-assisted content generation and editing tools for marketing teams',
     category: 'productivity',
     iconName: 'edit',
     pricing: 'premium',
-    rating: 4.5,
-    installCount: 3200,
     status: 'available',
     featured: false,
     isNew: true
@@ -105,12 +93,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '6',
     slug: 'project-management',
     displayName: 'Project Management',
-    description: 'Complete project tracking with Gantt charts and team collaboration',
+    description: 'Complete project tracking with Gantt charts and team collaboration tools',
     category: 'productivity',
     iconName: 'checkSquare',
     pricing: 'free',
-    rating: 4.4,
-    installCount: 12800,
     status: 'available',
     featured: false,
     isNew: false
@@ -120,12 +106,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '7',
     slug: 'financial-reports',
     displayName: 'Financial Reports',
-    description: 'Comprehensive financial analytics and automated reporting',
+    description: 'Comprehensive financial analytics and automated reporting for business insights',
     category: 'analytics',
     iconName: 'dollarSign',
-    pricing: 'enterprise',
-    rating: 4.7,
-    installCount: 4560,
+    pricing: 'premium',
     status: 'available',
     featured: false,
     isNew: false
@@ -134,12 +118,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '8',
     slug: 'competitor-tracking',
     displayName: 'Competitor Tracking',
-    description: 'Monitor competitor activities and market positioning',
+    description: 'Monitor competitor activities and market positioning in real-time',
     category: 'analytics',
     iconName: 'target',
     pricing: 'premium',
-    rating: 4.3,
-    installCount: 2870,
     status: 'available',
     featured: false,
     isNew: false
@@ -149,12 +131,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '9',
     slug: 'api-integration',
     displayName: 'API Integration',
-    description: 'Connect with external services through custom API configurations',
+    description: 'Connect with external services through custom API configurations and webhooks',
     category: 'automation',
     iconName: 'link',
     pricing: 'premium',
-    rating: 4.6,
-    installCount: 6740,
     status: 'installed',
     featured: false,
     isNew: false
@@ -163,12 +143,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '10',
     slug: 'data-sync',
     displayName: 'Data Sync',
-    description: 'Real-time data synchronization across multiple platforms',
+    description: 'Real-time data synchronization across multiple platforms and services',
     category: 'automation',
     iconName: 'refresh',
-    pricing: 'enterprise',
-    rating: 4.8,
-    installCount: 3450,
+    pricing: 'premium',
     status: 'available',
     featured: false,
     isNew: false
@@ -178,12 +156,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '11',
     slug: 'funding-tracker',
     displayName: 'Funding Tracker',
-    description: 'Track startup funding rounds and investment opportunities',
+    description: 'Track startup funding rounds and investment opportunities in your market',
     category: 'intelligence',
     iconName: 'piggyBank',
     pricing: 'premium',
-    rating: 4.2,
-    installCount: 1920,
     status: 'available',
     featured: false,
     isNew: false
@@ -192,12 +168,10 @@ const mockFeatures: MarketplaceFeature[] = [
     id: '12',
     slug: 'job-posting-monitor',
     displayName: 'Job Posting Monitor',
-    description: 'Monitor competitor job postings and hiring trends',
+    description: 'Monitor competitor job postings and hiring trends for talent intelligence',
     category: 'intelligence',
     iconName: 'briefcase',
     pricing: 'free',
-    rating: 4.0,
-    installCount: 5670,
     status: 'available',
     featured: false,
     isNew: false
@@ -229,6 +203,10 @@ export default function Marketplace() {
 
   const canInstall = role === 'admin' || role === 'super_admin';
 
+  const navigateToFeatureDetails = (slug: string) => {
+    window.location.href = `/marketplace/feature/${slug}`;
+  };
+
   // Filter and sort features
   const filteredFeatures = useMemo(() => {
     let filtered = mockFeatures.filter(feature => {
@@ -245,11 +223,9 @@ export default function Marketplace() {
           return Number(b.isNew) - Number(a.isNew);
         case 'name':
           return a.displayName.localeCompare(b.displayName);
-        case 'rating':
-          return b.rating - a.rating;
         case 'popular':
         default:
-          return b.installCount - a.installCount;
+          return Number(b.featured) - Number(a.featured);
       }
     });
 
@@ -260,13 +236,18 @@ export default function Marketplace() {
   const newFeatures = mockFeatures.filter(f => f.isNew);
   const installedCount = mockFeatures.filter(f => f.status === 'installed').length;
 
-  const handleInstall = (feature: MarketplaceFeature) => {
+  const handleFeatureAction = (feature: MarketplaceFeature) => {
     if (!canInstall) {
       toast({
         title: "Permission Required",
         description: "Please contact your admin to install features.",
         variant: "default"
       });
+      return;
+    }
+
+    if (feature.status === 'installed') {
+      navigateToFeatureDetails(feature.slug);
       return;
     }
 
@@ -283,100 +264,59 @@ export default function Marketplace() {
 
   const getPricingBadgeVariant = (pricing: MarketplaceFeature['pricing']) => {
     switch (pricing) {
-      case 'free': return 'secondary';
+      case 'free': return 'outline';
       case 'premium': return 'default';
-      case 'enterprise': return 'destructive';
-      default: return 'secondary';
-    }
-  };
-
-  const getStatusBadgeVariant = (status: MarketplaceFeature['status']) => {
-    switch (status) {
-      case 'installed': return 'default';
-      case 'requires_upgrade': return 'destructive';
-      case 'available': return 'outline';
       default: return 'outline';
     }
-  };
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Icons.star
-            key={star}
-            className={`h-3 w-3 ${
-              star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
-            }`}
-          />
-        ))}
-        <span className="text-xs text-muted-foreground ml-1">{rating}</span>
-      </div>
-    );
   };
 
   const FeatureCard = ({ feature }: { feature: MarketplaceFeature }) => {
     const IconComponent = Icons[feature.iconName];
     
     return (
-      <Card className="hover:shadow-lg transition-all duration-200 hover:scale-105">
+      <Card className="hover:shadow-md transition-shadow cursor-pointer">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <IconComponent className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-base line-clamp-1">{feature.displayName}</CardTitle>
+            <div className="flex-1">
+              <CardTitle 
+                className="text-lg font-semibold hover:text-primary cursor-pointer line-clamp-1"
+                onClick={() => navigateToFeatureDetails(feature.slug)}
+              >
+                {feature.displayName}
                 {feature.isNew && (
-                  <Badge variant="secondary" className="text-xs mt-1">New</Badge>
+                  <Badge variant="secondary" className="text-xs ml-2">New</Badge>
                 )}
-              </div>
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                {feature.description}
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pb-3">
-          <CardDescription className="line-clamp-2 mb-3">
-            {feature.description}
-          </CardDescription>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Badge variant="outline" className="text-xs">
+        <CardContent className="pt-0">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="text-xs capitalize">
                 {feature.category}
               </Badge>
-              <Badge variant={getPricingBadgeVariant(feature.pricing)} className="text-xs">
+              <Badge variant={getPricingBadgeVariant(feature.pricing)} className="text-xs capitalize">
                 {feature.pricing}
               </Badge>
             </div>
-            <div className="flex items-center justify-between">
-              {renderStars(feature.rating)}
-              <span className="text-xs text-muted-foreground">
-                {feature.installCount.toLocaleString()} installs
-              </span>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="pt-0">
-          <div className="w-full space-y-2">
-            <Badge 
-              variant={getStatusBadgeVariant(feature.status)} 
-              className="w-full justify-center text-xs"
-            >
-              {feature.status === 'installed' ? 'Installed' : 
-               feature.status === 'requires_upgrade' ? 'Requires Upgrade' : 'Available'}
-            </Badge>
-            <Button
-              className="w-full"
-              size="sm"
+            <Button 
+              size="sm" 
               variant={feature.status === 'installed' ? 'outline' : 'default'}
-              onClick={() => handleInstall(feature)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFeatureAction(feature);
+              }}
               disabled={loading}
             >
               {!canInstall ? 'Contact Admin' :
                feature.status === 'installed' ? 'Configure' : 'Install'}
             </Button>
           </div>
-        </CardFooter>
+        </CardContent>
       </Card>
     );
   };
