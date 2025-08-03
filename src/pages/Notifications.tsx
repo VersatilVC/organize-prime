@@ -11,7 +11,8 @@ import {
   Check,
   ExternalLink,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -200,6 +201,36 @@ function NotificationsContent() {
       toast({
         title: "Error",
         description: "Failed to mark notifications as read",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Delete notification
+  const deleteNotification = async (notificationId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent notification click when deleting
+    
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setTotalCount(prev => prev - 1);
+
+      toast({
+        title: "Success",
+        description: "Notification deleted",
+      });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete notification",
         variant: "destructive",
       });
     }
@@ -408,6 +439,14 @@ function NotificationsContent() {
                             {notification.action_url && (
                               <ExternalLink className="h-4 w-4 text-muted-foreground" />
                             )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => deleteNotification(notification.id, e)}
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
