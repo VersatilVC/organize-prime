@@ -43,18 +43,20 @@ export function OrganizationSwitcher() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
-            variant="ghost" 
-            className="flex items-center gap-2 px-2 py-1 h-auto max-w-48 justify-start"
+            variant="outline" 
+            className="flex items-center gap-2 px-3 py-2 h-auto max-w-48 justify-start border-border hover:bg-accent"
           >
             <Avatar className="h-6 w-6">
               <AvatarImage src={currentOrganization.logo_url || undefined} />
-              <AvatarFallback className="text-xs">
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
                 {currentOrganization.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="truncate text-sm font-medium">
-              {currentOrganization.name}
-            </span>
+            <div className="flex flex-col items-start">
+              <span className="truncate text-sm font-medium">
+                {currentOrganization.name}
+              </span>
+            </div>
             <Icons.chevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
