@@ -50,6 +50,18 @@ import {
   Image,
   AlertTriangle,
   Loader2,
+  // New icons for marketplace
+  Book,
+  CheckSquare,
+  DollarSign,
+  Target,
+  Link,
+  RefreshCw,
+  PiggyBank,
+  Briefcase,
+  Star,
+  TrendingUp,
+  Workflow,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -107,6 +119,18 @@ export const Icons = {
   image: Image,
   alertTriangle: AlertTriangle,
   loader: Loader2,
+  // New icons for marketplace
+  book: Book,
+  checkSquare: CheckSquare,
+  dollarSign: DollarSign,
+  target: Target,
+  link: Link,
+  refresh: RefreshCw,
+  piggyBank: PiggyBank,
+  briefcase: Briefcase,
+  star: Star,
+  trendingUp: TrendingUp,
+  workflow: Workflow,
   google: (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" {...props}>
       <path
