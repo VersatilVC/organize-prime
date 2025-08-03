@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -194,6 +195,7 @@ const sortOptions = [
 ];
 
 export default function Marketplace() {
+  const navigate = useNavigate();
   const { role } = useUserRole();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -204,7 +206,7 @@ export default function Marketplace() {
   const canInstall = role === 'admin' || role === 'super_admin';
 
   const navigateToFeatureDetails = (slug: string) => {
-    window.location.href = `/marketplace/feature/${slug}`;
+    navigate(`/marketplace/feature/${slug}`);
   };
 
   // Filter and sort features
