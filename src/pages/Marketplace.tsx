@@ -350,12 +350,16 @@ export default function Marketplace() {
             ) : (
               <Button 
                 size="sm" 
-                variant="default"
+                variant={
+                  roleLoading ? "outline" :
+                  !canInstall ? "outline" :
+                  feature.status === 'requires_upgrade' ? "secondary" : "default"
+                }
                 onClick={(e) => {
                   e.stopPropagation();
                   handleFeatureAction(feature);
                 }}
-                disabled={roleLoading}
+                disabled={roleLoading || !canInstall}
               >
                 {roleLoading ? '...' : 
                  !canInstall ? 'Contact Admin' :
