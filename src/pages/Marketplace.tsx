@@ -314,11 +314,11 @@ export default function Marketplace() {
                 {feature.description}
               </CardDescription>
             </div>
-            <div className="flex flex-col gap-1 items-end flex-shrink-0">
-              <Badge variant="secondary" className="text-xs capitalize">
+            <div className="flex flex-col gap-1 items-end flex-shrink-0 w-24">
+              <Badge variant="secondary" className="text-xs capitalize w-full text-center justify-center">
                 {feature.category}
               </Badge>
-              <Badge variant={getPricingBadgeVariant(feature.pricing)} className="text-xs capitalize">
+              <Badge variant={getPricingBadgeVariant(feature.pricing)} className="text-xs capitalize w-full text-center justify-center">
                 {feature.pricing}
               </Badge>
             </div>
@@ -467,7 +467,7 @@ export default function Marketplace() {
           </h2>
           
           {filteredFeatures.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredFeatures.map((feature) => (
                 <FeatureCard key={feature.id} feature={feature} />
               ))}
