@@ -31,6 +31,9 @@ const MyFeedback = lazy(() => import("./pages/MyFeedback"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const NotificationManagement = lazy(() => import("./pages/NotificationManagement"));
 
+// Lazy load feature router
+const FeatureRouter = lazy(() => import("./components/FeatureRouter").then(module => ({ default: module.FeatureRouter })));
+
 // Initialize cache cleanup on app start
 initializeCacheCleanup();
 
@@ -99,7 +102,16 @@ const App = () => (
                     <FeatureDetail />
                   </ProtectedRoute>
                 } 
-              />
+               />
+               {/* Feature Routes */}
+               <Route 
+                 path="/features/:slug/*" 
+                 element={
+                   <ProtectedRoute>
+                     <FeatureRouter />
+                   </ProtectedRoute>
+                 } 
+               />
               {/* System Admin Routes */}
               <Route 
                 path="/admin/feedback" 
