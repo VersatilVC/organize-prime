@@ -122,10 +122,10 @@ function FeatureRoutes() {
         </div>
       }>
         <Routes>
-          <Route path="/" element={<FeatureDashboard />} />
-          <Route path="/dashboard" element={<FeatureDashboard />} />
-          <Route path="/settings" element={<FeatureSettings />} />
-          <Route path="/*" element={<FeatureContent />} />
+          <Route path="" element={<FeatureDashboard />} />
+          <Route path="dashboard" element={<FeatureDashboard />} />
+          <Route path="settings" element={<FeatureSettings />} />
+          <Route path="*" element={<FeatureContent />} />
         </Routes>
       </Suspense>
     </FeatureLayout>
