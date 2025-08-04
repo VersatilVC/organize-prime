@@ -62,6 +62,14 @@ import {
   Star,
   TrendingUp,
   Workflow,
+  // New icons for dynamic features
+  Database,
+  File,
+  Folder,
+  Layout,
+  Library,
+  Radar,
+  Package,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -131,6 +139,14 @@ export const Icons = {
   star: Star,
   trendingUp: TrendingUp,
   workflow: Workflow,
+  // New icons for dynamic features
+  database: Database,
+  file: File,
+  folder: Folder,
+  layout: Layout,
+  library: Library,
+  radar: Radar,
+  package: Package,
   google: (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" {...props}>
       <path

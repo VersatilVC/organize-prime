@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useInstalledFeatures } from '@/hooks/useInstalledFeatures';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -26,12 +27,18 @@ interface SidebarSection {
     name: string;
     href: string;
     icon: any;
+    badge?: number;
   }>;
   isVisible: (role: string) => boolean;
 }
 
 // Helper function to get items for each section based on role
-const getSectionItems = (sectionKey: string, role: string) => {
+const getSectionItems = (sectionKey: string, role: string, section?: SidebarSection) => {
+  // For feature sections, return the items from the section itself
+  if (sectionKey.startsWith('feature-') && section) {
+    return section.items;
+  }
+  
   switch (sectionKey) {
     case 'main':
       const mainItems = [
@@ -71,7 +78,22 @@ const getSectionItems = (sectionKey: string, role: string) => {
   }
 };
 
-const sidebarSections: SidebarSection[] = [
+// Create dynamic sections for installed features
+const createFeatureSections = (installedFeatures: any[]): SidebarSection[] => {
+  return installedFeatures.map(feature => ({
+    key: `feature-${feature.slug}`,
+    title: feature.displayName,
+    items: feature.navigation.map((navItem: any) => ({
+      name: navItem.name,
+      href: navItem.href,
+      icon: Icons[navItem.icon as keyof typeof Icons] || Icons.package,
+      badge: navItem.badge
+    })),
+    isVisible: () => true
+  }));
+};
+
+const baseSidebarSections: SidebarSection[] = [
   {
     key: 'main',
     title: 'Main',
@@ -98,25 +120,37 @@ const sidebarSections: SidebarSection[] = [
   },
 ];
 
+// Combine base sections with dynamic feature sections
+const getAllSidebarSections = (installedFeatures: any[]): SidebarSection[] => {
+  const featureSections = createFeatureSections(installedFeatures);
+  
+  // Insert feature sections after 'main' section
+  const sections = [...baseSidebarSections];
+  sections.splice(1, 0, ...featureSections);
+  
+  return sections;
+};
+
 // Hook for managing sidebar section states
-function useSidebarSectionState() {
+function useSidebarSectionState(allSections: SidebarSection[]) {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const location = useLocation();
 
   // Load initial state from localStorage
   useEffect(() => {
     const savedStates: Record<string, boolean> = {};
-    sidebarSections.forEach(section => {
+    allSections.forEach(section => {
       const saved = localStorage.getItem(`sidebar_section_${section.key}_collapsed`);
       savedStates[section.key] = saved === 'true';
     });
     setCollapsedSections(savedStates);
-  }, []);
+  }, [allSections]);
 
   // Auto-expand section if user navigates to a page within collapsed section
   useEffect(() => {
-    sidebarSections.forEach(section => {
-      const hasActiveItem = section.items.some(item => {
+    allSections.forEach(section => {
+      const items = getSectionItems(section.key, 'user', section); // Pass section for feature sections
+      const hasActiveItem = items.some(item => {
         if (item.href === '/') {
           return location.pathname === '/';
         }
@@ -127,7 +161,7 @@ function useSidebarSectionState() {
         toggleSection(section.key);
       }
     });
-  }, [location.pathname]);
+  }, [location.pathname, allSections, collapsedSections]);
 
   const toggleSection = (sectionKey: string) => {
     setCollapsedSections(prev => {
@@ -146,7 +180,7 @@ const NavigationItem = React.memo(({
   isActive, 
   feedbackCount 
 }: {
-  item: { name: string; href: string; icon: any };
+  item: { name: string; href: string; icon: any; badge?: number };
   isActive: boolean;
   feedbackCount: number;
 }) => (
@@ -158,6 +192,16 @@ const NavigationItem = React.memo(({
       >
         <item.icon className="h-4 w-4" />
         <span>{item.name}</span>
+        {/* Show feature-specific badge if available */}
+        {item.badge && item.badge > 0 && (
+          <Badge 
+            variant={item.badge > 10 ? "destructive" : "secondary"} 
+            className="ml-auto h-5 px-1.5 text-xs"
+          >
+            {item.badge}
+          </Badge>
+        )}
+        {/* Show feedback count badge for feedback-related items */}
         {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedbackCount > 0 && (
           <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
             {feedbackCount}
@@ -169,7 +213,8 @@ const NavigationItem = React.memo(({
 ), (prevProps, nextProps) => {
   return (
     prevProps.isActive === nextProps.isActive &&
-    prevProps.feedbackCount === nextProps.feedbackCount
+    prevProps.feedbackCount === nextProps.feedbackCount &&
+    prevProps.item.badge === nextProps.item.badge
   );
 });
 
@@ -193,7 +238,7 @@ const SidebarSectionComponent = React.memo(({
 }) => {
   if (!section.isVisible(role)) return null;
   
-  const items = getSectionItems(section.key, role);
+  const items = getSectionItems(section.key, role, section);
   if (items.length === 0) return null;
   
   const isCollapsed = collapsedSections[section.key];
@@ -259,11 +304,16 @@ export function AppSidebar() {
   try {
     const { role, loading: roleLoading } = useUserRole();
     const { feedback } = useDashboardData();
+    const installedFeatures = useInstalledFeatures();
     const location = useLocation();
-    const { collapsedSections, toggleSection } = useSidebarSectionState();
 
-    // Debug logging to identify the issue (removed to prevent excessive logging)
-    // console.log('AppSidebar rendering:', { role, roleLoading, feedback });
+    // Get all sections including dynamic feature sections
+    const allSections = useMemo(() => {
+      if (!role) return [];
+      return getAllSidebarSections(installedFeatures).filter(section => section.isVisible(role));
+    }, [role, installedFeatures]);
+
+    const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
     // Memoized isActive function to prevent recreation on every render
     const isActive = useCallback((path: string) => {
@@ -272,12 +322,6 @@ export function AppSidebar() {
       }
       return location.pathname.startsWith(path);
     }, [location.pathname]);
-
-    // Memoized visible sections to prevent filtering on every render
-    const visibleSections = useMemo(() => {
-      if (!role) return [];
-      return sidebarSections.filter(section => section.isVisible(role));
-    }, [role]);
 
     return (
       <Sidebar collapsible="icon">
@@ -296,7 +340,7 @@ export function AppSidebar() {
               </div>
             </div>
           ) : (
-            visibleSections.map(section => (
+            allSections.map(section => (
               <SidebarSectionComponent
                 key={section.key}
                 section={section}
