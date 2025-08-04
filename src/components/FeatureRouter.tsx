@@ -1,9 +1,9 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, useParams } from 'react-router-dom';
-import { FeatureProvider } from '@/contexts/FeatureContext';
+import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
 import NotFound from '@/pages/NotFound';
-import { useFeatureData } from '@/hooks/useFeatureData';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -20,7 +20,7 @@ interface FeatureRouteParams extends Record<string, string> {
 }
 
 function FeatureAccessCheck({ children }: { children: React.ReactNode }) {
-  const { feature, isLoading, hasAccess } = useFeatureData();
+  const { feature, isLoading, hasAccess } = useFeatureContext();
 
   console.log('🔍 FeatureAccessCheck:', {
     feature: feature ? { slug: feature.slug, isInstalled: feature.isInstalled } : null,
