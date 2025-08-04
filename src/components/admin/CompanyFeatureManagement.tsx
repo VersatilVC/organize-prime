@@ -116,14 +116,29 @@ export function CompanyFeatureManagement() {
     // Update local state immediately for better UX
     setFeatures(items);
 
-    // Update menu order in database (only for items with IDs)
-    const updates = items
-      .filter(item => item.id)
-      .map((item, index) => ({
-        id: item.id!,
+    // Create organization configs for ALL features and update their menu order
+    const updates = items.map((item, index) => {
+      // If the feature doesn't have an org config yet, we need to create one
+      if (!item.id) {
+        // Create a new config with default values
+        updateConfig({
+          featureSlug: item.feature_slug,
+          config: {
+            is_enabled: item.is_enabled ?? true,
+            is_user_accessible: item.is_user_accessible ?? true,
+            org_menu_order: index
+          }
+        });
+        return null; // Skip this in the bulk update since we're creating it individually
+      }
+      
+      return {
+        id: item.id,
         org_menu_order: index
-      }));
+      };
+    }).filter(Boolean) as Array<{ id: string; org_menu_order: number }>;
 
+    // Update existing configs
     if (updates.length > 0) {
       updateMenuOrder(updates);
     }
