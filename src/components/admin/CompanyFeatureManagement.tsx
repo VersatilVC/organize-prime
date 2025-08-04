@@ -57,6 +57,8 @@ export function CompanyFeatureManagement() {
 
   // Merge system configs with organization configs
   React.useEffect(() => {
+    if (systemConfigs.length === 0) return;
+    
     const availableFeatures = systemConfigs
       .filter(config => config.is_enabled_globally)
       .map(systemConfig => {
@@ -73,7 +75,13 @@ export function CompanyFeatureManagement() {
       })
       .sort((a, b) => (a.org_menu_order || 0) - (b.org_menu_order || 0));
     
-    setFeatures(availableFeatures);
+    // Only update if the features have actually changed
+    setFeatures(prev => {
+      if (JSON.stringify(prev) === JSON.stringify(availableFeatures)) {
+        return prev;
+      }
+      return availableFeatures;
+    });
   }, [systemConfigs, orgConfigs]);
 
   const handleToggleFeatureEnabled = (feature: FeatureWithConfig) => {

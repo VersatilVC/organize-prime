@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useSystemFeatureConfigs } from './useSystemFeatureConfigs';
+import { useOrganizationFeatureConfigs } from './useOrganizationFeatureConfigs';
 
 export interface InstalledFeature {
   slug: string;
@@ -15,13 +17,10 @@ export interface InstalledFeature {
   }[];
 }
 
-const mockInstalledFeatures: InstalledFeature[] = [
-  {
-    slug: 'knowledge-base',
+const featureMetadata: Record<string, Omit<InstalledFeature, 'slug' | 'isActive' | 'installedAt'>> = {
+  'knowledge-base': {
     displayName: 'Knowledge Base',
     iconName: 'database',
-    isActive: true,
-    installedAt: '2024-01-15T10:00:00Z',
     navigation: [
       { name: 'Dashboard', href: '/features/knowledge-base/dashboard', icon: 'home' },
       { name: 'Documents', href: '/features/knowledge-base/documents', icon: 'file' },
@@ -30,12 +29,9 @@ const mockInstalledFeatures: InstalledFeature[] = [
       { name: 'Settings', href: '/features/knowledge-base/settings', icon: 'settings' }
     ]
   },
-  {
-    slug: 'content-creation',
+  'content-creation': {
     displayName: 'Content Engine',
     iconName: 'edit',
-    isActive: true,
-    installedAt: '2024-01-20T14:30:00Z',
     navigation: [
       { name: 'Dashboard', href: '/features/content-creation/dashboard', icon: 'home' },
       { name: 'Projects', href: '/features/content-creation/projects', icon: 'briefcase' },
@@ -44,12 +40,9 @@ const mockInstalledFeatures: InstalledFeature[] = [
       { name: 'Settings', href: '/features/content-creation/settings', icon: 'settings' }
     ]
   },
-  {
-    slug: 'market-intel',
+  'market-intel': {
     displayName: 'Market Intelligence',
     iconName: 'trendingUp',
-    isActive: true,
-    installedAt: '2024-02-01T09:15:00Z',
     navigation: [
       { name: 'Dashboard', href: '/features/market-intel/dashboard', icon: 'home' },
       { name: 'Funding', href: '/features/market-intel/funding', icon: 'dollarSign', badge: 5 },
@@ -59,19 +52,47 @@ const mockInstalledFeatures: InstalledFeature[] = [
       { name: 'Settings', href: '/features/market-intel/settings', icon: 'settings' }
     ]
   }
-];
+};
 
 export function useInstalledFeatures() {
   const { currentOrganization } = useOrganization();
+  const { configs: systemConfigs } = useSystemFeatureConfigs();
+  const { configs: orgConfigs } = useOrganizationFeatureConfigs();
   
-  // In real implementation, this would fetch from database
-  // For now, return mock data based on organization
   return useMemo(() => {
-    if (!currentOrganization) return [];
+    if (!currentOrganization || !systemConfigs.length) return [];
     
-    // Return different features based on organization
-    return mockInstalledFeatures
-      .filter(feature => feature.isActive)
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
-  }, [currentOrganization]);
+    // Get enabled features based on system and organization configs
+    const enabledFeatures = systemConfigs
+      .filter(systemConfig => {
+        // Must be globally enabled
+        if (!systemConfig.is_enabled_globally) return false;
+        
+        // Check organization-specific config
+        const orgConfig = orgConfigs.find(org => org.feature_slug === systemConfig.feature_slug);
+        return orgConfig?.is_enabled !== false; // Enabled by default if no org config
+      })
+      .map(systemConfig => {
+        const orgConfig = orgConfigs.find(org => org.feature_slug === systemConfig.feature_slug);
+        const metadata = featureMetadata[systemConfig.feature_slug];
+        
+        if (!metadata) return null; // Skip if no metadata available
+        
+        return {
+          slug: systemConfig.feature_slug,
+          displayName: metadata.displayName,
+          iconName: metadata.iconName,
+          isActive: true,
+          installedAt: systemConfig.created_at,
+          navigation: metadata.navigation,
+          // Use org menu order if available, otherwise system order
+          menuOrder: orgConfig?.org_menu_order ?? systemConfig.system_menu_order
+        };
+      })
+      .filter((feature): feature is InstalledFeature & { menuOrder: number } => feature !== null)
+      .sort((a, b) => a.menuOrder - b.menuOrder)
+      .map(({ menuOrder, ...feature }) => feature); // Remove menuOrder from final result
+    
+    return enabledFeatures;
+  }, [currentOrganization, systemConfigs, orgConfigs]);
 }
