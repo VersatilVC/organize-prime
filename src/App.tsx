@@ -31,8 +31,8 @@ const MyFeedback = lazy(() => import("./pages/MyFeedback"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const NotificationManagement = lazy(() => import("./pages/NotificationManagement"));
 
-// Lazy load feature router
-const FeatureRouter = lazy(() => import("./components/FeatureRouter").then(module => ({ default: module.FeatureRouter })));
+// Import FeatureRouter directly since it's not a default export
+import { FeatureRouter } from "./components/FeatureRouter";
 
 // Initialize cache cleanup on app start
 initializeCacheCleanup();
