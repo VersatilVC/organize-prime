@@ -6,10 +6,10 @@ import {
   createMockUser,
   createMockOrganization,
   mockHooks,
-  screen,
-  waitFor,
   testUtils
 } from '@/test-utils';
+import { render, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/dom';
 import UsersComposed from '@/pages/UsersComposed';
 
 // Mock the user management hook

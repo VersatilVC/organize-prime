@@ -98,13 +98,13 @@ beforeEach(() => {
   
   // Reset console mocks if they were set up
   if (vi.isMockFunction(console.error)) {
-    console.error.mockClear();
+    (console.error as any).mockClear();
   }
   if (vi.isMockFunction(console.warn)) {
-    console.warn.mockClear();
+    (console.warn as any).mockClear();
   }
   if (vi.isMockFunction(console.log)) {
-    console.log.mockClear();
+    (console.log as any).mockClear();
   }
 });
 
@@ -169,7 +169,8 @@ vi.mock('next-themes', () => ({
   })
 }));
 
-// Extend expect with custom matchers
+// Extend expect with custom matchers  
+import { expect } from 'vitest';
 expect.extend({
   toBeVisible(element: HTMLElement) {
     const isVisible = element.offsetWidth > 0 && element.offsetHeight > 0;

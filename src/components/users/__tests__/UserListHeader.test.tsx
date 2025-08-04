@@ -8,10 +8,10 @@ import {
   createMockUser, 
   createMockOrganization,
   mockHooks,
-  testUtils,
-  screen,
-  waitFor
+  testUtils
 } from '@/test-utils';
+import { render, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/dom';
 import { UserListHeader } from '@/components/users/UserListHeader';
 
 describe('UserListHeader Component', () => {

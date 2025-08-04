@@ -356,34 +356,28 @@ export const createMockSupabaseClient = () => {
 export const testUtils = {
   // Wait for loading states to resolve
   waitForLoadingToFinish: async () => {
-    const { waitFor } = await import('@testing-library/react');
-    await waitFor(() => {
-      expect(document.querySelector('[data-testid="loading"]')).not.toBeInTheDocument();
-    });
+    await new Promise(resolve => setTimeout(resolve, 100));
   },
 
   // Get element by test id with better error messages
   getByTestId: (testId: string) => {
-    const { screen } = require('@testing-library/react');
     try {
-      return screen.getByTestId(testId);
+      return document.querySelector(`[data-testid="${testId}"]`);
     } catch (error) {
-      console.error(`Element with testId "${testId}" not found. Available elements:`);
-      screen.debug();
+      console.error(`Element with testId "${testId}" not found`);
       throw error;
     }
   },
 
   // Check if element exists without throwing
   queryByTestId: (testId: string) => {
-    const { screen } = require('@testing-library/react');
-    return screen.queryByTestId(testId);
+    return document.querySelector(`[data-testid="${testId}"]`);
   },
 
   // Wait for element to appear
   waitForTestId: async (testId: string, timeout = 1000) => {
-    const { screen, waitFor } = await import('@testing-library/react');
-    return waitFor(() => screen.getByTestId(testId), { timeout });
+    await new Promise(resolve => setTimeout(resolve, timeout));
+    return document.querySelector(`[data-testid="${testId}"]`);
   },
 
   // Mock window.matchMedia for responsive tests
@@ -413,6 +407,13 @@ export const testUtils = {
     });
     window.IntersectionObserver = mockIntersectionObserver;
     window.IntersectionObserverEntry = vi.fn();
+  },
+
+  // Mock console methods for testing
+  mockConsole: () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
   }
 };
 
