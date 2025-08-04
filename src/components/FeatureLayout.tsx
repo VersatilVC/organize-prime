@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useFeatureContext } from '@/contexts/FeatureContext';
 import { Icons } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -82,32 +82,32 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
         </div>
 
         {/* Feature Navigation Tabs */}
-        <Tabs value={currentPage} className="w-full">
-          <TabsList className="grid w-full grid-cols-auto">
+        <div className="border-b border-border">
+          <nav className="flex space-x-8" aria-label="Tabs">
             {visibleNavigation.map((item) => {
               const ItemIcon = Icons[item.icon as keyof typeof Icons] || Icons.package;
               const tabValue = item.path.replace('/', '') || 'dashboard';
               const fullPath = `/features/${feature.slug}${item.path}`;
+              const isActive = currentPage === tabValue;
               
               return (
-                <TabsTrigger
+                <Link
                   key={item.path}
-                  value={tabValue}
-                  asChild
+                  to={fullPath}
                   className={cn(
-                    "flex items-center space-x-2",
-                    currentPage === tabValue && "data-[state=active]:bg-background data-[state=active]:text-foreground"
+                    "flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
                   )}
                 >
-                  <Link to={fullPath}>
-                    <ItemIcon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                </TabsTrigger>
+                  <ItemIcon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </Link>
               );
             })}
-          </TabsList>
-        </Tabs>
+          </nav>
+        </div>
       </div>
 
       {/* Content Area */}
