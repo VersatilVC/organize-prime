@@ -1,7 +1,7 @@
 // Base hook for consistent query handling across the application
 import React, { useRef, useEffect } from 'react';
 import { useQuery, QueryKey } from '@tanstack/react-query';
-import { useErrorHandler } from '@/lib/error-handling';
+import { useErrorHandler, ErrorSeverity } from '@/lib/error-handling';
 import { getCacheConfig } from '@/config/app-config';
 
 // Base query options interface
@@ -73,7 +73,7 @@ export const useBaseQuery = <T>(options: BaseQueryOptions<T>): BaseQueryResult<T
         return result;
       } catch (error) {
         const errorObj = error instanceof Error ? error : new Error('Unknown error');
-        handleError(errorObj, context);
+        handleError(errorObj, context, ErrorSeverity.MEDIUM);
         onError?.(errorObj);
         throw errorObj;
       }

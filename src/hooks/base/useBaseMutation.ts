@@ -1,7 +1,7 @@
 // Base mutation hook for consistent mutation handling
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useErrorHandler } from '@/lib/error-handling';
-import { useToast } from '@/hooks/use-toast';
+import { useErrorHandler, ErrorSeverity } from '@/lib/error-handling';
+import { toast } from '@/hooks/use-toast';
 
 // Base mutation options interface
 export interface BaseMutationOptions<TData, TVariables> {
@@ -46,7 +46,6 @@ export const useBaseMutation = <TData, TVariables>(
 ): BaseMutationResult<TData, TVariables> => {
   const queryClient = useQueryClient();
   const { handleError } = useErrorHandler();
-  const { toast } = useToast();
 
   const {
     mutationFn,
@@ -126,7 +125,7 @@ export const useBaseMutation = <TData, TVariables>(
           variant: "destructive"
         });
       } else {
-        handleError(error, context);
+        handleError(error, context, ErrorSeverity.MEDIUM);
       }
 
       // Call custom onError
