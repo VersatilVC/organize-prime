@@ -43,7 +43,9 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
 
   // Optimized refresh with caching
   const refreshOrganizations = useCallback(async () => {
+    console.log('🔍 OrganizationContext: refreshOrganizations called', { user: !!user });
     if (!user) {
+      console.log('🔍 OrganizationContext: No user, clearing organizations');
       setOrganizations([]);
       setCurrentOrganization(null);
       setLoading(false);
@@ -88,6 +90,11 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       
       setOrganizations(userOrgs);
 
+      console.log('🔍 OrganizationContext: Organizations fetched:', {
+        userOrgsCount: userOrgs.length,
+        userOrgs: userOrgs.map(o => ({ id: o.id, name: o.name }))
+      });
+
       // Set current organization from localStorage or first available
       const savedOrgId = localStorage.getItem('currentOrganizationId');
       let currentOrg = null;
@@ -97,6 +104,11 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       } else {
         currentOrg = userOrgs[0] || null;
       }
+
+      console.log('🔍 OrganizationContext: Setting current organization:', {
+        savedOrgId,
+        currentOrg: currentOrg ? { id: currentOrg.id, name: currentOrg.name } : null
+      });
 
       setCurrentOrganization(currentOrg);
       if (currentOrg) {

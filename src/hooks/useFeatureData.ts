@@ -116,31 +116,69 @@ export function useFeatureData(slug?: string): FeatureContext {
   const { currentOrganization } = useOrganization();
 
   const featureData = useMemo(() => {
-    if (!slug) return null;
+    console.log('🔍 useFeatureData Debug:', {
+      slug,
+      installedFeatures: installedFeatures.map(f => f.slug),
+      currentOrganization: currentOrganization?.id,
+      roleLoading,
+      role
+    });
+
+    if (!slug) {
+      console.log('❌ useFeatureData: No slug provided');
+      return null;
+    }
     
     const mockData = mockFeatureData[slug];
-    if (!mockData) return null;
+    if (!mockData) {
+      console.log('❌ useFeatureData: No mock data found for slug:', slug);
+      return null;
+    }
 
     // Check if feature is actually installed
     const isInstalled = installedFeatures.some(f => f.slug === slug);
+    console.log('🔍 useFeatureData: Feature check:', {
+      slug,
+      isInstalled,
+      availableFeatures: installedFeatures.map(f => f.slug)
+    });
     
-    return {
+    const result = {
       ...mockData,
       isInstalled,
       hasAccess: isInstalled && Boolean(currentOrganization)
     };
+
+    console.log('✅ useFeatureData: Final result:', result);
+    return result;
   }, [slug, installedFeatures, currentOrganization]);
 
   const hasAccess = useMemo(() => {
-    if (!featureData || !role) return false;
-    return featureData.hasAccess && featureData.isInstalled;
+    if (!featureData || !role) {
+      console.log('🔍 useFeatureData hasAccess: Missing data', {
+        hasFeatureData: !!featureData,
+        hasRole: !!role,
+        role
+      });
+      return false;
+    }
+    const access = featureData.hasAccess && featureData.isInstalled;
+    console.log('🔍 useFeatureData hasAccess:', {
+      featureHasAccess: featureData.hasAccess,
+      featureIsInstalled: featureData.isInstalled,
+      finalAccess: access
+    });
+    return access;
   }, [featureData, role]);
 
-  return {
+  const result = {
     feature: featureData,
     isLoading: roleLoading || !currentOrganization,
     error: null,
     hasAccess,
     userRole: role
   };
+
+  console.log('🔍 useFeatureData: Final hook result:', result);
+  return result;
 }

@@ -22,7 +22,14 @@ interface FeatureRouteParams extends Record<string, string> {
 function FeatureAccessCheck({ children }: { children: React.ReactNode }) {
   const { feature, isLoading, hasAccess } = useFeatureData();
 
+  console.log('🔍 FeatureAccessCheck:', {
+    feature: feature ? { slug: feature.slug, isInstalled: feature.isInstalled } : null,
+    isLoading,
+    hasAccess
+  });
+
   if (isLoading) {
+    console.log('⏳ FeatureAccessCheck: Still loading...');
     return (
       <div className="flex flex-col space-y-6 p-6">
         <div className="space-y-4">
@@ -46,6 +53,7 @@ function FeatureAccessCheck({ children }: { children: React.ReactNode }) {
   }
 
   if (!feature) {
+    console.log('❌ FeatureAccessCheck: No feature found, showing 404');
     return <NotFound />;
   }
 
@@ -135,9 +143,14 @@ function FeatureRoutes() {
 export function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
 
+  console.log('🔍 FeatureRouter: URL params:', { slug, allParams: useParams() });
+
   if (!slug) {
+    console.log('❌ FeatureRouter: No slug in URL params');
     return <NotFound />;
   }
+
+  console.log('✅ FeatureRouter: Rendering with slug:', slug);
 
   return (
     <FeatureProvider slug={slug}>
