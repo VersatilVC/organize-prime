@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserData } from './AuthContext';
+import { safeStorage } from '@/lib/safe-storage';
 
 interface Organization {
   id: string;
@@ -96,7 +97,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       });
 
       // Set current organization from localStorage or first available
-      const savedOrgId = localStorage.getItem('currentOrganizationId');
+      const savedOrgId = safeStorage.getItemSync('currentOrganizationId');
       let currentOrg = null;
 
       if (savedOrgId) {
@@ -112,7 +113,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
 
       setCurrentOrganization(currentOrg);
       if (currentOrg) {
-        localStorage.setItem('currentOrganizationId', currentOrg.id);
+        safeStorage.setItemSync('currentOrganizationId', currentOrg.id);
       }
     } catch (error) {
       console.error('Error fetching organizations:', error);
@@ -128,9 +129,9 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   const handleSetCurrentOrganization = useCallback((org: Organization | null) => {
     setCurrentOrganization(org);
     if (org) {
-      localStorage.setItem('currentOrganizationId', org.id);
+      safeStorage.setItemSync('currentOrganizationId', org.id);
     } else {
-      localStorage.removeItem('currentOrganizationId');
+      safeStorage.removeItemSync('currentOrganizationId');
     }
   }, []);
 

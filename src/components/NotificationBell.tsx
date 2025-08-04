@@ -125,7 +125,7 @@ export function NotificationBell() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, notifications]);
+  }, [user]); // Remove notifications dependency to prevent infinite loop
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {

@@ -32,17 +32,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let mounted = true; // Prevent state updates after unmount
+    
+    const initializeAuth = async () => {
+      try {
+        // Get initial session first
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return; // Prevent race condition
+        
+        if (error) {
+          console.error('Auth initialization error:', error);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
+        console.log('Auth state change:', event, session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          // Defer profile creation/update with setTimeout to prevent recursion
-          setTimeout(async () => {
-            await ensureProfile(session.user);
-          }, 0);
+          // Use a timeout to prevent blocking the auth state change
+          setTimeout(() => {
+            if (mounted) {
+              ensureProfile(session.user);
+            }
+          }, 100);
         }
         
         if (event === 'SIGNED_OUT') {
@@ -50,18 +80,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
         }
         
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Initialize auth state
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const ensureProfile = async (user: User) => {

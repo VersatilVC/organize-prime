@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from './useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffect, useRef } from 'react';
 
 interface DashboardStats {
   organizations: number;
@@ -48,11 +49,24 @@ export function useDashboardData(): DashboardStats {
   const { user } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
   const { currentOrganization, loading: orgLoading } = useOrganization();
+  const isMountedRef = useRef(true);
+
+  // Add cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats-optimized', user?.id, role, currentOrganization?.id],
     queryFn: async (): Promise<Omit<DashboardStats, 'loading'>> => {
       if (!user) throw new Error('User not authenticated');
+      
+      // Check if component is still mounted before making requests
+      if (!isMountedRef.current) {
+        throw new Error('Component unmounted');
+      }
       
       // Use optimized RPC function
       const optimizedStats = await getDashboardStats(
@@ -105,7 +119,7 @@ export function useDashboardData(): DashboardStats {
         feedback: optimizedStats?.totalFeedback || 0,
       };
     },
-    enabled: !!user && !roleLoading && !orgLoading && (role !== 'admin' || !!currentOrganization),
+    enabled: !!user && !roleLoading && !orgLoading && (role !== 'admin' || !!currentOrganization) && isMountedRef.current,
     staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
     gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
     retry: 2,
