@@ -132,12 +132,14 @@ const getAllSidebarSections = (installedFeatures: any[]): SidebarSection[] => {
 };
 
 // Hook for managing sidebar section states
-function useSidebarSectionState(allSections: SidebarSection[]) {
+function useSidebarSectionState(allSections: SidebarSection[] = []) {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const location = useLocation();
 
   // Load initial state from localStorage
   useEffect(() => {
+    if (!allSections || allSections.length === 0) return;
+    
     const savedStates: Record<string, boolean> = {};
     allSections.forEach(section => {
       const saved = localStorage.getItem(`sidebar_section_${section.key}_collapsed`);
@@ -148,6 +150,8 @@ function useSidebarSectionState(allSections: SidebarSection[]) {
 
   // Auto-expand section if user navigates to a page within collapsed section
   useEffect(() => {
+    if (!allSections || allSections.length === 0) return;
+    
     allSections.forEach(section => {
       const items = getSectionItems(section.key, 'user', section); // Pass section for feature sections
       const hasActiveItem = items.some(item => {
