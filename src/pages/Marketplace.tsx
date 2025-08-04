@@ -351,19 +351,19 @@ export default function Marketplace() {
               <Button 
                 size="sm" 
                 variant={
-                  roleLoading ? "outline" :
-                  !canInstall ? "outline" :
-                  feature.status === 'requires_upgrade' ? "secondary" : "default"
+                  feature.status === 'requires_upgrade' ? "outline" : 
+                  !canInstall ? "secondary" :
+                  "default"
                 }
                 onClick={(e) => {
                   e.stopPropagation();
                   handleFeatureAction(feature);
                 }}
-                disabled={roleLoading || !canInstall}
+                disabled={roleLoading || (!canInstall && feature.status !== 'requires_upgrade')}
               >
                 {roleLoading ? '...' : 
-                 !canInstall ? 'Contact Admin' :
-                 feature.status === 'requires_upgrade' ? 'Upgrade Required' : 'Install'}
+                 feature.status === 'requires_upgrade' ? 'Upgrade Required' :
+                 !canInstall ? 'Contact Admin' : 'Install'}
               </Button>
             )}
           </div>
