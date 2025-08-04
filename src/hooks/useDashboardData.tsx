@@ -8,7 +8,6 @@ interface DashboardStats {
   organizations: number;
   users: number;
   notifications: number;
-  files: number;
   feedback: number;
   loading: boolean;
 }
@@ -65,54 +64,44 @@ export function useDashboardData(): DashboardStats {
       // Get additional counts that aren't in the optimized function
       let organizationsCount = 0;
       let notificationsCount = 0;
-      let filesCount = 0;
 
       if (role === 'super_admin') {
-        const [orgsResult, notificationsResult, filesResult] = await Promise.all([
+        const [orgsResult, notificationsResult] = await Promise.all([
           supabase.from('organizations').select('*', { count: 'exact', head: true }),
           supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('read', false),
-          supabase.from('files').select('*', { count: 'exact', head: true }),
         ]);
 
         organizationsCount = orgsResult.count || 0;
         notificationsCount = notificationsResult.count || 0;
-        filesCount = filesResult.count || 0;
 
       } else if (role === 'admin' && currentOrganization) {
-        const [notificationsResult, filesResult] = await Promise.all([
+        const [notificationsResult] = await Promise.all([
           supabase.from('notifications').select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .eq('read', false),
-          supabase.from('files').select('*', { count: 'exact', head: true })
-            .eq('organization_id', currentOrganization.id),
         ]);
 
         organizationsCount = 1;
         notificationsCount = notificationsResult.count || 0;
-        filesCount = filesResult.count || 0;
 
       } else {
-        const [orgsResult, notificationsResult, filesResult] = await Promise.all([
+        const [orgsResult, notificationsResult] = await Promise.all([
           supabase.from('memberships').select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .eq('status', 'active'),
           supabase.from('notifications').select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .eq('read', false),
-          supabase.from('files').select('*', { count: 'exact', head: true })
-            .eq('uploaded_by', user.id),
         ]);
 
         organizationsCount = orgsResult.count || 0;
         notificationsCount = notificationsResult.count || 0;
-        filesCount = filesResult.count || 0;
       }
 
       return {
         organizations: organizationsCount,
         users: optimizedStats?.totalUsers || 0,
         notifications: notificationsCount,
-        files: filesCount,
         feedback: optimizedStats?.totalFeedback || 0,
       };
     },
@@ -129,7 +118,6 @@ export function useDashboardData(): DashboardStats {
     organizations: stats?.organizations || 0,
     users: stats?.users || 0,
     notifications: stats?.notifications || 0,
-    files: stats?.files || 0,
     feedback: stats?.feedback || 0,
     loading: isLoading || roleLoading || orgLoading,
   };

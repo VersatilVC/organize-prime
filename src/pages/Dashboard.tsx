@@ -97,7 +97,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
-  const { organizations: orgCount, users, notifications, files, feedback, loading } = useDashboardData();
+  const { organizations: orgCount, users, notifications, feedback, loading } = useDashboardData();
   const queryClient = useQueryClient();
   
   // Check for automatic organization creation (business domains)
@@ -172,12 +172,6 @@ export default function Dashboard() {
           icon: Icons.bell,
         },
         {
-          title: 'Files',
-          value: files,
-          description: 'Total files',
-          icon: Icons.fileText,
-        },
-        {
           title: 'Pending Feedback',
           value: feedback,
           description: 'Needs attention',
@@ -205,12 +199,6 @@ export default function Dashboard() {
           icon: Icons.bell,
         },
         {
-          title: 'Company Files',
-          value: files,
-          description: 'Shared documents',
-          icon: Icons.fileText,
-        },
-        {
           title: 'Pending Feedback',
           value: feedback,
           description: 'Needs review',
@@ -232,12 +220,6 @@ export default function Dashboard() {
           icon: Icons.bell,
         },
         {
-          title: 'My Files',
-          value: files,
-          description: 'Your uploads',
-          icon: Icons.fileText,
-        },
-        {
           title: 'My Feedback',
           value: feedback,
           description: 'Submitted feedback',
@@ -245,7 +227,7 @@ export default function Dashboard() {
         },
       ];
     }
-  }, [role, orgCount, users, notifications, files, feedback, currentOrganization?.name]);
+  }, [role, orgCount, users, notifications, feedback, currentOrganization?.name]);
 
   // Show empty state for users with no organizations
   const showEmptyState = organizations.length === 0 && !loading;
