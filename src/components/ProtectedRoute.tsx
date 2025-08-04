@@ -22,12 +22,25 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
       roleLoading,
       role,
       pathname: location.pathname,
-      requiredRole
+      requiredRole,
+      timestamp: new Date().toISOString()
     });
   }, [user, authLoading, roleLoading, role, location.pathname, requiredRole]);
 
-  if (authLoading || roleLoading) {
-    console.log('ProtectedRoute: Still loading auth state');
+  // Add timeout to prevent infinite loading
+  const [timeoutReached, setTimeoutReached] = React.useState(false);
+  
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('ProtectedRoute: Loading timeout reached, forcing render');
+      setTimeoutReached(true);
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  if ((authLoading || roleLoading) && !timeoutReached) {
+    console.log('ProtectedRoute: Still loading auth state', { authLoading, roleLoading, timeoutReached });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="space-y-4 w-full max-w-md">
