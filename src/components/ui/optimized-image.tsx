@@ -1,4 +1,4 @@
-import { useState, ImgHTMLAttributes } from 'react';
+import { useState, useEffect, ImgHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle } from 'lucide-react';
@@ -7,28 +7,68 @@ interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 
   fallback?: string;
   showSkeleton?: boolean;
   aspectRatio?: 'square' | 'video' | 'portrait' | 'landscape';
+  sizes?: string;
+  priority?: boolean;
+  quality?: number;
 }
 
 export const OptimizedImage = ({ 
   className, 
-  fallback = '/placeholder-image.svg', 
+  fallback = '/placeholder.svg', 
   showSkeleton = true,
   aspectRatio,
   alt,
+  sizes = '100vw',
+  priority = false,
+  quality = 75,
   ...props 
 }: OptimizedImageProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState<string>(fallback);
 
-  const handleLoad = () => {
-    setIsLoading(false);
+  // Generate responsive image URLs if using a CDN
+  const generateSrcSet = (baseSrc: string) => {
+    if (!baseSrc || baseSrc.startsWith('data:') || baseSrc.startsWith('blob:')) {
+      return baseSrc;
+    }
+
+    // Example for Supabase Storage with transform
+    if (baseSrc.includes('supabase')) {
+      const sizes = [320, 640, 768, 1024, 1280];
+      return sizes
+        .map(size => `${baseSrc}?width=${size}&quality=${quality} ${size}w`)
+        .join(', ');
+    }
+
+    return baseSrc;
+  };
+
+  useEffect(() => {
+    if (!props.src) {
+      setCurrentSrc(fallback);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
     setHasError(false);
-  };
 
-  const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
-  };
+    const img = new Image();
+    
+    img.onload = () => {
+      setCurrentSrc(props.src!);
+      setIsLoading(false);
+    };
+    
+    img.onerror = () => {
+      setCurrentSrc(fallback);
+      setIsLoading(false);
+      setHasError(true);
+    };
+
+    img.src = props.src;
+  }, [props.src, fallback]);
 
   const aspectRatioClass = aspectRatio ? {
     'square': 'aspect-square',
@@ -54,14 +94,18 @@ export const OptimizedImage = ({
         <img
           {...props}
           alt={alt || ''}
-          src={hasError ? fallback : props.src}
-          onLoad={handleLoad}
-          onError={handleError}
+          src={currentSrc}
+          srcSet={generateSrcSet(currentSrc)}
+          sizes={sizes}
+          loading={priority ? 'eager' : 'lazy'}
           className={cn(
             "object-cover w-full h-full transition-opacity duration-300",
             isLoading ? "opacity-0" : "opacity-100"
           )}
-          loading="lazy"
+          style={{
+            filter: hasError ? 'grayscale(100%)' : 'none',
+            ...props.style
+          }}
         />
       )}
     </div>

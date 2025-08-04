@@ -1,4 +1,4 @@
-// Package.json scripts for testing
+// Package.json scripts for testing and performance
 {
   "scripts": {
     "test": "vitest",
@@ -8,6 +8,9 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:ui": "vitest --coverage --ui",
     "test:e2e": "playwright test",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "analyze": "npm run build && open dist/stats.html",
+    "build:analyze": "vite build --mode production",
+    "perf": "lighthouse http://localhost:4173 --output html --output-path ./lighthouse-report.html"
   }
 }
