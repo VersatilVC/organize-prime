@@ -19,6 +19,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Loader2, Users, Building, Clock, Mail, Upload, Image } from 'lucide-react';
 import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedForm';
 import FeatureCategoryManagement from '@/components/settings/FeatureCategoryManagement';
+import { SystemFeatureManagement } from '@/components/admin/SystemFeatureManagement';
 
 interface SystemSettings {
   app_name: string;
@@ -410,9 +411,10 @@ export default function SystemSettings() {
         </div>
 
         <Tabs defaultValue="application" className="space-y-6">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="application">Application</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
           </TabsList>
 
@@ -712,6 +714,10 @@ export default function SystemSettings() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+        
+          <TabsContent value="features">
+            <SystemFeatureManagement />
           </TabsContent>
 
           <TabsContent value="categories">

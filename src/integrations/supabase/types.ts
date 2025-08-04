@@ -489,6 +489,53 @@ export type Database = {
           },
         ]
       }
+      organization_feature_configs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          feature_slug: string
+          id: string
+          is_enabled: boolean | null
+          is_user_accessible: boolean | null
+          org_menu_order: number | null
+          organization_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          feature_slug: string
+          id?: string
+          is_enabled?: boolean | null
+          is_user_accessible?: boolean | null
+          org_menu_order?: number | null
+          organization_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          feature_slug?: string
+          id?: string
+          is_enabled?: boolean | null
+          is_user_accessible?: boolean | null
+          org_menu_order?: number | null
+          organization_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_feature_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           category: string | null
@@ -726,6 +773,42 @@ export type Database = {
           },
         ]
       }
+      system_feature_configs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          feature_slug: string
+          id: string
+          is_enabled_globally: boolean | null
+          is_marketplace_visible: boolean | null
+          system_menu_order: number | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          feature_slug: string
+          id?: string
+          is_enabled_globally?: boolean | null
+          is_marketplace_visible?: boolean | null
+          system_menu_order?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          feature_slug?: string
+          id?: string
+          is_enabled_globally?: boolean | null
+          is_marketplace_visible?: boolean | null
+          system_menu_order?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           category: string | null
@@ -761,6 +844,47 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      user_feature_access: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          feature_slug: string
+          id: string
+          is_enabled: boolean | null
+          organization_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          feature_slug: string
+          id?: string
+          is_enabled?: boolean | null
+          organization_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          feature_slug?: string
+          id?: string
+          is_enabled?: boolean | null
+          organization_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feature_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhooks: {
         Row: {
@@ -936,6 +1060,15 @@ export type Database = {
       get_user_current_organization: {
         Args: { user_id: string }
         Returns: string
+      }
+      get_user_effective_features: {
+        Args: { p_user_id: string; p_organization_id: string }
+        Returns: {
+          feature_slug: string
+          is_enabled: boolean
+          menu_order: number
+          source: string
+        }[]
       }
       get_user_emails_for_super_admin: {
         Args: { user_ids: string[] }
