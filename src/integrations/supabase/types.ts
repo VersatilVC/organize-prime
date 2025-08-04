@@ -1019,6 +1019,14 @@ export type Database = {
         Args: { p_user_id: string; p_organization_id?: string; p_role?: string }
         Returns: Json
       }
+      get_dashboard_stats_optimized: {
+        Args: {
+          p_organization_id: string
+          p_user_id: string
+          p_is_super_admin?: boolean
+        }
+        Returns: Json
+      }
       get_invitations_optimized: {
         Args: {
           p_user_id: string
