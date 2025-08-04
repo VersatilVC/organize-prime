@@ -299,8 +299,8 @@ export default function Marketplace() {
     return (
       <Card className="hover:shadow-md transition-shadow cursor-pointer">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <CardTitle 
                 className="text-lg font-semibold hover:text-primary cursor-pointer line-clamp-1"
                 onClick={() => navigateToFeatureDetails(feature)}
@@ -314,11 +314,7 @@ export default function Marketplace() {
                 {feature.description}
               </CardDescription>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-1 items-end flex-shrink-0">
               <Badge variant="secondary" className="text-xs capitalize">
                 {feature.category}
               </Badge>
@@ -326,11 +322,16 @@ export default function Marketplace() {
                 {feature.pricing}
               </Badge>
             </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="w-full">
             {feature.status === 'installed' ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreVertical className="h-4 w-4" />
+                  <Button variant="outline" size="sm" className="w-full">
+                    <MoreVertical className="h-4 w-4 mr-2" />
+                    Manage
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -350,6 +351,7 @@ export default function Marketplace() {
             ) : (
               <Button 
                 size="sm" 
+                className="w-full"
                 variant={
                   feature.status === 'requires_upgrade' ? "secondary" : 
                   !canInstall ? "outline" :
