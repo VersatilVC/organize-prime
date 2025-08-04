@@ -1,181 +1,189 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/ui/icons';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { FeatureDetailModal } from '@/components/marketplace/FeatureDetailModal';
+import { MoreVertical, Settings, Trash2 } from 'lucide-react';
 
-interface MarketplaceFeature {
+interface MarketplaceFeatureExtended {
   id: string;
   slug: string;
   displayName: string;
   description: string;
+  longDescription: string;
   category: string;
   iconName: keyof typeof Icons;
-  pricing: 'free' | 'premium';
+  pricing: 'free' | 'premium' | 'enterprise';
   status: 'available' | 'installed' | 'requires_upgrade';
   featured: boolean;
   isNew: boolean;
+  screenshots: string[];
+  rating: number;
+  reviewCount: number;
+  installCount: number;
+  requirements: string[];
+  permissions: string[];
+  features: string[];
+  compatibility: {
+    minPlan: 'free' | 'basic' | 'pro' | 'enterprise';
+    requiresIntegration: boolean;
+  };
 }
 
-// Mock data
-const mockFeatures: MarketplaceFeature[] = [
+// Mock data with extended information
+const mockFeatures: MarketplaceFeatureExtended[] = [
   // Featured
   {
     id: '1',
     slug: 'knowledge-base',
     displayName: 'Knowledge Base',
     description: 'Create and manage comprehensive documentation and knowledge articles for your team',
+    longDescription: 'Transform your team\'s knowledge management with our comprehensive Knowledge Base feature. Create, organize, and maintain documentation that grows with your organization. Features advanced search capabilities, version control, and collaborative editing tools that make knowledge sharing seamless and efficient.',
     category: 'productivity',
     iconName: 'book',
     pricing: 'free',
     status: 'available',
     featured: true,
-    isNew: false
+    isNew: false,
+    screenshots: ['kb-1.jpg', 'kb-2.jpg', 'kb-3.jpg'],
+    rating: 4.8,
+    reviewCount: 127,
+    installCount: 15420,
+    requirements: [
+      'Organization admin privileges',
+      'Minimum 2GB storage space',
+      'Modern web browser'
+    ],
+    permissions: [
+      'Read and write access to knowledge articles',
+      'Manage article categories and tags',
+      'Access to user analytics'
+    ],
+    features: [
+      'Rich text editor with markdown support',
+      'Advanced search with filters',
+      'Version history and rollback',
+      'Collaborative editing',
+      'Custom categorization',
+      'Analytics and insights'
+    ],
+    compatibility: {
+      minPlan: 'free',
+      requiresIntegration: false
+    }
   },
   {
     id: '2',
     slug: 'usage-analytics',
     displayName: 'Usage Analytics',
     description: 'Advanced insights into user behavior and platform performance with detailed reports',
+    longDescription: 'Gain deep insights into how your platform is being used with our comprehensive Usage Analytics feature. Track user behavior, monitor performance metrics, and generate detailed reports that help you make data-driven decisions. Features real-time dashboards, custom report builders, and automated insights.',
     category: 'analytics',
     iconName: 'barChart',
     pricing: 'premium',
     status: 'installed',
     featured: true,
-    isNew: false
+    isNew: false,
+    screenshots: ['analytics-1.jpg', 'analytics-2.jpg', 'analytics-3.jpg'],
+    rating: 4.6,
+    reviewCount: 89,
+    installCount: 8932,
+    requirements: [
+      'Premium plan or higher',
+      'Analytics tracking enabled',
+      'Data retention policy configured'
+    ],
+    permissions: [
+      'Access to user activity logs',
+      'View analytics dashboards',
+      'Export analytics data',
+      'Configure tracking settings'
+    ],
+    features: [
+      'Real-time user activity tracking',
+      'Custom dashboard builder',
+      'Automated report generation',
+      'Data export capabilities',
+      'Performance monitoring',
+      'User journey mapping'
+    ],
+    compatibility: {
+      minPlan: 'basic',
+      requiresIntegration: true
+    }
   },
   {
     id: '3',
     slug: 'workflow-builder',
     displayName: 'Workflow Builder',
     description: 'Visual workflow automation with drag-and-drop interface for complex processes',
+    longDescription: 'Streamline your business processes with our intuitive Workflow Builder. Create complex automation workflows using a simple drag-and-drop interface. Connect different systems, automate repetitive tasks, and ensure consistency across your organization with powerful workflow automation.',
     category: 'automation',
     iconName: 'workflow',
     pricing: 'premium',
     status: 'requires_upgrade',
     featured: true,
-    isNew: true
+    isNew: true,
+    screenshots: ['workflow-1.jpg', 'workflow-2.jpg', 'workflow-3.jpg'],
+    rating: 4.9,
+    reviewCount: 156,
+    installCount: 12847,
+    requirements: [
+      'Pro plan or higher',
+      'API access enabled',
+      'Webhook support configured'
+    ],
+    permissions: [
+      'Create and manage workflows',
+      'Access to integration APIs',
+      'Modify system automations',
+      'View workflow execution logs'
+    ],
+    features: [
+      'Visual drag-and-drop builder',
+      'Pre-built workflow templates',
+      'API integrations',
+      'Conditional logic support',
+      'Automated notifications',
+      'Execution monitoring'
+    ],
+    compatibility: {
+      minPlan: 'pro',
+      requiresIntegration: true
+    }
   },
-  // New This Month
   {
     id: '4',
     slug: 'market-research',
     displayName: 'Market Research',
     description: 'AI-powered market analysis and competitor intelligence for strategic planning',
+    longDescription: 'Stay ahead of the competition with AI-powered market research tools. Analyze market trends, monitor competitors, and discover new opportunities with automated data collection and intelligent insights.',
     category: 'intelligence',
     iconName: 'trendingUp',
     pricing: 'premium',
     status: 'available',
     featured: false,
-    isNew: true
-  },
-  {
-    id: '5',
-    slug: 'content-creation',
-    displayName: 'Content Creation',
-    description: 'AI-assisted content generation and editing tools for marketing teams',
-    category: 'productivity',
-    iconName: 'edit',
-    pricing: 'premium',
-    status: 'available',
-    featured: false,
-    isNew: true
-  },
-  // Productivity
-  {
-    id: '6',
-    slug: 'project-management',
-    displayName: 'Project Management',
-    description: 'Complete project tracking with Gantt charts and team collaboration tools',
-    category: 'productivity',
-    iconName: 'checkSquare',
-    pricing: 'free',
-    status: 'available',
-    featured: false,
-    isNew: false
-  },
-  // Analytics
-  {
-    id: '7',
-    slug: 'financial-reports',
-    displayName: 'Financial Reports',
-    description: 'Comprehensive financial analytics and automated reporting for business insights',
-    category: 'analytics',
-    iconName: 'dollarSign',
-    pricing: 'premium',
-    status: 'available',
-    featured: false,
-    isNew: false
-  },
-  {
-    id: '8',
-    slug: 'competitor-tracking',
-    displayName: 'Competitor Tracking',
-    description: 'Monitor competitor activities and market positioning in real-time',
-    category: 'analytics',
-    iconName: 'target',
-    pricing: 'premium',
-    status: 'available',
-    featured: false,
-    isNew: false
-  },
-  // Automation
-  {
-    id: '9',
-    slug: 'api-integration',
-    displayName: 'API Integration',
-    description: 'Connect with external services through custom API configurations and webhooks',
-    category: 'automation',
-    iconName: 'link',
-    pricing: 'premium',
-    status: 'installed',
-    featured: false,
-    isNew: false
-  },
-  {
-    id: '10',
-    slug: 'data-sync',
-    displayName: 'Data Sync',
-    description: 'Real-time data synchronization across multiple platforms and services',
-    category: 'automation',
-    iconName: 'refresh',
-    pricing: 'premium',
-    status: 'available',
-    featured: false,
-    isNew: false
-  },
-  // Intelligence
-  {
-    id: '11',
-    slug: 'funding-tracker',
-    displayName: 'Funding Tracker',
-    description: 'Track startup funding rounds and investment opportunities in your market',
-    category: 'intelligence',
-    iconName: 'piggyBank',
-    pricing: 'premium',
-    status: 'available',
-    featured: false,
-    isNew: false
-  },
-  {
-    id: '12',
-    slug: 'job-posting-monitor',
-    displayName: 'Job Posting Monitor',
-    description: 'Monitor competitor job postings and hiring trends for talent intelligence',
-    category: 'intelligence',
-    iconName: 'briefcase',
-    pricing: 'free',
-    status: 'available',
-    featured: false,
-    isNew: false
+    isNew: true,
+    screenshots: ['market-1.jpg', 'market-2.jpg'],
+    rating: 4.3,
+    reviewCount: 67,
+    installCount: 5621,
+    requirements: ['Enterprise plan', 'External API access'],
+    permissions: ['Market data access', 'Competitor tracking'],
+    features: ['AI market analysis', 'Competitor monitoring', 'Trend forecasting'],
+    compatibility: {
+      minPlan: 'enterprise',
+      requiresIntegration: true
+    }
   }
 ];
 
@@ -201,12 +209,14 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('popular');
-  const [loading, setLoading] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<MarketplaceFeatureExtended | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const canInstall = role === 'admin' || role === 'super_admin';
 
-  const navigateToFeatureDetails = (slug: string) => {
-    navigate(`/marketplace/feature/${slug}`);
+  const navigateToFeatureDetails = (feature: MarketplaceFeatureExtended) => {
+    setSelectedFeature(feature);
+    setShowDetailModal(true);
   };
 
   // Filter and sort features
@@ -238,7 +248,7 @@ export default function Marketplace() {
   const newFeatures = mockFeatures.filter(f => f.isNew);
   const installedCount = mockFeatures.filter(f => f.status === 'installed').length;
 
-  const handleFeatureAction = (feature: MarketplaceFeature) => {
+  const handleFeatureAction = (feature: MarketplaceFeatureExtended) => {
     if (!canInstall) {
       toast({
         title: "Permission Required",
@@ -249,30 +259,41 @@ export default function Marketplace() {
     }
 
     if (feature.status === 'installed') {
-      navigateToFeatureDetails(feature.slug);
+      navigateToFeatureDetails(feature);
       return;
     }
 
-    setLoading(true);
-    // Simulate installation
-    setTimeout(() => {
-      toast({
-        title: "Feature Installed",
-        description: `${feature.displayName} has been successfully installed.`,
-      });
-      setLoading(false);
-    }, 2000);
+    // For available features, open detail modal for installation
+    setSelectedFeature(feature);
+    setShowDetailModal(true);
   };
 
-  const getPricingBadgeVariant = (pricing: MarketplaceFeature['pricing']) => {
+  const handleFeatureInstall = (feature: MarketplaceFeatureExtended) => {
+    // Update feature status to installed (in real app, this would update the backend)
+    toast({
+      title: "Feature Installed",
+      description: `${feature.displayName} has been successfully installed.`,
+    });
+  };
+
+  const handleUninstallFeature = (feature: MarketplaceFeatureExtended) => {
+    // Update feature status to available (in real app, this would update the backend)
+    toast({
+      title: "Feature Uninstalled",
+      description: `${feature.displayName} has been uninstalled.`,
+    });
+  };
+
+  const getPricingBadgeVariant = (pricing: MarketplaceFeatureExtended['pricing']) => {
     switch (pricing) {
       case 'free': return 'outline';
       case 'premium': return 'default';
+      case 'enterprise': return 'secondary';
       default: return 'outline';
     }
   };
 
-  const FeatureCard = ({ feature }: { feature: MarketplaceFeature }) => {
+  const FeatureCard = ({ feature }: { feature: MarketplaceFeatureExtended }) => {
     const IconComponent = Icons[feature.iconName];
     
     return (
@@ -282,7 +303,7 @@ export default function Marketplace() {
             <div className="flex-1">
               <CardTitle 
                 className="text-lg font-semibold hover:text-primary cursor-pointer line-clamp-1"
-                onClick={() => navigateToFeatureDetails(feature.slug)}
+                onClick={() => navigateToFeatureDetails(feature)}
               >
                 {feature.displayName}
                 {feature.isNew && (
@@ -305,19 +326,42 @@ export default function Marketplace() {
                 {feature.pricing}
               </Badge>
             </div>
-            <Button 
-              size="sm" 
-              variant={feature.status === 'installed' ? 'outline' : 'default'}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleFeatureAction(feature);
-              }}
-              disabled={loading || roleLoading}
-            >
-              {roleLoading ? '...' : 
-               !canInstall ? 'Contact Admin' :
-               feature.status === 'installed' ? 'Configure' : 'Install'}
-            </Button>
+            {feature.status === 'installed' ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigateToFeatureDetails(feature)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleUninstallFeature(feature)}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Uninstall
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="default"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFeatureAction(feature);
+                }}
+                disabled={roleLoading}
+              >
+                {roleLoading ? '...' : 
+                 !canInstall ? 'Contact Admin' :
+                 feature.status === 'requires_upgrade' ? 'Upgrade Required' : 'Install'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -416,27 +460,7 @@ export default function Marketplace() {
             {searchQuery && ` (${filteredFeatures.length} results)`}
           </h2>
           
-          {loading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-9 w-9 rounded-lg" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : filteredFeatures.length > 0 ? (
+          {filteredFeatures.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredFeatures.map((feature) => (
                 <FeatureCard key={feature.id} feature={feature} />
@@ -458,6 +482,18 @@ export default function Marketplace() {
           )}
         </div>
       </div>
+
+      {/* Feature Detail Modal */}
+      <FeatureDetailModal
+        feature={selectedFeature}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedFeature(null);
+        }}
+        onInstall={handleFeatureInstall}
+        canInstall={canInstall}
+      />
     </AppLayout>
   );
 }
