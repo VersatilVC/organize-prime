@@ -676,6 +676,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action_type: string
+          count: number | null
+          created_at: string | null
+          id: string
+          identifier: string
+          window_start: string | null
+        }
+        Insert: {
+          action_type: string
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          identifier: string
+          window_start?: string | null
+        }
+        Update: {
+          action_type?: string
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          identifier?: string
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       search_history: {
         Row: {
           clicked_results: Json | null
@@ -997,6 +1024,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          p_identifier: string
+          p_action_type: string
+          p_limit?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
       create_templated_notification: {
         Args: {
           p_template_type: string
@@ -1113,6 +1149,10 @@ export type Database = {
           total_count: number
         }[]
       }
+      hash_api_key: {
+        Args: { key_text: string }
+        Returns: string
+      }
       is_org_admin: {
         Args: { org_id: string }
         Returns: boolean
@@ -1125,12 +1165,29 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      log_security_event: {
+        Args: {
+          p_user_id: string
+          p_organization_id: string
+          p_action: string
+          p_resource_type: string
+          p_resource_id: string
+          p_ip_address?: unknown
+          p_user_agent?: string
+          p_details?: Json
+        }
+        Returns: string
+      }
       render_notification_template: {
         Args: { template_type: string; variables?: Json }
         Returns: {
           title: string
           message: string
         }[]
+      }
+      sanitize_input: {
+        Args: { input_text: string }
+        Returns: string
       }
       update_user_profile_and_role: {
         Args: {
@@ -1145,6 +1202,22 @@ export type Database = {
       }
       user_has_org_access: {
         Args: { user_id: string; org_id: string }
+        Returns: boolean
+      }
+      validate_email: {
+        Args: { email_text: string }
+        Returns: boolean
+      }
+      validate_password_strength: {
+        Args: { password_text: string }
+        Returns: Json
+      }
+      validate_session_security: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      verify_api_key: {
+        Args: { key_text: string; hash_text: string }
         Returns: boolean
       }
     }
