@@ -51,18 +51,10 @@ export const useUserManagement = (organizationId?: string) => {
     error, 
     refetch 
   } = useBaseQuery({
-    queryKey: ['organization-users', targetOrgId, filters, state.sortBy, state.sortOrder],
-    queryFn: () => userService.getUsersByOrganization(targetOrgId!, {
-      search: filters.search,
-      role: filters.role !== 'all' ? filters.role : undefined,
-      status: filters.status !== 'all' ? filters.status : undefined,
-      department: filters.department || undefined,
-      sortBy: state.sortBy,
-      sortOrder: state.sortOrder
-    }),
+    queryKey: ['organization-users', targetOrgId],
+    queryFn: () => userService.getUsersByOrganization(targetOrgId!),
     enabled: !!targetOrgId,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Mutations with optimized invalidation
@@ -73,66 +65,60 @@ export const useUserManagement = (organizationId?: string) => {
   });
 
   const updateUserMutation = useBaseMutation({
-    mutationFn: userService.updateUserProfile,
+    mutationFn: ({ userId, data }: { userId: string; data: Partial<User> }) => 
+      userService.updateUserProfile(userId, data),
     invalidateQueries: [['organization-users', targetOrgId]],
     successMessage: "User updated successfully",
     optimisticUpdate: {
       queryKey: ['organization-users', targetOrgId],
-      updateFn: (oldData: any, variables: any) => {
-        if (!oldData?.users) return oldData;
-        return {
-          ...oldData,
-          users: oldData.users.map((u: User) => 
-            u.id === variables.userId 
-              ? { ...u, ...variables.data }
-              : u
-          )
-        };
+      updater: (oldData: User[], variables: { userId: string; data: Partial<User> }) => {
+        if (!oldData) return oldData;
+        return oldData.map(u => 
+          u.id === variables.userId 
+            ? { ...u, ...variables.data }
+            : u
+        );
       }
     }
   });
 
   const removeUserMutation = useBaseMutation({
-    mutationFn: userService.removeUserFromOrganization,
+    mutationFn: (userId: string) => 
+      userService.removeUserFromOrganization(userId, targetOrgId!),
     invalidateQueries: [['organization-users', targetOrgId]],
     successMessage: "User removed successfully",
     optimisticUpdate: {
       queryKey: ['organization-users', targetOrgId],
-      updateFn: (oldData: any, userId: string) => {
-        if (!oldData?.users) return oldData;
-        return {
-          ...oldData,
-          users: oldData.users.filter((u: User) => u.id !== userId)
-        };
+      updater: (oldData: User[], userId: string) => {
+        if (!oldData) return oldData;
+        return oldData.filter(u => u.id !== userId);
       }
     }
   });
 
   const updateRoleMutation = useBaseMutation({
-    mutationFn: userService.updateUserRole,
+    mutationFn: ({ userId, role }: { userId: string; role: 'admin' | 'user' }) => 
+      userService.updateUserRole(userId, targetOrgId!, role),
     invalidateQueries: [['organization-users', targetOrgId]],
     successMessage: "User role updated successfully",
     optimisticUpdate: {
       queryKey: ['organization-users', targetOrgId],
-      updateFn: (oldData: any, variables: any) => {
-        if (!oldData?.users) return oldData;
-        return {
-          ...oldData,
-          users: oldData.users.map((u: User) => 
-            u.id === variables.userId 
-              ? { ...u, role: variables.role }
-              : u
-          )
-        };
+      updater: (oldData: User[], variables: { userId: string; role: 'admin' | 'user' }) => {
+        if (!oldData) return oldData;
+        return oldData.map(u => 
+          u.id === variables.userId 
+            ? { ...u, role: variables.role }
+            : u
+        );
       }
     }
   });
 
   // Memoized filtered users with optimized filtering
   const filteredUsers = useMemo(() => {
-    if (!data?.users) return [];
+    if (!data) return [];
     
-    return data.users.filter((user: User) => {
+    return data.filter((user: User) => {
       // Search filter
       const matchesSearch = !filters.search || 
         user.full_name.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -152,19 +138,19 @@ export const useUserManagement = (organizationId?: string) => {
 
       return matchesSearch && matchesRole && matchesStatus && matchesDepartment;
     });
-  }, [data?.users, filters]);
+  }, [data, filters]);
 
   // Memoized departments list for filter dropdown
   const departments = useMemo(() => {
-    if (!data?.users) return [];
+    if (!data) return [];
     
-    const depts = data.users
+    const depts = data
       .map((user: User) => user.department)
       .filter((dept): dept is string => Boolean(dept))
       .filter((dept, index, arr) => arr.indexOf(dept) === index);
     
     return depts.sort();
-  }, [data?.users]);
+  }, [data]);
 
   // Selection handlers with optimized callbacks
   const handleUserSelect = useCallback((userId: string, selected: boolean) => {
@@ -396,7 +382,7 @@ export const useUserManagement = (organizationId?: string) => {
   return {
     // Enhanced data with computed values
     users: filteredUsers,
-    totalUsers: data?.users?.length || 0,
+    totalUsers: data?.length || 0,
     filteredCount: filteredUsers.length,
     selectedUsers,
     departments,
