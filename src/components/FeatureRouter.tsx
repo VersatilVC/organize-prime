@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, useParams } from 'react-router-dom';
 import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
+import { AppLayout } from './layout/AppLayout';
 import NotFound from '@/pages/NotFound';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,10 +154,12 @@ export function FeatureRouter() {
   console.log('✅ FeatureRouter: Rendering with slug:', slug);
 
   return (
-    <FeatureProvider slug={slug}>
-      <FeatureAccessCheck>
-        <FeatureRoutes />
-      </FeatureAccessCheck>
-    </FeatureProvider>
+    <AppLayout>
+      <FeatureProvider slug={slug}>
+        <FeatureAccessCheck>
+          <FeatureRoutes />
+        </FeatureAccessCheck>
+      </FeatureProvider>
+    </AppLayout>
   );
 }
