@@ -351,8 +351,8 @@ export default function Marketplace() {
               <Button 
                 size="sm" 
                 variant={
-                  feature.status === 'requires_upgrade' ? "outline" : 
-                  !canInstall ? "secondary" :
+                  feature.status === 'requires_upgrade' ? "secondary" : 
+                  !canInstall ? "outline" :
                   "default"
                 }
                 onClick={(e) => {
