@@ -13,8 +13,7 @@ import { Loader2, Send, FileText, History, Settings } from 'lucide-react';
 import { 
   SendAnnouncementForm, 
   NotificationTemplatesManager, 
-  NotificationHistory, 
-  BulkNotificationActions
+  NotificationHistory
 } from '@/components/notifications';
 
 export default function NotificationManagement() {
@@ -76,7 +75,7 @@ export default function NotificationManagement() {
         <Card>
           <CardContent className="p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="send" className="flex items-center gap-2">
                   <Send className="h-4 w-4" />
                   Send Announcement
@@ -88,10 +87,6 @@ export default function NotificationManagement() {
                 <TabsTrigger value="history" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
                   History
-                </TabsTrigger>
-                <TabsTrigger value="bulk" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Bulk Actions
                 </TabsTrigger>
               </TabsList>
 
@@ -120,12 +115,6 @@ export default function NotificationManagement() {
                 />
               </TabsContent>
 
-              <TabsContent value="bulk">
-                <BulkNotificationActions 
-                  userRole={role}
-                  currentOrganization={currentOrganization}
-                />
-              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>

@@ -40,32 +40,44 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notification-history', userRole, currentOrganization?.id, searchTerm, typeFilter, dateFilter],
     queryFn: async () => {
-      // This would typically call a database function or API endpoint
-      // For now, we'll return mock data
-      return [
-        {
-          id: '1',
-          title: 'System Maintenance Notice',
-          message: 'We will be performing scheduled maintenance...',
-          type: 'system_announcement',
-          created_at: new Date().toISOString(),
-          sender_name: 'System Admin',
-          recipient_count: 150,
-          organization_name: userRole === 'super_admin' ? 'All Organizations' : currentOrganization?.name,
-          delivery_status: 'sent' as const,
-        },
-        {
-          id: '2',
-          title: 'Welcome New Team Members',
-          message: 'Please welcome our new team members...',
-          type: 'user_invitation_accepted',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          sender_name: 'HR Team',
-          recipient_count: 25,
-          organization_name: currentOrganization?.name,
-          delivery_status: 'sent' as const,
-        },
-      ] as NotificationRecord[];
+      let query = supabase
+        .from('notifications')
+        .select(`
+          id,
+          title,
+          message,
+          type,
+          created_at,
+          data,
+          organization_id,
+          organizations!inner(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      // Filter by organization for admins
+      if (userRole === 'admin' && currentOrganization?.id) {
+        query = query.eq('organization_id', currentOrganization.id);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching notification history:', error);
+        return [];
+      }
+
+      return (data || []).map(notification => ({
+        id: notification.id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        created_at: notification.created_at,
+        sender_name: (notification.data as any)?.sender_name || 'System',
+        recipient_count: (notification.data as any)?.recipient_count || 0,
+        organization_name: notification.organizations?.name || 'Unknown',
+        delivery_status: 'sent' as const,
+      })) as NotificationRecord[];
     }
   });
 
