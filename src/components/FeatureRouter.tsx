@@ -143,10 +143,10 @@ function FeatureRoutes() {
 export function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
 
-  console.log('🔍 FeatureRouter: URL params:', { slug, allParams: useParams() });
+  console.log('🔍 FeatureRouter: Component mounted, URL params:', { slug, allParams: useParams(), pathname: window.location.pathname });
 
   if (!slug) {
-    console.log('❌ FeatureRouter: No slug in URL params');
+    console.log('❌ FeatureRouter: No slug in URL params, showing NotFound');
     return <NotFound />;
   }
 

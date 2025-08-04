@@ -52,6 +52,13 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
     );
   }
 
+  console.log('ProtectedRoute: Auth state resolved, rendering children', { 
+    user: !!user, 
+    role, 
+    pathname: location.pathname,
+    requiredRole 
+  });
+
   if (!user) {
     console.log('ProtectedRoute: No user found, redirecting to auth');
     return <Navigate to="/auth" state={{ from: location }} replace />;

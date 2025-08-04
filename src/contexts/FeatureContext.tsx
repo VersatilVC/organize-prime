@@ -11,6 +11,12 @@ interface FeatureProviderProps {
 export function FeatureProvider({ children, slug }: FeatureProviderProps) {
   const featureData = useFeatureData(slug);
 
+  console.log('🔍 FeatureProvider: Providing context for slug:', slug, 'Data:', {
+    feature: featureData.feature ? { slug: featureData.feature.slug, isInstalled: featureData.feature.isInstalled } : null,
+    isLoading: featureData.isLoading,
+    hasAccess: featureData.hasAccess
+  });
+
   return (
     <FeatureContext.Provider value={featureData}>
       {children}
