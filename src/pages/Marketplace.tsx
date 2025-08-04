@@ -196,7 +196,7 @@ const sortOptions = [
 
 export default function Marketplace() {
   const navigate = useNavigate();
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -312,9 +312,10 @@ export default function Marketplace() {
                 e.stopPropagation();
                 handleFeatureAction(feature);
               }}
-              disabled={loading}
+              disabled={loading || roleLoading}
             >
-              {!canInstall ? 'Contact Admin' :
+              {roleLoading ? '...' : 
+               !canInstall ? 'Contact Admin' :
                feature.status === 'installed' ? 'Configure' : 'Install'}
             </Button>
           </div>
