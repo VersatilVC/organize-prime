@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,83 +14,45 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-
-interface FeatureCategory {
-  id: string;
-  name: string;
-  description: string;
-  slug: string;
-  color: string;
-  isActive: boolean;
-  isSystem: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { 
+  useAppCategories, 
+  useCreateAppCategory, 
+  useUpdateAppCategory, 
+  useDeleteAppCategory,
+  useSeedAppCategories,
+  type AppCategory 
+} from '@/hooks/useAppCategories';
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(50),
   description: z.string().max(200).optional(),
   slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase with hyphens"),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i, "Must be valid hex color"),
-  isActive: z.boolean()
+  color_hex: z.string().regex(/^#[0-9A-F]{6}$/i, "Must be valid hex color"),
+  is_active: z.boolean()
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
 
-const defaultCategories: FeatureCategory[] = [
-  {
-    id: '1',
-    name: 'Productivity',
-    description: 'Tools to enhance team productivity and efficiency',
-    slug: 'productivity',
-    color: '#3b82f6',
-    isActive: true,
-    isSystem: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Analytics',
-    description: 'Data analysis and reporting tools',
-    slug: 'analytics',
-    color: '#10b981',
-    isActive: true,
-    isSystem: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Automation',
-    description: 'Workflow and process automation tools',
-    slug: 'automation',
-    color: '#f59e0b',
-    isActive: true,
-    isSystem: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Intelligence',
-    description: 'AI-powered insights and market intelligence',
-    slug: 'intelligence',
-    color: '#8b5cf6',
-    isActive: true,
-    isSystem: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
-  }
-];
-
 export default function FeatureCategoryManagement() {
   const { toast } = useToast();
-  const [categories, setCategories] = useState<FeatureCategory[]>(defaultCategories);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'created'>('name');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<FeatureCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<AppCategory | null>(null);
+
+  // Hooks for database operations
+  const { data: categories = [], isLoading } = useAppCategories();
+  const createCategoryMutation = useCreateAppCategory();
+  const updateCategoryMutation = useUpdateAppCategory();
+  const deleteCategoryMutation = useDeleteAppCategory();
+  const seedCategoriesMutation = useSeedAppCategories();
+
+  // Auto-seed categories on first load if none exist
+  useEffect(() => {
+    if (!isLoading && categories.length === 0) {
+      seedCategoriesMutation.mutate();
+    }
+  }, [isLoading, categories.length]);
 
   const {
     register,
@@ -102,104 +64,81 @@ export default function FeatureCategoryManagement() {
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
-      isActive: true,
-      color: '#3b82f6'
+      is_active: true,
+      color_hex: '#3b82f6'
     }
   });
 
   const filteredCategories = useMemo(() => {
     let filtered = categories.filter(category =>
       category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      category.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (category.description || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
       } else {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
 
     return filtered;
   }, [categories, searchQuery, sortBy]);
 
-  const handleAddCategory = (data: CategoryFormData) => {
-    const newCategory: FeatureCategory = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: data.name,
-      description: data.description || '',
-      slug: data.slug,
-      color: data.color,
-      isActive: data.isActive,
-      isSystem: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    setCategories([...categories, newCategory]);
-    setIsAddDialogOpen(false);
-    reset();
-    
-    toast({
-      title: "Category Added",
-      description: `${data.name} has been successfully created.`,
-    });
+  const handleAddCategory = async (data: CategoryFormData) => {
+    try {
+      await createCategoryMutation.mutateAsync({
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        color_hex: data.color_hex,
+        icon_name: 'Package', // Default icon
+        is_active: data.is_active,
+      });
+      
+      setIsAddDialogOpen(false);
+      reset();
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
   };
 
-  const handleEditCategory = (data: CategoryFormData) => {
+  const handleEditCategory = async (data: CategoryFormData) => {
     if (!editingCategory) return;
 
-    const updatedCategories = categories.map(cat =>
-      cat.id === editingCategory.id
-        ? {
-            ...cat,
-            name: data.name,
-            description: data.description || '',
-            slug: data.slug,
-            color: data.color,
-            isActive: data.isActive,
-            updatedAt: new Date().toISOString()
-          }
-        : cat
-    );
-
-    setCategories(updatedCategories);
-    setEditingCategory(null);
-    reset();
-    
-    toast({
-      title: "Category Updated",
-      description: `${data.name} has been successfully updated.`,
-    });
-  };
-
-  const handleDeleteCategory = (categoryId: string) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    if (category?.isSystem) {
-      toast({
-        title: "Cannot Delete",
-        description: "System categories cannot be deleted.",
-        variant: "destructive"
+    try {
+      await updateCategoryMutation.mutateAsync({
+        id: editingCategory.id,
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        color_hex: data.color_hex,
+        is_active: data.is_active,
       });
-      return;
+      
+      setEditingCategory(null);
+      reset();
+    } catch (error) {
+      // Error handling is done in the mutation
     }
-
-    setCategories(categories.filter(cat => cat.id !== categoryId));
-    
-    toast({
-      title: "Category Deleted",
-      description: "The category has been successfully deleted.",
-    });
   };
 
-  const openEditDialog = (category: FeatureCategory) => {
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      await deleteCategoryMutation.mutateAsync(categoryId);
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
+  };
+
+  const openEditDialog = (category: AppCategory) => {
     setEditingCategory(category);
     setValue('name', category.name);
-    setValue('description', category.description);
+    setValue('description', category.description || '');
     setValue('slug', category.slug);
-    setValue('color', category.color);
-    setValue('isActive', category.isActive);
+    setValue('color_hex', category.color_hex);
+    setValue('is_active', category.is_active);
   };
 
   const generateSlug = (name: string) => {
@@ -272,25 +211,25 @@ export default function FeatureCategoryManagement() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="color">Badge Color</Label>
+                <div className="space-y-2">
+                <Label htmlFor="color_hex">Badge Color</Label>
                 <Input
-                  id="color"
+                  id="color_hex"
                   type="color"
-                  {...register('color')}
+                  {...register('color_hex')}
                   className="w-20 h-10"
                 />
-                {errors.color && (
-                  <p className="text-sm text-destructive">{errors.color.message}</p>
+                {errors.color_hex && (
+                  <p className="text-sm text-destructive">{errors.color_hex.message}</p>
                 )}
               </div>
 
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="isActive"
-                  {...register('isActive')}
+                  id="is_active"
+                  {...register('is_active')}
                 />
-                <Label htmlFor="isActive">Active</Label>
+                <Label htmlFor="is_active">Active</Label>
               </div>
 
               <div className="flex justify-end gap-2">
@@ -349,17 +288,14 @@ export default function FeatureCategoryManagement() {
                   <div className="flex items-center gap-2">
                     <div 
                       className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: category.color }}
+                      style={{ backgroundColor: category.color_hex }}
                     />
                     <span className="font-medium">{category.name}</span>
-                    {category.isSystem && (
-                      <Badge variant="outline" className="text-xs">System</Badge>
-                    )}
                   </div>
                 </TableCell>
                 <TableCell className="max-w-xs">
                   <span className="text-sm text-muted-foreground truncate">
-                    {category.description}
+                    {category.description || 'No description'}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -368,8 +304,8 @@ export default function FeatureCategoryManagement() {
                   </code>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={category.isActive ? 'default' : 'secondary'}>
-                    {category.isActive ? 'Active' : 'Inactive'}
+                  <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                    {category.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -381,29 +317,27 @@ export default function FeatureCategoryManagement() {
                     >
                       <Icons.edit className="h-4 w-4" />
                     </Button>
-                    {!category.isSystem && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Icons.trash className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{category.name}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteCategory(category.id)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Icons.trash className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{category.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteCategory(category.id)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>
@@ -450,7 +384,6 @@ export default function FeatureCategoryManagement() {
                 id="edit-slug"
                 {...register('slug')}
                 placeholder="e.g., productivity"
-                disabled={editingCategory?.isSystem}
               />
               {errors.slug && (
                 <p className="text-sm text-destructive">{errors.slug.message}</p>
@@ -458,24 +391,24 @@ export default function FeatureCategoryManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-color">Badge Color</Label>
+              <Label htmlFor="edit-color_hex">Badge Color</Label>
               <Input
-                id="edit-color"
+                id="edit-color_hex"
                 type="color"
-                {...register('color')}
+                {...register('color_hex')}
                 className="w-20 h-10"
               />
-              {errors.color && (
-                <p className="text-sm text-destructive">{errors.color.message}</p>
+              {errors.color_hex && (
+                <p className="text-sm text-destructive">{errors.color_hex.message}</p>
               )}
             </div>
 
             <div className="flex items-center space-x-2">
               <Switch
-                id="edit-isActive"
-                {...register('isActive')}
+                id="edit-is_active"
+                {...register('is_active')}
               />
-              <Label htmlFor="edit-isActive">Active</Label>
+              <Label htmlFor="edit-is_active">Active</Label>
             </div>
 
             <div className="flex justify-end gap-2">

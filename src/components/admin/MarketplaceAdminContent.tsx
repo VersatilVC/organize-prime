@@ -25,6 +25,7 @@ import {
 import { AppCreationModal } from './AppCreationModal';
 import { MarketplaceAnalytics } from './MarketplaceAnalytics';
 import { MarketplaceSettings } from './MarketplaceSettings';
+import { type AppCategory } from '@/hooks/useAppCategories';
 
 interface MarketplaceApp {
   id: string;
@@ -41,11 +42,7 @@ interface MarketplaceApp {
   created_at: string;
 }
 
-interface AppCategory {
-  id: string;
-  name: string;
-  slug: string;
-}
+// AppCategory interface now imported from useAppCategories hook
 
 export const MarketplaceAdminContent: React.FC = () => {
   const { toast } = useToast();
@@ -69,18 +66,18 @@ export const MarketplaceAdminContent: React.FC = () => {
     }
   });
 
-  // Fetch app categories
-  const { data: categories = [] } = useQuery({
+  // Fetch app categories using unified hook
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ['app-categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('app_categories' as any)
+      const { data, error } = await (supabase as any)
+        .from('app_categories')
         .select('id, name, slug')
         .eq('is_active', true)
         .order('sort_order');
       
       if (error) throw error;
-      return (data || []) as unknown as AppCategory[];
+      return (data || []) as AppCategory[];
     }
   });
 

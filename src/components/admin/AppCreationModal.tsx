@@ -22,11 +22,7 @@ import {
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
-interface AppCategory {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { type AppCategory } from '@/hooks/useAppCategories';
 
 interface AppCreationModalProps {
   open: boolean;
