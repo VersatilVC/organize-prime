@@ -67,6 +67,48 @@ export type Database = {
           },
         ]
       }
+      app_categories: {
+        Row: {
+          color_hex: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          color_hex?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          color_hex?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -385,6 +427,369 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketplace_app_analytics: {
+        Row: {
+          app_id: string | null
+          created_at: string | null
+          event_category: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          organization_id: string | null
+          page_path: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string | null
+          event_category?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          organization_id?: string | null
+          page_path?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string | null
+          event_category?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          organization_id?: string | null
+          page_path?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_app_analytics_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_app_analytics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_app_installations: {
+        Row: {
+          app_id: string | null
+          app_settings: Json | null
+          created_at: string | null
+          custom_navigation: Json | null
+          feature_flags: Json | null
+          id: string
+          installation_type: string | null
+          installed_at: string | null
+          installed_by: string | null
+          last_used_at: string | null
+          organization_id: string | null
+          status: string | null
+          uninstalled_at: string | null
+          uninstalled_by: string | null
+          updated_at: string | null
+          usage_stats: Json | null
+        }
+        Insert: {
+          app_id?: string | null
+          app_settings?: Json | null
+          created_at?: string | null
+          custom_navigation?: Json | null
+          feature_flags?: Json | null
+          id?: string
+          installation_type?: string | null
+          installed_at?: string | null
+          installed_by?: string | null
+          last_used_at?: string | null
+          organization_id?: string | null
+          status?: string | null
+          uninstalled_at?: string | null
+          uninstalled_by?: string | null
+          updated_at?: string | null
+          usage_stats?: Json | null
+        }
+        Update: {
+          app_id?: string | null
+          app_settings?: Json | null
+          created_at?: string | null
+          custom_navigation?: Json | null
+          feature_flags?: Json | null
+          id?: string
+          installation_type?: string | null
+          installed_at?: string | null
+          installed_by?: string | null
+          last_used_at?: string | null
+          organization_id?: string | null
+          status?: string | null
+          uninstalled_at?: string | null
+          uninstalled_by?: string | null
+          updated_at?: string | null
+          usage_stats?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_app_installations_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_app_installations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_app_reviews: {
+        Row: {
+          app_id: string | null
+          cons: string[] | null
+          created_at: string | null
+          helpful_count: number | null
+          id: string
+          is_featured: boolean | null
+          is_verified: boolean | null
+          organization_id: string | null
+          pros: string[] | null
+          rating: number
+          review_text: string | null
+          review_title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_id?: string | null
+          cons?: string[] | null
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_featured?: boolean | null
+          is_verified?: boolean | null
+          organization_id?: string | null
+          pros?: string[] | null
+          rating: number
+          review_text?: string | null
+          review_title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_id?: string | null
+          cons?: string[] | null
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_featured?: boolean | null
+          is_verified?: boolean | null
+          organization_id?: string | null
+          pros?: string[] | null
+          rating?: number
+          review_text?: string | null
+          review_title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_app_reviews_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_app_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_apps: {
+        Row: {
+          app_config: Json | null
+          approved_at: string | null
+          approved_by: string | null
+          banner_url: string | null
+          base_price: number | null
+          category: string
+          changelog: string | null
+          compatibility_version: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          dashboard_config: Json | null
+          database_tables: string[] | null
+          demo_url: string | null
+          description: string
+          documentation_url: string | null
+          github_repo_url: string | null
+          icon_name: string | null
+          icon_url: string | null
+          id: string
+          install_count: number | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          is_system_app: boolean | null
+          long_description: string | null
+          lovable_project_url: string | null
+          n8n_webhooks: Json | null
+          name: string
+          navigation_config: Json | null
+          pricing_model: string
+          rating_average: number | null
+          rating_count: number | null
+          required_permissions: string[] | null
+          requires_approval: boolean | null
+          screenshots: string[] | null
+          settings_schema: Json | null
+          slug: string
+          subcategory: string | null
+          updated_at: string | null
+          version: string | null
+        }
+        Insert: {
+          app_config?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          banner_url?: string | null
+          base_price?: number | null
+          category?: string
+          changelog?: string | null
+          compatibility_version?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          dashboard_config?: Json | null
+          database_tables?: string[] | null
+          demo_url?: string | null
+          description: string
+          documentation_url?: string | null
+          github_repo_url?: string | null
+          icon_name?: string | null
+          icon_url?: string | null
+          id?: string
+          install_count?: number | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_system_app?: boolean | null
+          long_description?: string | null
+          lovable_project_url?: string | null
+          n8n_webhooks?: Json | null
+          name: string
+          navigation_config?: Json | null
+          pricing_model?: string
+          rating_average?: number | null
+          rating_count?: number | null
+          required_permissions?: string[] | null
+          requires_approval?: boolean | null
+          screenshots?: string[] | null
+          settings_schema?: Json | null
+          slug: string
+          subcategory?: string | null
+          updated_at?: string | null
+          version?: string | null
+        }
+        Update: {
+          app_config?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          banner_url?: string | null
+          base_price?: number | null
+          category?: string
+          changelog?: string | null
+          compatibility_version?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          dashboard_config?: Json | null
+          database_tables?: string[] | null
+          demo_url?: string | null
+          description?: string
+          documentation_url?: string | null
+          github_repo_url?: string | null
+          icon_name?: string | null
+          icon_url?: string | null
+          id?: string
+          install_count?: number | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_system_app?: boolean | null
+          long_description?: string | null
+          lovable_project_url?: string | null
+          n8n_webhooks?: Json | null
+          name?: string
+          navigation_config?: Json | null
+          pricing_model?: string
+          rating_average?: number | null
+          rating_count?: number | null
+          required_permissions?: string[] | null
+          requires_approval?: boolean | null
+          screenshots?: string[] | null
+          settings_schema?: Json | null
+          slug?: string
+          subcategory?: string | null
+          updated_at?: string | null
+          version?: string | null
+        }
+        Relationships: []
+      }
+      marketplace_settings: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
       memberships: {
         Row: {
