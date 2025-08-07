@@ -158,7 +158,9 @@ export function AppSettings({
         )}
         {fieldComponent()}
         {error && (
-          <p className="text-sm text-destructive">{error.message}</p>
+          <p className="text-sm text-destructive">
+            {typeof error === 'object' && error && 'message' in error ? String(error.message) : 'This field is required'}
+          </p>
         )}
       </div>
     );

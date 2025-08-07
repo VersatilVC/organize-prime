@@ -230,7 +230,8 @@ export class AppAnalyticsService {
       events
         .filter(e => e.event_type === 'feature_usage')
         .forEach(e => {
-          const featureName = e.event_data?.feature_name;
+          const eventData = e.event_data as any;
+          const featureName = eventData?.feature_name;
           if (featureName) {
             featureUsage[featureName] = (featureUsage[featureName] || 0) + 1;
           }

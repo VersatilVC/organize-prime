@@ -205,7 +205,8 @@ export class N8NWebhookService {
       }
 
       // Get webhook config from app settings
-      const webhooks = installation.app_settings?.webhooks || {};
+      const appSettings = installation.app_settings as any;
+      const webhooks = appSettings?.webhooks || {};
       const webhookConfig = webhooks[webhookId];
 
       if (!webhookConfig) {

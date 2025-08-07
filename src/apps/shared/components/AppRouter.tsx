@@ -4,7 +4,7 @@ import { AppModule, AppRoute } from '../types/AppTypes';
 import { AppLayout } from './AppLayout';
 import { AppDashboard } from './AppDashboard';
 import { AppSettings } from './AppSettings';
-import { LoadingSkeletons } from '@/components/LoadingSkeletons';
+import { ComponentLoadingSkeleton } from '@/components/LoadingSkeletons';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
@@ -46,8 +46,7 @@ export function AppRouter({ basePath = '/features', fallbackComponent }: AppRout
   if (appsLoading || configLoading) {
     return (
       <div className="p-6">
-        <LoadingSkeletons.Header />
-        <LoadingSkeletons.Content />
+        <ComponentLoadingSkeleton />
       </div>
     );
   }
@@ -88,7 +87,7 @@ export function AppRouter({ basePath = '/features', fallbackComponent }: AppRout
       permissions={marketplaceApp.required_permissions || []}
     >
       <ErrorBoundary>
-        <Suspense fallback={<LoadingSkeletons.Content />}>
+        <Suspense fallback={<ComponentLoadingSkeleton />}>
           <Routes>
             {/* Default dashboard route */}
             <Route
@@ -206,7 +205,11 @@ function DynamicAppModule({
     const moduleLoader = APP_REGISTRY[appSlug];
     
     if (moduleLoader) {
-      return lazy(moduleLoader);
+      return lazy(() => 
+        moduleLoader().then(module => ({
+          default: module.default.component
+        }))
+      );
     }
     
     return null;
@@ -215,8 +218,19 @@ function DynamicAppModule({
   // If app module exists, render it
   if (AppModule) {
     return (
-      <Suspense fallback={<LoadingSkeletons.Content />}>
-        <AppModule />
+      <Suspense fallback={<ComponentLoadingSkeleton />}>
+        <AppModule 
+          context={{
+            appId: appSlug,
+            appSlug: appSlug,
+            appName: marketplaceApp.name,
+            organizationId: '',
+            configuration: { id: '', appId: '', organizationId: '', settings: {}, customNavigation: [], featureFlags: {}, status: 'active' },
+            permissions: [],
+            updateConfiguration: async () => {},
+            trackEvent: async () => {}
+          }}
+        />
       </Suspense>
     );
   }

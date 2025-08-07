@@ -30,11 +30,11 @@ export class AppConfigService {
         id: data.id,
         appId: data.app_id,
         organizationId: data.organization_id,
-        settings: data.app_settings || {},
-        customNavigation: data.custom_navigation || [],
-        featureFlags: data.feature_flags || {},
+        settings: (typeof data.app_settings === 'object' ? data.app_settings : {}) as Record<string, any>,
+        customNavigation: (Array.isArray(data.custom_navigation) ? data.custom_navigation : []) as any[],
+        featureFlags: (typeof data.feature_flags === 'object' ? data.feature_flags : {}) as Record<string, boolean>,
         lastUsedAt: data.last_used_at,
-        status: data.status,
+        status: (data.status as 'active' | 'inactive' | 'pending') || 'inactive',
       };
     } catch (error) {
       console.error('Failed to get app configuration:', error);
@@ -90,11 +90,11 @@ export class AppConfigService {
         id: data.id,
         appId: data.app_id,
         organizationId: data.organization_id,
-        settings: data.app_settings || {},
-        customNavigation: data.custom_navigation || [],
-        featureFlags: data.feature_flags || {},
+        settings: (typeof data.app_settings === 'object' ? data.app_settings : {}) as Record<string, any>,
+        customNavigation: (Array.isArray(data.custom_navigation) ? data.custom_navigation : []) as any[],
+        featureFlags: (typeof data.feature_flags === 'object' ? data.feature_flags : {}) as Record<string, boolean>,
         lastUsedAt: data.last_used_at,
-        status: data.status,
+        status: (data.status as 'active' | 'inactive' | 'pending') || 'inactive',
       };
     } catch (error) {
       console.error('Failed to update app configuration:', error);
@@ -124,11 +124,11 @@ export class AppConfigService {
         id: installation.id,
         appId: installation.app_id,
         organizationId: installation.organization_id,
-        settings: installation.app_settings || {},
-        customNavigation: installation.custom_navigation || [],
-        featureFlags: installation.feature_flags || {},
+        settings: (typeof installation.app_settings === 'object' ? installation.app_settings : {}) as Record<string, any>,
+        customNavigation: (Array.isArray(installation.custom_navigation) ? installation.custom_navigation : []) as any[],
+        featureFlags: (typeof installation.feature_flags === 'object' ? installation.feature_flags : {}) as Record<string, boolean>,
         lastUsedAt: installation.last_used_at,
-        status: installation.status,
+        status: (installation.status as 'active' | 'inactive' | 'pending') || 'inactive',
       }));
     } catch (error) {
       console.error('Failed to get installed apps:', error);

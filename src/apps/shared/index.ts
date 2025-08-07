@@ -57,11 +57,11 @@ export function createAppModule(config: {
   slug: string;
   version: string;
   component: React.ComponentType<any>;
-  routes?: any[];
-  navigation?: any[];
+  routes?: import('./types/AppTypes').AppRoute[];
+  navigation?: import('./types/AppTypes').NavigationItem[];
   permissions?: string[];
-  settings?: any;
-}): AppModule {
+  settings?: import('./types/AppTypes').AppSettingsSchema;
+}): import('./types/AppTypes').AppModule {
   return {
     routes: [],
     navigation: [],
@@ -86,9 +86,9 @@ export function createNavigationItem(config: {
   path: string;
   icon?: string;
   permissions?: string[];
-  children?: any[];
+  children?: import('./types/AppTypes').NavigationItem[];
   order?: number;
-}): NavigationItem {
+}): import('./types/AppTypes').NavigationItem {
   return {
     children: [],
     permissions: [],

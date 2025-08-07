@@ -24,7 +24,7 @@ export function useAppNavigation({
   const location = useLocation();
   const params = useParams();
   const { configuration, isLoading: configLoading } = useAppConfig({ appId });
-  const { data: featureConfigs, isLoading: featureConfigsLoading } = useOrganizationFeatureConfigs();
+  const { configs: featureConfigs, isLoading: featureConfigsLoading } = useOrganizationFeatureConfigs();
 
   // Get app slug from URL params
   const appSlug = params.slug;
