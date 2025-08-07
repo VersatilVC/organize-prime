@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAppInstallations, useUninstallApp } from '@/hooks/database/useMarketplaceApps';
+import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
 import { Separator } from '@/components/ui/separator';
 import { Settings, Trash2, ExternalLink } from 'lucide-react';
 import { Icons } from '@/components/ui/icons';
@@ -15,8 +16,27 @@ import { Link } from 'react-router-dom';
 export function InstalledAppsManagement() {
   const { data: appInstallations = [], isLoading } = useAppInstallations();
   const uninstallAppMutation = useUninstallApp();
+  const { configs, updateConfig, isUpdating } = useOrganizationFeatureConfigs();
   const { toast } = useToast();
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
+
+  const handleToggleApp = async (appSlug: string, isEnabled: boolean) => {
+    try {
+      updateConfig({
+        featureSlug: appSlug,
+        config: {
+          is_enabled: isEnabled,
+          is_user_accessible: isEnabled,
+        }
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to update app status',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleUninstallApp = async (appId: string, appName: string) => {
     try {
@@ -33,6 +53,15 @@ export function InstalledAppsManagement() {
         variant: 'destructive',
       });
     }
+  };
+
+  const getAppConfig = (appSlug: string) => {
+    return configs.find(config => config.feature_slug === appSlug);
+  };
+
+  const isAppEnabled = (appSlug: string) => {
+    const config = getAppConfig(appSlug);
+    return config?.is_enabled !== false; // Default to enabled if no config exists
   };
 
   if (isLoading) {
@@ -93,6 +122,7 @@ export function InstalledAppsManagement() {
         {appInstallations.map((installation) => {
           const app = installation.marketplace_apps;
           const AppIcon = Icons[app.icon_name as keyof typeof Icons] || Icons.package;
+          const appEnabled = isAppEnabled(app.slug);
 
           return (
             <div key={installation.id} className="border rounded-lg p-4">
@@ -112,16 +142,38 @@ export function InstalledAppsManagement() {
                     <Badge variant="outline" className="text-xs">
                       {installation.status}
                     </Badge>
+                    <Badge variant={appEnabled ? "default" : "secondary"} className="text-xs">
+                      {appEnabled ? "Enabled" : "Disabled"}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Installed on {new Date(installation.installed_at).toLocaleDateString()}
                   </p>
                 </div>
 
-                {/* Controls */}
+                {/* Enable/Disable Toggle */}
                 <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor={`enable-${app.slug}`} className="text-sm">
+                      Enable
+                    </Label>
+                    <Switch
+                      id={`enable-${app.slug}`}
+                      checked={appEnabled}
+                      disabled={isUpdating}
+                      onCheckedChange={(checked) => handleToggleApp(app.slug, checked)}
+                    />
+                  </div>
+
+                  <Separator orientation="vertical" className="h-8" />
+
                   {/* App Dashboard Link */}
-                  <Button variant="outline" size="sm" asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    asChild
+                    disabled={!appEnabled}
+                  >
                     <Link to={`/apps/${app.slug}`}>
                       <ExternalLink className="h-4 w-4 mr-1" />
                       Open
@@ -129,7 +181,12 @@ export function InstalledAppsManagement() {
                   </Button>
 
                   {/* App Settings Link */}
-                  <Button variant="outline" size="sm" asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    asChild
+                    disabled={!appEnabled}
+                  >
                     <Link to={`/apps/${app.slug}/settings`}>
                       <Settings className="h-4 w-4 mr-1" />
                       Settings

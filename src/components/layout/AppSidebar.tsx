@@ -36,6 +36,12 @@ interface SidebarSection {
 
 // Helper function to get items for each section based on role
 const getSectionItems = (sectionKey: string, role: string, section?: SidebarSection) => {
+  // For app sections, return the items from the section itself
+  if (sectionKey.startsWith('app-') && section) {
+    console.log(`Returning items for app section ${sectionKey}:`, section.items);
+    return section.items;
+  }
+  
   // For feature sections, return the items from the section itself
   if (sectionKey.startsWith('feature-') && section) {
     return section.items;
