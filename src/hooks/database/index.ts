@@ -41,6 +41,14 @@ export {
 } from './useAppCategories';
 
 export {
+  useAppNavigation,
+  useAppNavigationItem,
+  useIsAppNavigationItemActive,
+  type AppNavigationItem,
+  type AppNavigationSection
+} from '../useAppNavigation';
+
+export {
   useAppReviews,
   useUserAppReview,
   useCreateAppReview,

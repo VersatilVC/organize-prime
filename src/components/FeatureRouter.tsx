@@ -3,6 +3,8 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
+import { AppLayout as SharedAppLayout } from '@/apps/shared/components/AppLayout';
+import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
 import NotFound from '@/pages/NotFound';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -141,6 +143,58 @@ function FeatureRoutes() {
   );
 }
 
+// Enhanced router that supports both features and marketplace apps
+export function EnhancedFeatureRouter() {
+  const params = useParams();
+  const { slug } = params as { slug?: string };
+  const { data: appInstallations = [] } = useAppInstallations();
+
+  console.log('🔍 EnhancedFeatureRouter: Component mounted, URL params:', { slug, allParams: params, pathname: window.location.pathname });
+
+  if (!slug) {
+    console.log('❌ EnhancedFeatureRouter: No slug in URL params, showing NotFound');
+    return <NotFound />;
+  }
+
+  // Check if this is a marketplace app
+  const appInstallation = appInstallations.find(
+    installation => installation.marketplace_apps.slug === slug
+  );
+
+  if (appInstallation) {
+    console.log('✅ EnhancedFeatureRouter: Found marketplace app installation:', appInstallation.marketplace_apps.name);
+    
+    return (
+      <SharedAppLayout
+        appId={appInstallation.app_id}
+        appName={appInstallation.marketplace_apps.name}
+        permissions={[]}
+      >
+        <Routes>
+          <Route path="" element={<div>App Dashboard for {appInstallation.marketplace_apps.name}</div>} />
+          <Route path="dashboard" element={<div>App Dashboard for {appInstallation.marketplace_apps.name}</div>} />
+          <Route path="settings" element={<div>App Settings for {appInstallation.marketplace_apps.name}</div>} />
+          <Route path="*" element={<div>App Content for {appInstallation.marketplace_apps.name}</div>} />
+        </Routes>
+      </SharedAppLayout>
+    );
+  }
+
+  console.log('✅ EnhancedFeatureRouter: Rendering traditional feature with slug:', slug);
+
+  // Fall back to traditional feature routing
+  return (
+    <AppLayout>
+      <FeatureProvider slug={slug}>
+        <FeatureAccessCheck>
+          <FeatureRoutes />
+        </FeatureAccessCheck>
+      </FeatureProvider>
+    </AppLayout>
+  );
+}
+
+// Keep original for backward compatibility
 export function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { useInstalledFeatures } from '@/hooks/useInstalledFeatures';
+import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -30,6 +30,8 @@ interface SidebarSection {
     badge?: number;
   }>;
   isVisible: (role: string) => boolean;
+  isApp?: boolean;
+  appIcon?: string;
 }
 
 // Helper function to get items for each section based on role
@@ -78,19 +80,36 @@ const getSectionItems = (sectionKey: string, role: string, section?: SidebarSect
   }
 };
 
-// Create dynamic sections for installed features
-const createFeatureSections = (installedFeatures: any[]): SidebarSection[] => {
-  return installedFeatures.map(feature => ({
-    key: `feature-${feature.slug}`,
-    title: feature.displayName,
-    items: feature.navigation.map((navItem: any) => ({
-      name: navItem.name,
-      href: navItem.href,
-      icon: Icons[navItem.icon as keyof typeof Icons] || Icons.package,
-      badge: navItem.badge
-    })),
-    isVisible: () => true
-  }));
+// Create dynamic sections for installed marketplace apps
+const createAppSections = (appInstallations: any[]): SidebarSection[] => {
+  return appInstallations.map(installation => {
+    const app = installation.marketplace_apps;
+    const navigationConfig = installation.custom_navigation || {};
+    
+    // Default navigation items for all apps
+    const defaultItems = [
+      { name: 'Dashboard', href: `/apps/${app.slug}`, icon: Icons.home },
+      { name: 'Settings', href: `/apps/${app.slug}/settings`, icon: Icons.settings }
+    ];
+
+    // Add custom navigation from app configuration
+    const customItems = navigationConfig.items || [];
+    const navigationItems = customItems.length > 0 ? customItems : defaultItems;
+
+    return {
+      key: `app-${app.slug}`,
+      title: app.name,
+      items: navigationItems.map((navItem: any) => ({
+        name: navItem.name || navItem.label,
+        href: navItem.href || navItem.path || `/apps/${app.slug}/${navItem.slug || navItem.name.toLowerCase()}`,
+        icon: Icons[navItem.icon as keyof typeof Icons] || Icons.package,
+        badge: navItem.badge
+      })),
+      isVisible: () => true,
+      isApp: true,
+      appIcon: app.icon_name,
+    };
+  });
 };
 
 const baseSidebarSections: SidebarSection[] = [
@@ -120,13 +139,14 @@ const baseSidebarSections: SidebarSection[] = [
   },
 ];
 
-// Combine base sections with dynamic feature sections
-const getAllSidebarSections = (installedFeatures: any[]): SidebarSection[] => {
-  const featureSections = createFeatureSections(installedFeatures);
+// Combine base sections with dynamic app sections
+const getAllSidebarSections = (appInstallations: any[]): SidebarSection[] => {
+  const appSections = createAppSections(appInstallations);
   
-  // Insert feature sections after 'main' section
+  // Insert app sections after 'main' section but before management sections
   const sections = [...baseSidebarSections];
-  sections.splice(1, 0, ...featureSections);
+  const mainIndex = sections.findIndex(s => s.key === 'main');
+  sections.splice(mainIndex + 1, 0, ...appSections);
   
   return sections;
 };
@@ -264,10 +284,19 @@ const SidebarSectionComponent = React.memo(({
               hasActiveItem && "text-sidebar-accent-foreground"
             )}
           >
-            <span>
-              {section.title}
-              {isCollapsed && ` (${itemCount})`}
-            </span>
+            <div className="flex items-center gap-2">
+              {section.isApp && section.appIcon && (
+                <div className="w-4 h-4 flex items-center justify-center">
+                  {React.createElement(Icons[section.appIcon as keyof typeof Icons] || Icons.package, {
+                    className: "w-4 h-4"
+                  })}
+                </div>
+              )}
+              <span>
+                {section.title}
+                {isCollapsed && ` (${itemCount})`}
+              </span>
+            </div>
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4 transition-transform duration-300 ease-in-out" />
             ) : (
@@ -308,14 +337,14 @@ export function AppSidebar() {
   try {
     const { role, loading: roleLoading } = useUserRole();
     const { feedback } = useDashboardData();
-    const installedFeatures = useInstalledFeatures();
+    const { data: appInstallations = [], isLoading: appsLoading } = useAppInstallations();
     const location = useLocation();
 
-    // Get all sections including dynamic feature sections
+    // Get all sections including dynamic app sections
     const allSections = useMemo(() => {
       if (!role) return [];
-      return getAllSidebarSections(installedFeatures).filter(section => section.isVisible(role));
-    }, [role, installedFeatures]);
+      return getAllSidebarSections(appInstallations).filter(section => section.isVisible(role));
+    }, [role, appInstallations]);
 
     const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
@@ -330,7 +359,7 @@ export function AppSidebar() {
     return (
       <Sidebar collapsible="icon">
         <SidebarContent className="space-y-1">
-          {roleLoading ? (
+          {roleLoading || appsLoading ? (
             // Show loading skeleton while role is being determined
             <div className="space-y-4 p-4">
               <div className="animate-pulse space-y-2">
