@@ -46,7 +46,7 @@ export function FeatureDetailModal({ feature, isOpen, onClose, onInstall, canIns
 
   if (!feature) return null;
 
-  const IconComponent = Icons[feature.iconName];
+  const IconComponent = Icons[feature.iconName as keyof typeof Icons] || Icons.package;
   
   const handleInstall = () => {
     if (canInstall) {
