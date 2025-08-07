@@ -1,9 +1,10 @@
-import React, { memo } from 'react';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import React, { memo, useRef } from 'react';
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserTableRow } from './UserTableRow';
 import { TableLoadingSkeleton } from '@/components/LoadingSkeletons';
 import { User } from '@/types/api';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface UserTableProps {
   users: User[];
@@ -25,6 +26,17 @@ export const UserTable = memo(({
   const allSelected = users.length > 0 && selectedUsers.length === users.length;
   const someSelected = selectedUsers.length > 0 && selectedUsers.length < users.length;
 
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: users.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 56, // approximate row height
+    overscan: 8,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom = virtualRows.length > 0 ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end : 0;
+  const COL_COUNT = 7;
   if (isLoading) {
     return <TableLoadingSkeleton />;
   }
@@ -55,7 +67,7 @@ export const UserTable = memo(({
   }
 
   return (
-    <div className="border rounded-lg">
+    <div ref={parentRef} className="border rounded-lg overflow-auto max-h-[640px]">
       <Table>
         <TableHeader>
           <TableRow>
@@ -76,15 +88,30 @@ export const UserTable = memo(({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <UserTableRow
-              key={user.id}
-              user={user}
-              selected={selectedUsers.includes(user.id)}
-              onSelect={(selected) => onUserSelect(user.id, selected)}
-              onAction={(action) => onUserAction(user.id, action)}
-            />
-          ))}
+          {paddingTop > 0 && (
+            <TableRow>
+              <TableCell colSpan={COL_COUNT} style={{ height: paddingTop }} />
+            </TableRow>
+          )}
+
+          {virtualRows.map((virtualRow) => {
+            const user = users[virtualRow.index];
+            return (
+              <UserTableRow
+                key={user.id}
+                user={user}
+                selected={selectedUsers.includes(user.id)}
+                onSelect={(selected) => onUserSelect(user.id, selected)}
+                onAction={(action) => onUserAction(user.id, action)}
+              />
+            );
+          })}
+
+          {paddingBottom > 0 && (
+            <TableRow>
+              <TableCell colSpan={COL_COUNT} style={{ height: paddingBottom }} />
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>
