@@ -23,6 +23,7 @@ import {
   Store
 } from 'lucide-react';
 import { AppCreationModal } from './AppCreationModal';
+import { AppEditModal } from './AppEditModal';
 import { MarketplaceAnalytics } from './MarketplaceAnalytics';
 import { MarketplaceSettings } from './MarketplaceSettings';
 import { useAppCategories, type AppCategory } from '@/hooks/database/useAppCategories';
@@ -32,11 +33,17 @@ interface MarketplaceApp {
   name: string;
   slug: string;
   description: string;
+  long_description: string;
   category: string;
   install_count: number;
   is_active: boolean;
   is_featured: boolean;
   icon_name: string;
+  pricing_model: 'free' | 'paid' | 'freemium';
+  base_price: number;
+  required_permissions: string[];
+  n8n_webhooks: Record<string, string>;
+  requires_approval: boolean;
   rating_average: number;
   rating_count: number;
   created_at: string;
@@ -51,6 +58,8 @@ export const MarketplaceAdminContent: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingApp, setEditingApp] = useState<MarketplaceApp | null>(null);
 
   // Fetch marketplace apps
   const { data: apps = [], isLoading: appsLoading } = useQuery({
@@ -120,6 +129,12 @@ export const MarketplaceAdminContent: React.FC = () => {
       });
     }
   });
+
+  // Handle edit app
+  const handleEditApp = (app: MarketplaceApp) => {
+    setEditingApp(app);
+    setShowEditModal(true);
+  };
 
   // Filter apps based on search and filters
   const filteredApps = apps.filter(app => {
@@ -315,7 +330,7 @@ export const MarketplaceAdminContent: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => {/* TODO: Navigate to edit */}}
+                        onClick={() => handleEditApp(app)}
                       >
                         <Edit className="h-3 w-3 mr-1" />
                         Edit
@@ -387,6 +402,22 @@ export const MarketplaceAdminContent: React.FC = () => {
       <AppCreationModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
+        categories={categories}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['marketplace-apps'] });
+        }}
+      />
+
+      {/* App Edit Modal */}
+      <AppEditModal
+        open={showEditModal}
+        onOpenChange={(open) => {
+          setShowEditModal(open);
+          if (!open) {
+            setEditingApp(null);
+          }
+        }}
+        app={editingApp}
         categories={categories}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['marketplace-apps'] });
