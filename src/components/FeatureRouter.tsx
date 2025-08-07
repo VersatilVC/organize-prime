@@ -18,6 +18,10 @@ const FeatureDashboard = React.lazy(() => import('@/pages/features/FeatureDashbo
 const FeatureSettings = React.lazy(() => import('@/pages/features/FeatureSettings'));
 const FeatureContent = React.lazy(() => import('@/pages/features/FeatureContent'));
 
+// Lazy load app pages
+const AppDashboard = React.lazy(() => import('@/pages/apps/AppDashboard'));
+const AppSettings = React.lazy(() => import('@/pages/apps/AppSettings'));
+
 interface FeatureRouteParams extends Record<string, string> {
   slug: string;
 }
@@ -170,12 +174,23 @@ export function EnhancedFeatureRouter() {
         appName={appInstallation.marketplace_apps.name}
         permissions={[]}
       >
-        <Routes>
-          <Route path="" element={<div>App Dashboard for {appInstallation.marketplace_apps.name}</div>} />
-          <Route path="dashboard" element={<div>App Dashboard for {appInstallation.marketplace_apps.name}</div>} />
-          <Route path="settings" element={<div>App Settings for {appInstallation.marketplace_apps.name}</div>} />
-          <Route path="*" element={<div>App Content for {appInstallation.marketplace_apps.name}</div>} />
-        </Routes>
+        <Suspense fallback={
+          <div className="space-y-4">
+            <div className="h-8 bg-muted rounded w-48"></div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="h-32 bg-muted rounded"></div>
+              <div className="h-32 bg-muted rounded"></div>
+              <div className="h-32 bg-muted rounded"></div>
+            </div>
+          </div>
+        }>
+          <Routes>
+            <Route path="" element={<AppDashboard />} />
+            <Route path="dashboard" element={<AppDashboard />} />
+            <Route path="settings" element={<AppSettings />} />
+            <Route path="*" element={<AppDashboard />} />
+          </Routes>
+        </Suspense>
       </SharedAppLayout>
     );
   }

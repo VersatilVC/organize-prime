@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Upload, Loader2, Building } from 'lucide-react';
 import { CompanyFeatureManagement } from '@/components/admin/CompanyFeatureManagement';
+import { InstalledAppsManagement } from '@/components/admin/InstalledAppsManagement';
 
 interface CompanyData {
   id: string;
@@ -262,9 +263,10 @@ export default function CompanySettings() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="apps">Installed Apps</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
@@ -426,6 +428,10 @@ export default function CompanySettings() {
 
           <TabsContent value="features">
             <CompanyFeatureManagement />
+          </TabsContent>
+
+          <TabsContent value="apps">
+            <InstalledAppsManagement />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-6">

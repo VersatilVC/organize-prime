@@ -82,6 +82,8 @@ const getSectionItems = (sectionKey: string, role: string, section?: SidebarSect
 
 // Create dynamic sections for installed marketplace apps
 const createAppSections = (appInstallations: any[]): SidebarSection[] => {
+  console.log('Creating app sections for installations:', appInstallations);
+  
   return appInstallations.map(installation => {
     const app = installation.marketplace_apps;
     const navigationConfig = installation.custom_navigation || {};
@@ -92,22 +94,32 @@ const createAppSections = (appInstallations: any[]): SidebarSection[] => {
       { name: 'Settings', href: `/apps/${app.slug}/settings`, icon: Icons.settings }
     ];
 
-    // Add custom navigation from app configuration
-    const customItems = navigationConfig.items || [];
-    const navigationItems = customItems.length > 0 ? customItems : defaultItems;
-
-    return {
-      key: `app-${app.slug}`,
-      title: app.name,
-      items: navigationItems.map((navItem: any) => ({
+    // Check if custom_navigation has items array, even if empty
+    let navigationItems = defaultItems;
+    if (navigationConfig && Array.isArray(navigationConfig.items) && navigationConfig.items.length > 0) {
+      // Use custom navigation items if they exist
+      navigationItems = navigationConfig.items.map((navItem: any) => ({
         name: navItem.name || navItem.label,
         href: navItem.href || navItem.path || `/apps/${app.slug}/${navItem.slug || navItem.name.toLowerCase()}`,
         icon: Icons[navItem.icon as keyof typeof Icons] || Icons.package,
         badge: navItem.badge
-      })),
+      }));
+    }
+    // Otherwise, always use default items
+
+    console.log(`Creating section for app ${app.name}:`, {
+      slug: app.slug,
+      navigationItems,
+      hasCustomNav: navigationConfig && Array.isArray(navigationConfig.items)
+    });
+
+    return {
+      key: `app-${app.slug}`,
+      title: app.name,
+      items: navigationItems,
       isVisible: () => true,
       isApp: true,
-      appIcon: app.icon_name,
+      appIcon: app.icon_name || 'package',
     };
   });
 };

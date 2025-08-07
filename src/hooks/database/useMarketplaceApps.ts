@@ -74,7 +74,12 @@ export const useAppInstallations = () => {
   return useQuery({
     queryKey: ['app-installations', currentOrganization?.id],
     queryFn: async () => {
-      if (!currentOrganization?.id) return [];
+      if (!currentOrganization?.id) {
+        console.log('🔍 useAppInstallations: No current organization');
+        return [];
+      }
+
+      console.log('🔍 useAppInstallations: Fetching for organization:', currentOrganization.id);
 
       const { data, error } = await supabase
         .from('marketplace_app_installations')
@@ -85,7 +90,12 @@ export const useAppInstallations = () => {
         .eq('organization_id', currentOrganization.id)
         .eq('status', 'active');
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ useAppInstallations: Error fetching app installations:', error);
+        throw error;
+      }
+
+      console.log('✅ useAppInstallations: Found app installations:', data);
       return data as (AppInstallation & {
         marketplace_apps: Pick<MarketplaceApp, 'name' | 'slug' | 'icon_name' | 'version'>;
       })[];
