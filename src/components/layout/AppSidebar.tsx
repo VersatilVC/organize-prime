@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -87,10 +88,25 @@ const getSectionItems = (sectionKey: string, role: string, section?: SidebarSect
 };
 
 // Create dynamic sections for installed marketplace apps
-const createAppSections = (appInstallations: any[]): SidebarSection[] => {
+const createAppSections = (appInstallations: any[], configs: any[]): SidebarSection[] => {
   console.log('Creating app sections for installations:', appInstallations);
+  console.log('Organization feature configs:', configs);
   
-  return appInstallations.map(installation => {
+  // Helper function to check if app is enabled
+  const isAppEnabled = (appSlug: string) => {
+    const config = configs.find(c => c.feature_slug === appSlug);
+    return config?.is_enabled !== false; // Default to enabled if no config exists
+  };
+  
+  // Filter installations to only include enabled apps
+  const enabledInstallations = appInstallations.filter(installation => {
+    const app = installation.marketplace_apps;
+    const enabled = isAppEnabled(app.slug);
+    console.log(`App ${app.name} (${app.slug}) enabled:`, enabled);
+    return enabled;
+  });
+  
+  return enabledInstallations.map(installation => {
     const app = installation.marketplace_apps;
     const navigationConfig = installation.custom_navigation || {};
     
@@ -113,7 +129,7 @@ const createAppSections = (appInstallations: any[]): SidebarSection[] => {
     }
     // Otherwise, always use default items
 
-    console.log(`Creating section for app ${app.name}:`, {
+    console.log(`Creating section for enabled app ${app.name}:`, {
       slug: app.slug,
       navigationItems,
       hasCustomNav: navigationConfig && Array.isArray(navigationConfig.items)
@@ -158,8 +174,8 @@ const baseSidebarSections: SidebarSection[] = [
 ];
 
 // Combine base sections with dynamic app sections
-const getAllSidebarSections = (appInstallations: any[]): SidebarSection[] => {
-  const appSections = createAppSections(appInstallations);
+const getAllSidebarSections = (appInstallations: any[], configs: any[]): SidebarSection[] => {
+  const appSections = createAppSections(appInstallations, configs);
   
   // Insert app sections after 'main' section but before management sections
   const sections = [...baseSidebarSections];
@@ -356,13 +372,14 @@ export function AppSidebar() {
     const { role, loading: roleLoading } = useUserRole();
     const { feedback } = useDashboardData();
     const { data: appInstallations = [], isLoading: appsLoading } = useAppInstallations();
+    const { configs, isLoading: configsLoading } = useOrganizationFeatureConfigs();
     const location = useLocation();
 
     // Get all sections including dynamic app sections
     const allSections = useMemo(() => {
       if (!role) return [];
-      return getAllSidebarSections(appInstallations).filter(section => section.isVisible(role));
-    }, [role, appInstallations]);
+      return getAllSidebarSections(appInstallations, configs).filter(section => section.isVisible(role));
+    }, [role, appInstallations, configs]);
 
     const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
@@ -377,7 +394,7 @@ export function AppSidebar() {
     return (
       <Sidebar collapsible="icon">
         <SidebarContent className="space-y-1">
-          {roleLoading || appsLoading ? (
+          {roleLoading || appsLoading || configsLoading ? (
             // Show loading skeleton while role is being determined
             <div className="space-y-4 p-4">
               <div className="animate-pulse space-y-2">
