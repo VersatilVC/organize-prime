@@ -25,7 +25,7 @@ import {
 import { AppCreationModal } from './AppCreationModal';
 import { MarketplaceAnalytics } from './MarketplaceAnalytics';
 import { MarketplaceSettings } from './MarketplaceSettings';
-import { type AppCategory } from '@/hooks/useAppCategories';
+import { useAppCategories, type AppCategory } from '@/hooks/database/useAppCategories';
 
 interface MarketplaceApp {
   id: string;
@@ -67,19 +67,7 @@ export const MarketplaceAdminContent: React.FC = () => {
   });
 
   // Fetch app categories using unified hook
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ['app-categories'],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('app_categories')
-        .select('id, name, slug')
-        .eq('is_active', true)
-        .order('sort_order');
-      
-      if (error) throw error;
-      return (data || []) as AppCategory[];
-    }
-  });
+  const { data: categories = [], isLoading: categoriesLoading } = useAppCategories();
 
   // Toggle app status mutation
   const toggleAppStatusMutation = useMutation({
