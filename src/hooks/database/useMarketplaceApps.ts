@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useEnhancedAuth } from '@/contexts/EnhancedAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 
 export interface MarketplaceApp {
@@ -99,7 +99,7 @@ export const useAppInstallations = () => {
 export const useInstallApp = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
 
   return useMutation({
@@ -213,7 +213,7 @@ export const useInstallApp = () => {
 export const useUninstallApp = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
 
   return useMutation({
@@ -284,7 +284,7 @@ export const useUninstallApp = () => {
 };
 
 export const useTrackAppView = () => {
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
 
   return useMutation({
