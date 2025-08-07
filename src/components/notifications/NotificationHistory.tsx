@@ -136,7 +136,8 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const totalCount = notifications?.total ?? 0;
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const enableVirtual = totalCount > 200;
+  const VIRTUALIZE_THRESHOLD = 150;
+  const enableVirtual = totalCount > VIRTUALIZE_THRESHOLD;
   const rowVirtualizer = useVirtualizer({
     count: enableVirtual ? items.length : 0,
     getScrollElement: () => parentRef.current,
@@ -269,7 +270,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
         <CardContent className="p-0">
           <div ref={parentRef} className="max-h-[640px] overflow-auto">
             <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Type</TableHead>
