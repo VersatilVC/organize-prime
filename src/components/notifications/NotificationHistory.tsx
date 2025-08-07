@@ -12,6 +12,8 @@ import { UserRole } from '@/hooks/useUserRole';
 // Use the organization data structure from context
 import { Loader2, Eye, Download, Search, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+//
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NotificationHistoryProps {
   userRole: UserRole;
@@ -35,14 +37,27 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const [typeFilter, setTypeFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [selectedNotification, setSelectedNotification] = useState<NotificationRecord | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const { user } = useAuth();
 
-  // Fetch notification history
+  // Server-side filtered, paginated history
   const { data: notifications, isLoading } = useQuery({
-    queryKey: ['notification-history', userRole, currentOrganization?.id, searchTerm, typeFilter, dateFilter],
+    queryKey: [
+      'notification-history',
+      userRole,
+      currentOrganization?.id,
+      searchTerm,
+      typeFilter,
+      dateFilter,
+      page,
+      pageSize,
+    ],
     queryFn: async () => {
       let query = supabase
         .from('notifications')
-        .select(`
+        .select(
+          `
           id,
           title,
           message,
@@ -50,24 +65,57 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
           created_at,
           data,
           organization_id,
-          organizations!inner(name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+          organizations(name)
+        `,
+          { count: 'exact' }
+        )
+        .order('created_at', { ascending: false });
 
-      // Filter by organization for admins
-      if (userRole === 'admin' && currentOrganization?.id) {
+      // Scope by organization if available to satisfy RLS for admins/super_admins
+      if (currentOrganization?.id) {
         query = query.eq('organization_id', currentOrganization.id);
+      } else if (userRole === 'user' && user?.id) {
+        // Regular users: only their notifications
+        query = query.eq('user_id', user.id);
       }
 
-      const { data, error } = await query;
-      
+      if (typeFilter !== 'all') {
+        query = query.eq('type', typeFilter);
+      }
+
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim();
+        query = query.or(`title.ilike.%${term}%,message.ilike.%${term}%`);
+      }
+
+      if (dateFilter !== 'all') {
+        const now = new Date();
+        let since = new Date(0);
+        switch (dateFilter) {
+          case 'today':
+            since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            break;
+          case 'week':
+            since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case 'month':
+            since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        }
+        query = query.gte('created_at', since.toISOString());
+      }
+
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query.range(from, to);
+
       if (error) {
         console.error('Error fetching notification history:', error);
-        return [];
+        return { items: [], total: 0 };
       }
 
-      return (data || []).map(notification => ({
+      const items = (data || []).map((notification: any) => ({
         id: notification.id,
         title: notification.title,
         message: notification.message,
@@ -78,44 +126,21 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
         organization_name: notification.organizations?.name || 'Unknown',
         delivery_status: 'sent' as const,
       })) as NotificationRecord[];
-    }
+
+      return { items, total: count || 0 };
+    },
   });
 
-  const filteredNotifications = notifications?.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || notification.type === typeFilter;
-    
-    let matchesDate = true;
-    if (dateFilter !== 'all') {
-      const notificationDate = new Date(notification.created_at);
-      const now = new Date();
-      
-      switch (dateFilter) {
-        case 'today':
-          matchesDate = notificationDate.toDateString() === now.toDateString();
-          break;
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          matchesDate = notificationDate >= weekAgo;
-          break;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          matchesDate = notificationDate >= monthAgo;
-          break;
-      }
-    }
-
-    return matchesSearch && matchesType && matchesDate;
-  });
+  const items = notifications?.items ?? [];
+  const totalCount = notifications?.total ?? 0;
 
   const exportToCsv = () => {
-    if (!filteredNotifications || filteredNotifications.length === 0) return;
+    if (!items || items.length === 0) return;
 
     const headers = ['Title', 'Type', 'Sent Date', 'Sender', 'Recipients', 'Status'];
     const csvContent = [
       headers.join(','),
-      ...filteredNotifications.map(notification => [
+      ...items.map(notification => [
         `"${notification.title}"`,
         notification.type,
         format(new Date(notification.created_at), 'yyyy-MM-dd HH:mm'),
@@ -213,7 +238,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
 
             <div className="flex items-center text-sm text-muted-foreground">
               <Calendar className="h-4 w-4 mr-2" />
-              {filteredNotifications?.length || 0} notifications
+              {totalCount} notifications
             </div>
           </div>
         </CardContent>
@@ -321,6 +346,27 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between gap-4 mt-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {items.length > 0 ? page * pageSize + 1 : 0}–
+          {Math.min((page + 1) * pageSize, totalCount)} of {totalCount}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 0 || isLoading} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={(page + 1) * pageSize >= totalCount || isLoading}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
