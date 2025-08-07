@@ -147,19 +147,17 @@ export const useInstallApp = () => {
 
       if (appError) throw appError;
 
-      // Add to organization feature configs if navigation config exists
-      if (app.navigation_config && Object.keys(app.navigation_config).length > 0) {
-        await supabase
-          .from('organization_feature_configs')
-          .insert({
-            organization_id: currentOrganization.id,
-            feature_slug: app.slug,
-            is_enabled: true,
-            is_user_accessible: true,
-            org_menu_order: 99, // Add to end by default
-            created_by: user.id,
-          });
-      }
+      // Always add to organization feature configs for installed apps
+      await supabase
+        .from('organization_feature_configs')
+        .insert({
+          organization_id: currentOrganization.id,
+          feature_slug: app.slug,
+          is_enabled: true,
+          is_user_accessible: true,
+          org_menu_order: 99, // Add to end by default
+          created_by: user.id,
+        });
 
       // Track analytics
       await supabase

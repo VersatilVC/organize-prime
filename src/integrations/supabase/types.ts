@@ -1426,7 +1426,41 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_index_stats: {
+        Row: {
+          index_name: unknown | null
+          schemaname: unknown | null
+          table_name: unknown | null
+          times_used: number | null
+          tuples_fetched: number | null
+          tuples_read: number | null
+        }
+        Relationships: []
+      }
+      v_performance_summary: {
+        Row: {
+          active_count: number | null
+          row_count: number | null
+          table_name: string | null
+        }
+        Relationships: []
+      }
+      v_table_stats: {
+        Row: {
+          dead_rows: number | null
+          deletes: number | null
+          inserts: number | null
+          last_analyze: string | null
+          last_autoanalyze: string | null
+          last_autovacuum: string | null
+          last_vacuum: string | null
+          live_rows: number | null
+          schemaname: unknown | null
+          table_name: unknown | null
+          updates: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_rate_limit: {
@@ -1528,7 +1562,9 @@ export type Database = {
       }
       get_user_organizations: {
         Args: Record<PropertyKey, never>
-        Returns: string[]
+        Returns: {
+          organization_id: string
+        }[]
       }
       get_users_optimized: {
         Args: {
@@ -1553,6 +1589,26 @@ export type Database = {
           organization_name: string
           total_count: number
         }[]
+      }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
       }
       hash_api_key: {
         Args: { key_text: string }
@@ -1593,6 +1649,27 @@ export type Database = {
       sanitize_input: {
         Args: { input_text: string }
         Returns: string
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
+      }
+      test_rls_security: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          table_name: string
+          rls_enabled: boolean
+          policy_count: number
+          test_result: string
+        }[]
       }
       update_user_profile_and_role: {
         Args: {
