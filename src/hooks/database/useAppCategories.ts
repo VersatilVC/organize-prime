@@ -14,7 +14,7 @@ export interface AppCategory {
 
 export const useAppCategories = () => {
   return useQuery({
-    queryKey: ['app-categories'],
+    queryKey: ['app-categories-active'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('app_categories')
