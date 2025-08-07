@@ -10,7 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { createOptimizedQueryClient } from "@/lib/query-client";
 import { initializeCacheCleanup } from "@/lib/local-storage";
 import { PageLoadingSpinner } from "@/components/LoadingSkeletons";
-
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 // Lazy load all page components for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -48,7 +48,8 @@ const App = () => (
       <AuthProvider>
         <OrganizationProvider>
           <BrowserRouter>
-            <Suspense fallback={<PageLoadingSpinner />}>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoadingSpinner />}>
               <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -207,6 +208,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </ErrorBoundary>
           </BrowserRouter>
         </OrganizationProvider>
       </AuthProvider>

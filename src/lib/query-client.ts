@@ -84,7 +84,9 @@ export const createOptimizedQueryClient = () => {
         staleTime: cacheConfig.dynamic.staleTime,
         gcTime: cacheConfig.dynamic.gcTime,
         refetchOnWindowFocus: false,
-        refetchOnReconnect: true,
+        refetchOnMount: false,
+        placeholderData: (prev) => prev as unknown,
+        
         retry: (failureCount, error: any) => {
           // Don't retry on 404 or authentication errors
           if (error?.status === 404 || error?.status === 401 || error?.status === 403) {
