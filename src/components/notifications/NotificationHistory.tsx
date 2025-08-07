@@ -266,14 +266,14 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : filteredNotifications?.length === 0 ? (
+) : items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No notifications found matching your criteria.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredNotifications?.map((notification) => (
+                items.map((notification) => (
                   <TableRow key={notification.id}>
                     <TableCell className="font-medium max-w-xs">
                       <div className="truncate" title={notification.title}>
