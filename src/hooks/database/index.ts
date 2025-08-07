@@ -25,14 +25,29 @@ export {
   useOptimizedUserRole 
 } from './useOptimizedUserRole';
 
+// Enhanced marketplace hooks
+export {
+  useEnhancedMarketplaceApps,
+  useEnhancedAppInstallations,
+  useEnhancedInstallApp,
+  useEnhancedUninstallApp,
+  useTrackAppUsage,
+  useEnhancedAppReviews,
+  useMarketplaceSettings,
+  useCreateMarketplaceApp,
+  type MarketplaceApp,
+  type AppInstallation,
+  type AppReviewWithProfile,
+  type MarketplaceSettings
+} from './useEnhancedMarketplaceApps';
+
+// Legacy marketplace hooks (deprecated - use enhanced versions)
 export {
   useMarketplaceApps,
   useAppInstallations,
   useInstallApp,
   useUninstallApp,
-  useTrackAppView,
-  type MarketplaceApp,
-  type AppInstallation
+  useTrackAppView
 } from './useMarketplaceApps';
 
 export {
@@ -48,6 +63,7 @@ export {
   type AppNavigationSection
 } from '../useAppNavigation';
 
+// Legacy app reviews hooks (deprecated - use enhanced versions from marketplace hooks)
 export {
   useAppReviews,
   useUserAppReview,
