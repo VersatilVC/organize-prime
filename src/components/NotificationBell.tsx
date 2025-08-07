@@ -237,7 +237,7 @@ export function NotificationBell() {
       
       <DropdownMenuContent 
         align="end" 
-        className="w-80 max-h-96 overflow-auto bg-popover border"
+        className="z-50 w-80 max-h-96 overflow-auto bg-popover border"
         sideOffset={8}
       >
         <DropdownMenuLabel className="px-4 py-3 border-b">

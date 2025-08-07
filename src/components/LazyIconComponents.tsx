@@ -18,24 +18,16 @@ export function LazyIcon({ name, size = 16, color = 'currentColor', className }:
       try {
         setLoading(true);
         setError(false);
-        
-        // Dynamic import based on icon name
-        const iconModule = await import('lucide-react');
-        
-        // Convert kebab-case to PascalCase for icon names
-        const iconName = name.split('-').map(part => 
-          part.charAt(0).toUpperCase() + part.slice(1)
-        ).join('');
-        
-        const IconComponent = (iconModule as any)[iconName] || iconModule.HelpCircle;
-        setIconComponent(() => IconComponent);
+
+        const dynamicIconImports = (await import('lucide-react/dynamicIconImports')).default as Record<string, any>;
+        const importer = dynamicIconImports[name] || dynamicIconImports['help-circle'];
+        const mod = await importer();
+        setIconComponent(() => (mod as any).default);
       } catch (err) {
         console.warn(`Failed to load icon: ${name}`, err);
         setError(true);
-        // Fallback to a basic icon
-        import('lucide-react').then(mod => {
-          setIconComponent(() => mod.HelpCircle);
-        });
+        const iconModule = await import('lucide-react');
+        setIconComponent(() => (iconModule as any).HelpCircle);
       } finally {
         setLoading(false);
       }
@@ -163,7 +155,8 @@ export function LazyDatePicker({ onSelect, ...props }: any) {
     return <ComponentLoadingSkeleton />;
   }
 
-  return <DatePicker onSelect={onSelect} {...props} />;
+  const { className, ...rest } = props;
+  return <DatePicker onSelect={onSelect} className={`${className ?? ''} p-3 pointer-events-auto`} {...rest} />;
 }
 
 // Lazy table component with virtualization
