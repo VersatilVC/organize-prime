@@ -25,6 +25,29 @@ export {
   useOptimizedUserRole 
 } from './useOptimizedUserRole';
 
+export {
+  useMarketplaceApps,
+  useAppInstallations,
+  useInstallApp,
+  useUninstallApp,
+  useTrackAppView,
+  type MarketplaceApp,
+  type AppInstallation
+} from './useMarketplaceApps';
+
+export {
+  useAppCategories,
+  type AppCategory
+} from './useAppCategories';
+
+export {
+  useAppReviews,
+  useUserAppReview,
+  useCreateAppReview,
+  useUpdateAppReview,
+  type AppReview
+} from './useAppReviews';
+
 // Re-export common types for convenience
 export type DatabaseHookResult<T> = {
   data: T | undefined;

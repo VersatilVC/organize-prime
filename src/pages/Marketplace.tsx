@@ -8,198 +8,50 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/components/ui/icons';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import { FeatureDetailModal } from '@/components/marketplace/FeatureDetailModal';
-import { MoreVertical, Settings, Trash2 } from 'lucide-react';
+import { MoreVertical, Settings, Trash2, Search, Star } from 'lucide-react';
+import { 
+  useMarketplaceApps, 
+  useAppInstallations, 
+  useInstallApp, 
+  useUninstallApp, 
+  useTrackAppView,
+  type MarketplaceApp 
+} from '@/hooks/database/useMarketplaceApps';
+import { useAppCategories } from '@/hooks/database/useAppCategories';
 
-interface MarketplaceFeatureExtended {
-  id: string;
-  slug: string;
-  displayName: string;
-  description: string;
-  longDescription: string;
-  category: string;
-  iconName: keyof typeof Icons;
-  pricing: 'free' | 'premium' | 'enterprise';
+// Extended interface for marketplace features with installation status
+interface MarketplaceFeatureExtended extends MarketplaceApp {
   status: 'available' | 'installed' | 'requires_upgrade';
   featured: boolean;
   isNew: boolean;
-  screenshots: string[];
-  rating: number;
-  reviewCount: number;
-  installCount: number;
+  displayName: string;
+  longDescription: string;
+  iconName: string;
   requirements: string[];
   permissions: string[];
   features: string[];
   compatibility: {
-    minPlan: 'free' | 'basic' | 'pro' | 'enterprise';
+    minPlan: string;
     requiresIntegration: boolean;
   };
+  // Modal compatibility
+  pricing: string;
+  rating: number;
+  reviewCount: number;
+  installCount: number;
 }
-
-// Mock data with extended information
-const mockFeatures: MarketplaceFeatureExtended[] = [
-  // Featured
-  {
-    id: '1',
-    slug: 'knowledge-base',
-    displayName: 'Knowledge Base',
-    description: 'Create and manage comprehensive documentation and knowledge articles for your team',
-    longDescription: 'Transform your team\'s knowledge management with our comprehensive Knowledge Base feature. Create, organize, and maintain documentation that grows with your organization. Features advanced search capabilities, version control, and collaborative editing tools that make knowledge sharing seamless and efficient.',
-    category: 'productivity',
-    iconName: 'book',
-    pricing: 'free',
-    status: 'available',
-    featured: true,
-    isNew: false,
-    screenshots: ['kb-1.jpg', 'kb-2.jpg', 'kb-3.jpg'],
-    rating: 4.8,
-    reviewCount: 127,
-    installCount: 15420,
-    requirements: [
-      'Organization admin privileges',
-      'Minimum 2GB storage space',
-      'Modern web browser'
-    ],
-    permissions: [
-      'Read and write access to knowledge articles',
-      'Manage article categories and tags',
-      'Access to user analytics'
-    ],
-    features: [
-      'Rich text editor with markdown support',
-      'Advanced search with filters',
-      'Version history and rollback',
-      'Collaborative editing',
-      'Custom categorization',
-      'Analytics and insights'
-    ],
-    compatibility: {
-      minPlan: 'free',
-      requiresIntegration: false
-    }
-  },
-  {
-    id: '2',
-    slug: 'usage-analytics',
-    displayName: 'Usage Analytics',
-    description: 'Advanced insights into user behavior and platform performance with detailed reports',
-    longDescription: 'Gain deep insights into how your platform is being used with our comprehensive Usage Analytics feature. Track user behavior, monitor performance metrics, and generate detailed reports that help you make data-driven decisions. Features real-time dashboards, custom report builders, and automated insights.',
-    category: 'analytics',
-    iconName: 'barChart',
-    pricing: 'premium',
-    status: 'installed',
-    featured: true,
-    isNew: false,
-    screenshots: ['analytics-1.jpg', 'analytics-2.jpg', 'analytics-3.jpg'],
-    rating: 4.6,
-    reviewCount: 89,
-    installCount: 8932,
-    requirements: [
-      'Premium plan or higher',
-      'Analytics tracking enabled',
-      'Data retention policy configured'
-    ],
-    permissions: [
-      'Access to user activity logs',
-      'View analytics dashboards',
-      'Export analytics data',
-      'Configure tracking settings'
-    ],
-    features: [
-      'Real-time user activity tracking',
-      'Custom dashboard builder',
-      'Automated report generation',
-      'Data export capabilities',
-      'Performance monitoring',
-      'User journey mapping'
-    ],
-    compatibility: {
-      minPlan: 'basic',
-      requiresIntegration: true
-    }
-  },
-  {
-    id: '3',
-    slug: 'workflow-builder',
-    displayName: 'Workflow Builder',
-    description: 'Visual workflow automation with drag-and-drop interface for complex processes',
-    longDescription: 'Streamline your business processes with our intuitive Workflow Builder. Create complex automation workflows using a simple drag-and-drop interface. Connect different systems, automate repetitive tasks, and ensure consistency across your organization with powerful workflow automation.',
-    category: 'automation',
-    iconName: 'workflow',
-    pricing: 'premium',
-    status: 'requires_upgrade',
-    featured: true,
-    isNew: true,
-    screenshots: ['workflow-1.jpg', 'workflow-2.jpg', 'workflow-3.jpg'],
-    rating: 4.9,
-    reviewCount: 156,
-    installCount: 12847,
-    requirements: [
-      'Pro plan or higher',
-      'API access enabled',
-      'Webhook support configured'
-    ],
-    permissions: [
-      'Create and manage workflows',
-      'Access to integration APIs',
-      'Modify system automations',
-      'View workflow execution logs'
-    ],
-    features: [
-      'Visual drag-and-drop builder',
-      'Pre-built workflow templates',
-      'API integrations',
-      'Conditional logic support',
-      'Automated notifications',
-      'Execution monitoring'
-    ],
-    compatibility: {
-      minPlan: 'pro',
-      requiresIntegration: true
-    }
-  },
-  {
-    id: '4',
-    slug: 'market-research',
-    displayName: 'Market Research',
-    description: 'AI-powered market analysis and competitor intelligence for strategic planning',
-    longDescription: 'Stay ahead of the competition with AI-powered market research tools. Analyze market trends, monitor competitors, and discover new opportunities with automated data collection and intelligent insights.',
-    category: 'intelligence',
-    iconName: 'trendingUp',
-    pricing: 'premium',
-    status: 'available',
-    featured: false,
-    isNew: true,
-    screenshots: ['market-1.jpg', 'market-2.jpg'],
-    rating: 4.3,
-    reviewCount: 67,
-    installCount: 5621,
-    requirements: ['Enterprise plan', 'External API access'],
-    permissions: ['Market data access', 'Competitor tracking'],
-    features: ['AI market analysis', 'Competitor monitoring', 'Trend forecasting'],
-    compatibility: {
-      minPlan: 'enterprise',
-      requiresIntegration: true
-    }
-  }
-];
-
-const categoryOptions = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'productivity', label: 'Productivity' },
-  { value: 'analytics', label: 'Analytics' },
-  { value: 'automation', label: 'Automation' },
-  { value: 'intelligence', label: 'Intelligence' }
-];
 
 const sortOptions = [
   { value: 'popular', label: 'Popular' },
   { value: 'newest', label: 'Newest' },
   { value: 'name', label: 'Name' },
-  { value: 'rating', label: 'Rating' }
+  { value: 'rating', label: 'Rating' },
+  { value: 'installs', label: 'Install Count' }
 ];
 
 export default function Marketplace() {
@@ -212,18 +64,76 @@ export default function Marketplace() {
   const [selectedFeature, setSelectedFeature] = useState<MarketplaceFeatureExtended | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Database queries
+  const { data: apps = [], isLoading: appsLoading, error: appsError } = useMarketplaceApps();
+  const { data: installations = [], isLoading: installationsLoading } = useAppInstallations();
+  const { data: categories = [], isLoading: categoriesLoading } = useAppCategories();
+  const installAppMutation = useInstallApp();
+  const uninstallAppMutation = useUninstallApp();
+  const trackAppViewMutation = useTrackAppView();
+
   const canInstall = role === 'admin' || role === 'super_admin';
+
+  // Create lookup for installed apps
+  const installedAppsLookup = useMemo(() => {
+    const lookup: Record<string, boolean> = {};
+    installations.forEach(installation => {
+      lookup[installation.app_id] = true;
+    });
+    return lookup;
+  }, [installations]);
+
+  // Transform apps to extended interface
+  const transformedApps = useMemo(() => {
+    return apps.map(app => ({
+      ...app,
+      displayName: app.name,
+      longDescription: app.long_description || app.description,
+      iconName: app.icon_name,
+      status: installedAppsLookup[app.id] ? 'installed' as const : 'available' as const,
+      featured: app.is_featured,
+      isNew: new Date(app.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // New if created in last 30 days
+      requirements: app.app_config?.requirements || [],
+      permissions: app.required_permissions || [],
+      features: app.app_config?.features || [],
+      compatibility: {
+        minPlan: app.app_config?.minPlan || 'free',
+        requiresIntegration: app.app_config?.requiresIntegration || false,
+      },
+      // Modal compatibility
+      pricing: app.pricing_model,
+      rating: app.rating_average,
+      reviewCount: app.rating_count,
+      installCount: app.install_count,
+    })) as MarketplaceFeatureExtended[];
+  }, [apps, installedAppsLookup]);
+
+  // Category options from database
+  const categoryOptions = useMemo(() => {
+    const options = [{ value: 'all', label: 'All Categories' }];
+    categories.forEach(category => {
+      options.push({ value: category.slug, label: category.name });
+    });
+    return options;
+  }, [categories]);
 
   const navigateToFeatureDetails = (feature: MarketplaceFeatureExtended) => {
     setSelectedFeature(feature);
     setShowDetailModal(true);
+    
+    // Track app view
+    trackAppViewMutation.mutate({ 
+      appId: feature.id, 
+      pageData: { source: 'marketplace', action: 'view_details' } 
+    });
   };
 
   // Filter and sort features
   const filteredFeatures = useMemo(() => {
-    let filtered = mockFeatures.filter(feature => {
+    let filtered = transformedApps.filter(feature => {
       const matchesSearch = feature.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           feature.description.toLowerCase().includes(searchQuery.toLowerCase());
+                           feature.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           feature.category.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || feature.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
@@ -232,21 +142,25 @@ export default function Marketplace() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return Number(b.isNew) - Number(a.isNew);
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'name':
           return a.displayName.localeCompare(b.displayName);
+        case 'rating':
+          return b.rating_average - a.rating_average;
+        case 'installs':
+          return b.install_count - a.install_count;
         case 'popular':
         default:
-          return Number(b.featured) - Number(a.featured);
+          return Number(b.featured) - Number(a.featured) || b.install_count - a.install_count;
       }
     });
 
     return filtered;
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [transformedApps, searchQuery, selectedCategory, sortBy]);
 
-  const featuredFeatures = mockFeatures.filter(f => f.featured);
-  const newFeatures = mockFeatures.filter(f => f.isNew);
-  const installedCount = mockFeatures.filter(f => f.status === 'installed').length;
+  const featuredFeatures = transformedApps.filter(f => f.featured);
+  const newFeatures = transformedApps.filter(f => f.isNew);
+  const installedCount = transformedApps.filter(f => f.status === 'installed').length;
 
   const handleFeatureAction = (feature: MarketplaceFeatureExtended) => {
     if (!canInstall) {
@@ -268,33 +182,40 @@ export default function Marketplace() {
     setShowDetailModal(true);
   };
 
-  const handleFeatureInstall = (feature: MarketplaceFeatureExtended) => {
-    // Update feature status to installed (in real app, this would update the backend)
-    toast({
-      title: "Feature Installed",
-      description: `${feature.displayName} has been successfully installed.`,
-    });
+  const handleFeatureInstall = async (feature: any) => {
+    try {
+      await installAppMutation.mutateAsync({ 
+        appId: feature.id,
+        appSettings: { 
+          source: 'marketplace',
+          installed_version: feature.version,
+        }
+      });
+      setShowDetailModal(false);
+    } catch (error) {
+      console.error('Installation failed:', error);
+    }
   };
 
-  const handleUninstallFeature = (feature: MarketplaceFeatureExtended) => {
-    // Update feature status to available (in real app, this would update the backend)
-    toast({
-      title: "Feature Uninstalled",
-      description: `${feature.displayName} has been uninstalled.`,
-    });
+  const handleUninstallFeature = async (feature: MarketplaceFeatureExtended) => {
+    try {
+      await uninstallAppMutation.mutateAsync(feature.id);
+    } catch (error) {
+      console.error('Uninstall failed:', error);
+    }
   };
 
-  const getPricingBadgeVariant = (pricing: MarketplaceFeatureExtended['pricing']) => {
+  const getPricingBadgeVariant = (pricing: string) => {
     switch (pricing) {
       case 'free': return 'outline';
-      case 'premium': return 'default';
-      case 'enterprise': return 'secondary';
+      case 'paid': return 'default';
+      case 'freemium': return 'secondary';
       default: return 'outline';
     }
   };
 
   const FeatureCard = ({ feature }: { feature: MarketplaceFeatureExtended }) => {
-    const IconComponent = Icons[feature.iconName];
+    const IconComponent = Icons[feature.iconName as keyof typeof Icons] || Icons.package;
     
     return (
       <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -313,13 +234,23 @@ export default function Marketplace() {
               <CardDescription className="text-sm text-muted-foreground mt-1 line-clamp-2">
                 {feature.description}
               </CardDescription>
+              
+              {/* Rating and install count */}
+              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span>{feature.rating_average.toFixed(1)}</span>
+                  <span>({feature.rating_count})</span>
+                </div>
+                <span>{feature.install_count.toLocaleString()} installs</span>
+              </div>
             </div>
             <div className="flex flex-col gap-1 items-end flex-shrink-0 w-24">
               <Badge variant="secondary" className="text-xs capitalize w-full text-center justify-center">
                 {feature.category}
               </Badge>
-              <Badge variant={getPricingBadgeVariant(feature.pricing)} className="text-xs capitalize w-full text-center justify-center">
-                {feature.pricing}
+              <Badge variant={getPricingBadgeVariant(feature.pricing_model)} className="text-xs capitalize w-full text-center justify-center">
+                {feature.pricing_model}
               </Badge>
             </div>
           </div>
@@ -342,9 +273,10 @@ export default function Marketplace() {
                   <DropdownMenuItem 
                     onClick={() => handleUninstallFeature(feature)}
                     className="text-red-600"
+                    disabled={uninstallAppMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Uninstall
+                    {uninstallAppMutation.isPending ? 'Uninstalling...' : 'Uninstall'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -352,19 +284,15 @@ export default function Marketplace() {
               <Button 
                 size="sm" 
                 className="w-full"
-                variant={
-                  feature.status === 'requires_upgrade' ? "secondary" : 
-                  !canInstall ? "outline" :
-                  "default"
-                }
+                variant={!canInstall ? "outline" : "default"}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleFeatureAction(feature);
                 }}
-                disabled={roleLoading || (!canInstall && feature.status !== 'requires_upgrade')}
+                disabled={roleLoading || !canInstall || installAppMutation.isPending}
               >
                 {roleLoading ? '...' : 
-                 feature.status === 'requires_upgrade' ? 'Upgrade Required' :
+                 installAppMutation.isPending ? 'Installing...' :
                  !canInstall ? 'Contact Admin' : 'Install'}
               </Button>
             )}
@@ -373,6 +301,41 @@ export default function Marketplace() {
       </Card>
     );
   };
+
+  const LoadingSkeleton = () => (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader>
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  if (appsError) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto p-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-bold text-red-600">Error Loading Marketplace</h1>
+            <p className="text-muted-foreground">
+              {appsError.message || 'Failed to load marketplace apps. Please try again later.'}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -394,7 +357,7 @@ export default function Marketplace() {
           {/* Search and Filters */}
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
-              <Icons.search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search features..."
                 value={searchQuery}
@@ -431,72 +394,93 @@ export default function Marketplace() {
           </div>
         </div>
 
-        {/* Featured Section */}
-        <div className="space-y-6">
-          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 rounded-lg border">
-            <h2 className="text-2xl font-bold mb-4">Featured</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredFeatures.map((feature) => (
-                <FeatureCard key={feature.id} feature={feature} />
-              ))}
+        {/* Loading state */}
+        {(appsLoading || installationsLoading || categoriesLoading) && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 rounded-lg border">
+              <Skeleton className="h-8 w-32 mb-4" />
+              <LoadingSkeleton />
             </div>
           </div>
+        )}
 
-          {/* New This Month */}
-          {newFeatures.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">New This Month</h2>
-              <ScrollArea>
-                <div className="flex gap-4 pb-4">
-                  {newFeatures.map((feature) => (
-                    <div key={feature.id} className="flex-none w-72">
-                      <FeatureCard feature={feature} />
-                    </div>
+        {/* Content when loaded */}
+        {!appsLoading && !installationsLoading && (
+          <>
+            {/* Featured Section */}
+            {featuredFeatures.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 rounded-lg border">
+                  <h2 className="text-2xl font-bold mb-4">Featured</h2>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {featuredFeatures.slice(0, 6).map((feature) => (
+                      <FeatureCard key={feature.id} feature={feature} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* New This Month */}
+                {newFeatures.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">New This Month</h2>
+                    <ScrollArea>
+                      <div className="flex gap-4 pb-4">
+                        {newFeatures.map((feature) => (
+                          <div key={feature.id} className="flex-none w-72">
+                            <FeatureCard feature={feature} />
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* All Features Grid */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold">
+                All Features 
+                {searchQuery && ` (${filteredFeatures.length} results)`}
+              </h2>
+              
+              {filteredFeatures.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredFeatures.map((feature) => (
+                    <FeatureCard key={feature.id} feature={feature} />
                   ))}
                 </div>
-              </ScrollArea>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="space-y-4">
+                    <div className="text-muted-foreground">
+                      <Icons.search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg">No features found</p>
+                      <p className="text-sm">
+                        {searchQuery 
+                          ? `No features match "${searchQuery}"` 
+                          : "No features available in this category"
+                        }
+                      </p>
+                    </div>
+                    {searchQuery && (
+                      <Button variant="outline" onClick={() => setSearchQuery('')}>
+                        Clear search
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* All Features Grid */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold">
-            All Features 
-            {searchQuery && ` (${filteredFeatures.length} results)`}
-          </h2>
-          
-          {filteredFeatures.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredFeatures.map((feature) => (
-                <FeatureCard key={feature.id} feature={feature} />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <Icons.search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No features found</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                {searchQuery 
-                  ? `No features match "${searchQuery}". Try adjusting your search or filters.`
-                  : selectedCategory !== 'all' 
-                    ? `No features available in the ${selectedCategory} category.`
-                    : 'No features are currently available.'
-                }
-              </p>
-            </Card>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Feature Detail Modal */}
       <FeatureDetailModal
         feature={selectedFeature}
         isOpen={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false);
-          setSelectedFeature(null);
-        }}
+        onClose={() => setShowDetailModal(false)}
         onInstall={handleFeatureInstall}
         canInstall={canInstall}
       />

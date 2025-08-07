@@ -17,9 +17,9 @@ interface MarketplaceFeature {
   description: string;
   longDescription: string;
   category: string;
-  iconName: keyof typeof Icons;
-  screenshots: string[];
-  pricing: 'free' | 'premium' | 'enterprise';
+  iconName: string;
+  screenshots: string[] | null;
+  pricing: string;
   rating: number;
   reviewCount: number;
   installCount: number;
@@ -28,7 +28,7 @@ interface MarketplaceFeature {
   features: string[];
   status: 'available' | 'installed' | 'requires_upgrade';
   compatibility: {
-    minPlan: 'free' | 'basic' | 'pro' | 'enterprise';
+    minPlan: string;
     requiresIntegration: boolean;
   };
 }
@@ -158,7 +158,7 @@ export function FeatureDetailModal({ feature, isOpen, onClose, onInstall, canIns
                       <h3 className="text-lg font-semibold mb-2">Screenshots</h3>
                       <Carousel className="w-full max-w-xs mx-auto">
                         <CarouselContent>
-                          {feature.screenshots.map((screenshot, index) => (
+                          {(feature.screenshots || []).map((screenshot, index) => (
                             <CarouselItem key={index}>
                               <div className="p-1">
                                 <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
