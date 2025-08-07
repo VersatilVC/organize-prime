@@ -108,73 +108,116 @@ export const useInstallApp = () => {
         throw new Error('User or organization not found');
       }
 
-      // First check if already installed
-      const { data: existing } = await supabase
-        .from('marketplace_app_installations')
-        .select('id')
-        .eq('app_id', appId)
-        .eq('organization_id', currentOrganization.id)
-        .eq('status', 'active')
-        .single();
+      try {
+        // First check if already installed and active
+        const { data: existing } = await supabase
+          .from('marketplace_app_installations')
+          .select('id, status')
+          .eq('app_id', appId)
+          .eq('organization_id', currentOrganization.id)
+          .single();
 
-      if (existing) {
-        throw new Error('App is already installed');
+        // If exists and active, throw error
+        if (existing?.status === 'active') {
+          throw new Error('App is already installed and active');
+        }
+
+        // Get app details first for better error reporting
+        const { data: app, error: appError } = await supabase
+          .from('marketplace_apps')
+          .select('slug, name, navigation_config')
+          .eq('id', appId)
+          .single();
+
+        if (appError || !app) {
+          throw new Error(`App not found or invalid: ${appError?.message || 'Unknown error'}`);
+        }
+
+        let installation;
+
+        // If exists but inactive, reactivate it
+        if (existing?.status === 'inactive') {
+          const { data: reactivated, error: reactivateError } = await supabase
+            .from('marketplace_app_installations')
+            .update({
+              status: 'active',
+              app_settings: appSettings,
+              installed_by: user.id,
+              installed_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id)
+            .select()
+            .single();
+
+          if (reactivateError) {
+            throw new Error(`Failed to reactivate app: ${reactivateError.message}`);
+          }
+          installation = reactivated;
+        } else {
+          // Create new installation
+          const { data: newInstallation, error: installError } = await supabase
+            .from('marketplace_app_installations')
+            .insert({
+              app_id: appId,
+              organization_id: currentOrganization.id,
+              installed_by: user.id,
+              status: 'active',
+              app_settings: appSettings,
+              custom_navigation: {},
+              feature_flags: {},
+            })
+            .select()
+            .single();
+
+          if (installError) {
+            throw new Error(`Failed to install app: ${installError.message}`);
+          }
+          installation = newInstallation;
+        }
+
+        // Upsert organization feature config (handles both new and existing configs)
+        const { error: configError } = await supabase
+          .from('organization_feature_configs')
+          .upsert({
+            organization_id: currentOrganization.id,
+            feature_slug: app.slug,
+            is_enabled: true,
+            is_user_accessible: true,
+            org_menu_order: 99, // Add to end by default
+            created_by: user.id,
+          }, {
+            onConflict: 'organization_id,feature_slug'
+          });
+
+        if (configError) {
+          // Log but don't fail - the app is still installed
+          console.warn(`Failed to update feature config for ${app.slug}:`, configError);
+        }
+
+        // Track analytics (non-blocking)
+        supabase
+          .from('marketplace_app_analytics')
+          .insert({
+            app_id: appId,
+            organization_id: currentOrganization.id,
+            user_id: user.id,
+            event_type: existing ? 'reactivate' : 'install',
+            event_category: 'app_lifecycle',
+            event_data: {
+              installation_id: installation.id,
+              app_settings: appSettings,
+              app_name: app.name,
+            },
+          })
+          .then(({ error }) => {
+            if (error) console.warn('Analytics tracking failed:', error);
+          });
+
+        return installation;
+      } catch (error) {
+        console.error('App installation failed:', error);
+        throw error;
       }
-
-      // Install the app
-      const { data: installation, error: installError } = await supabase
-        .from('marketplace_app_installations')
-        .insert({
-          app_id: appId,
-          organization_id: currentOrganization.id,
-          installed_by: user.id,
-          status: 'active',
-          app_settings: appSettings,
-          custom_navigation: {},
-          feature_flags: {},
-        })
-        .select()
-        .single();
-
-      if (installError) throw installError;
-
-      // Get app details for navigation setup
-      const { data: app, error: appError } = await supabase
-        .from('marketplace_apps')
-        .select('slug, navigation_config')
-        .eq('id', appId)
-        .single();
-
-      if (appError) throw appError;
-
-      // Always add to organization feature configs for installed apps
-      await supabase
-        .from('organization_feature_configs')
-        .insert({
-          organization_id: currentOrganization.id,
-          feature_slug: app.slug,
-          is_enabled: true,
-          is_user_accessible: true,
-          org_menu_order: 99, // Add to end by default
-          created_by: user.id,
-        });
-
-      // Track analytics
-      await supabase
-        .from('marketplace_app_analytics')
-        .insert({
-          app_id: appId,
-          organization_id: currentOrganization.id,
-          user_id: user.id,
-          event_type: 'install',
-          event_category: 'app_lifecycle',
-          event_data: {
-            installation_id: installation.id,
-            app_settings: appSettings,
-          },
-        });
-
-      return installation;
     },
     onSuccess: (_, { appId }) => {
       queryClient.invalidateQueries({ queryKey: ['app-installations'] });
@@ -220,47 +263,83 @@ export const useUninstallApp = () => {
         throw new Error('User or organization not found');
       }
 
-      // Update installation status
-      const { error: updateError } = await supabase
-        .from('marketplace_app_installations')
-        .update({
-          status: 'inactive',
-          uninstalled_at: new Date().toISOString(),
-          uninstalled_by: user.id,
-        })
-        .eq('app_id', appId)
-        .eq('organization_id', currentOrganization.id);
+      try {
+        // First verify the app exists and is installed
+        const { data: installation, error: checkError } = await supabase
+          .from('marketplace_app_installations')
+          .select('id, status')
+          .eq('app_id', appId)
+          .eq('organization_id', currentOrganization.id)
+          .single();
 
-      if (updateError) throw updateError;
+        if (checkError || !installation) {
+          throw new Error('App installation not found');
+        }
 
-      // Get app slug for feature config removal
-      const { data: app } = await supabase
-        .from('marketplace_apps')
-        .select('slug')
-        .eq('id', appId)
-        .single();
+        if (installation.status !== 'active') {
+          throw new Error('App is not currently installed');
+        }
 
-      // Remove from organization feature configs
-      if (app?.slug) {
-        await supabase
+        // Get app details for better error reporting and cleanup
+        const { data: app, error: appError } = await supabase
+          .from('marketplace_apps')
+          .select('slug, name')
+          .eq('id', appId)
+          .single();
+
+        if (appError || !app) {
+          throw new Error(`App details not found: ${appError?.message || 'Unknown error'}`);
+        }
+
+        // Update installation status first
+        const { error: updateError } = await supabase
+          .from('marketplace_app_installations')
+          .update({
+            status: 'inactive',
+            uninstalled_at: new Date().toISOString(),
+            uninstalled_by: user.id,
+          })
+          .eq('id', installation.id);
+
+        if (updateError) {
+          throw new Error(`Failed to update installation status: ${updateError.message}`);
+        }
+
+        // Remove from organization feature configs
+        const { error: configError } = await supabase
           .from('organization_feature_configs')
           .delete()
           .eq('organization_id', currentOrganization.id)
           .eq('feature_slug', app.slug);
+
+        if (configError) {
+          // Log but don't fail the uninstall
+          console.warn(`Failed to remove feature config for ${app.slug}:`, configError);
+        }
+
+        // Track analytics (non-blocking)
+        supabase
+          .from('marketplace_app_analytics')
+          .insert({
+            app_id: appId,
+            organization_id: currentOrganization.id,
+            user_id: user.id,
+            event_type: 'uninstall',
+            event_category: 'app_lifecycle',
+            event_data: {
+              installation_id: installation.id,
+              app_name: app.name,
+            },
+          })
+          .then(({ error }) => {
+            if (error) console.warn('Analytics tracking failed:', error);
+          });
+
+        return { appId, appName: app.name };
+      } catch (error) {
+        console.error('App uninstallation failed:', error);
+        throw error;
       }
-
-      // Track analytics
-      await supabase
-        .from('marketplace_app_analytics')
-        .insert({
-          app_id: appId,
-          organization_id: currentOrganization.id,
-          user_id: user.id,
-          event_type: 'uninstall',
-          event_category: 'app_lifecycle',
-        });
-
-      return { appId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['app-installations'] });
