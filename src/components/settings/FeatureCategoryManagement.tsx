@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
@@ -60,6 +60,7 @@ export default function FeatureCategoryManagement() {
     reset,
     setValue,
     watch,
+    control,
     formState: { errors, isSubmitting }
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -225,9 +226,16 @@ export default function FeatureCategoryManagement() {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  {...register('is_active')}
+                <Controller
+                  name="is_active"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      id="is_active"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
                 />
                 <Label htmlFor="is_active">Active</Label>
               </div>
@@ -404,9 +412,16 @@ export default function FeatureCategoryManagement() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-is_active"
-                {...register('is_active')}
+              <Controller
+                name="is_active"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    id="edit-is_active"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
               />
               <Label htmlFor="edit-is_active">Active</Label>
             </div>
