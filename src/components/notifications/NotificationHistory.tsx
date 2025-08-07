@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +12,8 @@ import { UserRole } from '@/hooks/useUserRole';
 // Use the organization data structure from context
 import { Loader2, Eye, Download, Search, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
-//
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface NotificationHistoryProps {
@@ -134,7 +135,26 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const items = notifications?.items ?? [];
   const totalCount = notifications?.total ?? 0;
 
+  const parentRef = useRef<HTMLDivElement>(null);
+  const enableVirtual = totalCount > 200;
+  const rowVirtualizer = useVirtualizer({
+    count: enableVirtual ? items.length : 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 56,
+    overscan: 8,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom = virtualRows.length > 0 ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end : 0;
+  const COLS = 7;
+
   const exportToCsv = () => {
+    if (totalCount > pageSize) {
+      toast({
+        title: 'Export limited',
+        description: `Exporting only current page (${pageSize} of ${totalCount}). Use filters to narrow results.`,
+      });
+    }
     if (!items || items.length === 0) return;
 
     const headers = ['Title', 'Type', 'Sent Date', 'Sender', 'Recipients', 'Status'];
@@ -247,7 +267,8 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
       {/* Notifications Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <div ref={parentRef} className="max-h-[640px] overflow-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
@@ -272,6 +293,90 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
                     No notifications found matching your criteria.
                   </TableCell>
                 </TableRow>
+              ) : enableVirtual ? (
+                <>
+                  {paddingTop > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={COLS} style={{ height: paddingTop }} />
+                    </TableRow>
+                  )}
+
+                  {virtualRows.map((virtualRow) => {
+                    const notification = items[virtualRow.index];
+                    return (
+                      <TableRow key={notification.id}>
+                        <TableCell className="font-medium max-w-xs">
+                          <div className="truncate" title={notification.title}>
+                            {notification.title}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{getTypeLabel(notification.type)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(notification.created_at), 'MMM dd, yyyy HH:mm')}
+                        </TableCell>
+                        <TableCell>{notification.sender_name}</TableCell>
+                        <TableCell>{notification.recipient_count}</TableCell>
+                        <TableCell>{getStatusBadge(notification.delivery_status)}</TableCell>
+                        <TableCell className="text-right">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedNotification(notification)}
+                                className="flex items-center gap-1"
+                              >
+                                <Eye className="h-3 w-3" />
+                                View
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                              <DialogHeader>
+                                <DialogTitle>Notification Details</DialogTitle>
+                              </DialogHeader>
+                              {selectedNotification && (
+                                <div className="space-y-4">
+                                  <div>
+                                    <h4 className="font-semibold text-lg">{selectedNotification.title}</h4>
+                                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                                      <span>Sent by {selectedNotification.sender_name}</span>
+                                      <span>•</span>
+                                      <span>{format(new Date(selectedNotification.created_at), 'MMM dd, yyyy HH:mm')}</span>
+                                      <span>•</span>
+                                      <span>{selectedNotification.recipient_count} recipients</span>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium mb-2">Message</h5>
+                                    <p className="whitespace-pre-wrap text-sm">{selectedNotification.message}</p>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div>
+                                      <span className="text-sm font-medium">Type: </span>
+                                      <Badge variant="outline">{getTypeLabel(selectedNotification.type)}</Badge>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm font-medium">Status: </span>
+                                      {getStatusBadge(selectedNotification.delivery_status)}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+
+                  {paddingBottom > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={COLS} style={{ height: paddingBottom }} />
+                    </TableRow>
+                  )}
+                </>
               ) : (
                 items.map((notification) => (
                   <TableRow key={notification.id}>
@@ -344,6 +449,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
