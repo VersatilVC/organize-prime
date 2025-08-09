@@ -1,16 +1,17 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { createOptimizedQueryClient } from "@/lib/query-client";
+import { createOptimizedQueryClient, cacheConfig } from "@/lib/query-client";
 import { initializeCacheCleanup } from "@/lib/local-storage";
 import { PageLoadingSpinner } from "@/components/LoadingSkeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { queryPersister } from "@/lib/query-persistence";
 // Lazy load all page components for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -41,7 +42,7 @@ initializeCacheCleanup();
 const queryClient = createOptimizedQueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: cacheConfig.static.gcTime }}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -213,7 +214,7 @@ const App = () => (
         </OrganizationProvider>
       </AuthProvider>
     </TooltipProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;

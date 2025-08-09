@@ -19,6 +19,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Icons } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
+import { prefetchByPath } from '@/lib/route-prefetch';
 
 // Define sidebar sections with their navigation items
 interface SidebarSection {
@@ -247,6 +248,7 @@ const NavigationItem = React.memo(({
       <NavLink 
         to={item.href} 
         className={isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
+        onMouseEnter={() => prefetchByPath(item.href)}
       >
         <item.icon className="h-4 w-4" />
         <span>{item.name}</span>

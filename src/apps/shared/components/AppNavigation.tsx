@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { prefetchByPath } from '@/lib/route-prefetch';
 
 export interface AppNavigationProps {
   appId: string;
@@ -68,7 +69,7 @@ export function AppNavigation({
     );
 
     const navElement = item.path ? (
-      <Link key={item.id} to={item.path} className="block">
+      <Link key={item.id} to={item.path} className="block" onMouseEnter={() => prefetchByPath(item.path!)}>
         {itemContent}
       </Link>
     ) : (
@@ -114,7 +115,7 @@ export function AppNavigation({
             asChild={!!item.path}
           >
             {item.path ? (
-              <Link to={item.path} className="flex items-center gap-2">
+              <Link to={item.path} className="flex items-center gap-2" onMouseEnter={() => prefetchByPath(item.path!)}>
                 {showIcons && item.icon && (
                   <span className="h-4 w-4" dangerouslySetInnerHTML={{ __html: item.icon }} />
                 )}

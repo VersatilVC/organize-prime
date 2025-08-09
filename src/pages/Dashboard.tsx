@@ -15,6 +15,7 @@ import { Icons } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { usePagePerformance } from '@/lib/performance';
 
 // Memoized StatCard component to prevent unnecessary re-renders
 const StatCard = React.memo(({ 
@@ -94,6 +95,7 @@ const QuickActionButton = React.memo(({
 QuickActionButton.displayName = 'QuickActionButton';
 
 export default function Dashboard() {
+  usePagePerformance('Dashboard');
   const { user } = useAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();

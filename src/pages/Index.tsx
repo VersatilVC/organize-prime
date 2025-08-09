@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
+import { usePagePerformance } from '@/lib/performance';
 
 const Index = () => {
+  usePagePerformance('Home');
   const { user } = useAuth();
 
   if (!user) {
