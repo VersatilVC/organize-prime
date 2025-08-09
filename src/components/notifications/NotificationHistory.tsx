@@ -69,7 +69,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
       if (!user?.id) return;
       try {
         const [userRes, orgRes] = await Promise.all([
-          supabase.from('profiles').select('preferences').eq('id', user.id).single(),
+          supabase.from('profiles').select('preferences').eq('id', user.id).maybeSingle(),
           currentOrganization?.id
             ? supabase
                 .from('organization_settings')
@@ -105,7 +105,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
         .from('profiles')
         .select('preferences')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const existing = (profile?.preferences as any) ?? {};
       const next = {

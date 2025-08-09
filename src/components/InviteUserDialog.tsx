@@ -73,7 +73,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
         .eq('organization_id', targetOrganization.id)
         .eq('user_id', formData.email) // This would need to be changed to check by email
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       // Check if there's already a pending invitation
       const { data: existingInvitation } = await supabase
@@ -83,7 +83,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
         .eq('organization_id', targetOrganization.id)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
-        .single();
+        .maybeSingle();
 
       if (existingInvitation) {
         throw new Error('An invitation has already been sent to this email address');
@@ -101,7 +101,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
         .from('profiles')
         .select('full_name, username')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const inviterName = profile?.full_name || profile?.username || 'Someone';
 
@@ -118,7 +118,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
           organization_id: targetOrganization.id
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
