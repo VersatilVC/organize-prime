@@ -255,7 +255,7 @@ export const useEnhancedInstallApp = () => {
         .select('name, slug, navigation_config, required_permissions')
         .eq('id', appId)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (appError || !app) {
         throw new Error('App not found or no longer available.');
@@ -281,9 +281,10 @@ export const useEnhancedInstallApp = () => {
           .update(installationData)
           .eq('id', existing.id)
           .select()
-          .single();
+          .maybeSingle();
         
         if (error) throw error;
+        if (!data) throw new Error('No data returned after reactivating installation');
         installation = data;
       } else {
         // Create new installation
@@ -291,9 +292,10 @@ export const useEnhancedInstallApp = () => {
           .from('marketplace_app_installations')
           .insert(installationData)
           .select()
-          .single();
+          .maybeSingle();
         
         if (error) throw error;
+        if (!data) throw new Error('No data returned after creating installation');
         installation = data;
       }
 
@@ -375,7 +377,7 @@ export const useEnhancedUninstallApp = () => {
         .from('marketplace_apps')
         .select('name, slug')
         .eq('id', appId)
-        .single();
+        .maybeSingle();
 
       // Update installation status (don't delete for audit trail)
       const { error: updateError } = await supabase
@@ -550,7 +552,7 @@ export const useCreateMarketplaceApp = () => {
         .from('profiles')
         .select('is_super_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profile?.is_super_admin) {
         throw new Error('Super admin access required');
@@ -575,9 +577,10 @@ export const useCreateMarketplaceApp = () => {
         .from('marketplace_apps')
         .insert(insertData)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned after creating app');
       return data;
     },
     onSuccess: () => {

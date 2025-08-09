@@ -164,14 +164,14 @@ export default function FeedbackManagement() {
           .from('profiles')
           .select('full_name')
           .eq('id', item.user_id)
-          .single();
+          .maybeSingle();
 
         // Get organization name
         const { data: organization } = await supabase
           .from('organizations')
           .select('name')
           .eq('id', item.organization_id)
-          .single();
+          .maybeSingle();
 
         return {
           ...item,

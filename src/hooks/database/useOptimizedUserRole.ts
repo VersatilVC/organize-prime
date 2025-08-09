@@ -34,7 +34,7 @@ export function useOptimizedUserRole() {
         .from('profiles')
         .select('is_super_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) throw profileError;
 

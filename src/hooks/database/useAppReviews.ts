@@ -54,9 +54,9 @@ export const useUserAppReview = (appId: string) => {
         .eq('app_id', appId)
         .eq('organization_id', currentOrganization.id)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error; // Ignore not found errors
+      if (error) throw error; // maybeSingle(): no error for no rows
       return data as AppReview | null;
     },
     enabled: !!appId && !!user?.id && !!currentOrganization?.id,
@@ -102,9 +102,10 @@ export const useCreateAppReview = () => {
           cons: cons || null,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned after creating review');
       return data;
     },
     onSuccess: (_, { appId }) => {
@@ -159,9 +160,10 @@ export const useUpdateAppReview = () => {
         .update(updateData)
         .eq('id', reviewId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned after updating review');
       return data;
     },
     onSuccess: (data) => {

@@ -103,7 +103,7 @@ export function useResendInvitationMutation() {
         .from('profiles')
         .select('full_name, username')
         .eq('id', invitation.invited_by)
-        .single();
+        .maybeSingle();
 
       const inviterName = profile?.full_name || profile?.username || 'Someone';
 

@@ -38,7 +38,7 @@ export function useUserRole() {
           .from('profiles')
           .select('is_super_admin')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (profile?.is_super_admin) {
           console.log('🔍 useUserRole: User is super admin');

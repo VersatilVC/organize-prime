@@ -60,9 +60,10 @@ export function useCreateAppCategory() {
           is_active: data.is_active ?? true,
         }])
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!result) throw new Error('No data returned after creating category');
       return result;
     },
     onSuccess: () => {
@@ -94,9 +95,10 @@ export function useUpdateAppCategory() {
         .update(data)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!result) throw new Error('No data returned after updating category');
       return result;
     },
     onSuccess: () => {

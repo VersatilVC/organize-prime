@@ -45,7 +45,7 @@ export function useOrganizationCreation() {
               is_active: true,
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (newOrg && !orgError) {
             // Create admin membership

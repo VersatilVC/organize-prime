@@ -125,7 +125,7 @@ export const useInstallApp = () => {
           .select('id, status')
           .eq('app_id', appId)
           .eq('organization_id', currentOrganization.id)
-          .single();
+          .maybeSingle();
 
         // If exists and active, throw error
         if (existing?.status === 'active') {
@@ -137,7 +137,7 @@ export const useInstallApp = () => {
           .from('marketplace_apps')
           .select('slug, name, navigation_config')
           .eq('id', appId)
-          .single();
+          .maybeSingle();
 
         if (appError || !app) {
           throw new Error(`App not found or invalid: ${appError?.message || 'Unknown error'}`);
@@ -157,10 +157,13 @@ export const useInstallApp = () => {
             })
             .eq('id', existing.id)
             .select()
-            .single();
+            .maybeSingle();
 
           if (reactivateError) {
             throw new Error(`Failed to reactivate app: ${reactivateError.message}`);
+          }
+          if (!reactivated) {
+            throw new Error('No data returned after reactivating app');
           }
           installation = reactivated;
         } else {
@@ -177,10 +180,13 @@ export const useInstallApp = () => {
               feature_flags: {},
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (installError) {
             throw new Error(`Failed to install app: ${installError.message}`);
+          }
+          if (!newInstallation) {
+            throw new Error('No data returned after installing app');
           }
           installation = newInstallation;
         }
@@ -280,7 +286,7 @@ export const useUninstallApp = () => {
           .select('id, status')
           .eq('app_id', appId)
           .eq('organization_id', currentOrganization.id)
-          .single();
+          .maybeSingle();
 
         if (checkError || !installation) {
           throw new Error('App installation not found');
@@ -295,7 +301,7 @@ export const useUninstallApp = () => {
           .from('marketplace_apps')
           .select('slug, name')
           .eq('id', appId)
-          .single();
+          .maybeSingle();
 
         if (appError || !app) {
           throw new Error(`App details not found: ${appError?.message || 'Unknown error'}`);

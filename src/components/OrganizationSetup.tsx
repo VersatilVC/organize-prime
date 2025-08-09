@@ -138,7 +138,7 @@ export function OrganizationSetup({ open, onOpenChange, onSuccess }: Organizatio
           },
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (orgError) throw orgError;
 
@@ -186,7 +186,7 @@ export function OrganizationSetup({ open, onOpenChange, onSuccess }: Organizatio
         .eq('token', values.invitationToken)
         .eq('email', user.email)
         .is('accepted_at', null)
-        .single();
+        .maybeSingle();
 
       if (inviteError || !invitation) {
         throw new Error('Invalid invitation code or invitation not found');

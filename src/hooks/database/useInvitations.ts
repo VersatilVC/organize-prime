@@ -138,10 +138,11 @@ export function useCreateInvitationMutation() {
           expires_at: expiresAt.toISOString()
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-
+      if (!data) throw new Error('No data returned after creating invitation');
+      
       // Send invitation email via edge function
       const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
         body: {
@@ -288,7 +289,7 @@ export function useAcceptInvitationMutation() {
         .from('invitations')
         .select('*')
         .eq('token', token)
-        .single();
+        .maybeSingle();
 
       if (fetchError) throw fetchError;
 

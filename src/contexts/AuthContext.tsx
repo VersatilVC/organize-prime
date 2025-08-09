@@ -207,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             slug: domain,
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (newOrg && !orgError) {
           // Create admin membership

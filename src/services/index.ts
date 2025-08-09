@@ -97,7 +97,7 @@ export class UserService {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       if (error.code === '23505') {
@@ -126,7 +126,7 @@ export class UserService {
       })
       .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new ServiceError('Failed to update user profile', error);
@@ -239,7 +239,7 @@ export class OrganizationService {
         slug
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (orgError) {
       throw new ServiceError('Failed to create organization', orgError);
@@ -304,7 +304,7 @@ export class FeedbackService {
         status: 'pending'
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new ServiceError('Failed to create feedback', error);
@@ -346,7 +346,7 @@ export class FeedbackService {
       .update(updateData)
       .eq('id', feedbackId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new ServiceError('Failed to update feedback status', error);

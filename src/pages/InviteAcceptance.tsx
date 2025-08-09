@@ -180,7 +180,7 @@ export default function InviteAcceptance() {
         .select('id, status')
         .eq('user_id', currentUser.id)
         .eq('organization_id', invitation.organization_id)
-        .single();
+        .maybeSingle();
 
       if (existingMembership) {
         if (existingMembership.status === 'active') {
