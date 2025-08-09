@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { 
@@ -25,6 +25,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
+import { usePagePerformance } from '@/lib/performance';
+import { debounce } from '@/lib/utils';
 
 // Memoized UserRow component to prevent unnecessary re-renders
 const UserRow = React.memo(({ 
@@ -323,9 +325,20 @@ export default function Users() {
   
   // Search and pagination state
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [invitationsPage, setInvitationsPage] = useState(0);
-  const pageSize = 50;
+  const [usersPageSize, setUsersPageSize] = useState(50);
+  const [invitationsPageSize, setInvitationsPageSize] = useState(50);
+  
+  // Performance tracking
+  usePagePerformance('Users');
+  
+  // Debounce search input
+  const applyDebouncedSearch = useMemo(() => debounce((v: string) => setDebouncedSearch(v), 300), []);
+  useEffect(() => {
+    applyDebouncedSearch(searchTerm);
+  }, [searchTerm, applyDebouncedSearch]);
   
   // UI state
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -343,8 +356,8 @@ export default function Users() {
     error: usersError 
   } = useUsersQuery({ 
     page: currentPage, 
-    pageSize, 
-    search: searchTerm || undefined 
+    pageSize: usersPageSize, 
+    search: debouncedSearch || undefined 
   });
 
   const { 
@@ -352,7 +365,7 @@ export default function Users() {
     isLoading: invitationsLoading 
   } = useInvitationsQuery({ 
     page: invitationsPage, 
-    pageSize 
+    pageSize: invitationsPageSize 
   });
 
   // Mutations with optimistic updates
@@ -450,8 +463,8 @@ export default function Users() {
   }, [toast]);
 
   // Memoized computed values
-  const totalPages = useMemo(() => Math.ceil(totalUsers / pageSize), [totalUsers, pageSize]);
-  const totalInvitationPages = useMemo(() => Math.ceil(totalInvitations / pageSize), [totalInvitations, pageSize]);
+  const totalPages = useMemo(() => Math.ceil(totalUsers / usersPageSize), [totalUsers, usersPageSize]);
+  const totalInvitationPages = useMemo(() => Math.ceil(totalInvitations / invitationsPageSize), [totalInvitations, invitationsPageSize]);
 
   if (roleLoading) {
     return (
@@ -597,7 +610,7 @@ export default function Users() {
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between px-6 py-4 border-t">
                         <div className="text-sm text-muted-foreground">
-                          Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalUsers)} of {totalUsers} users
+                          Showing {currentPage * usersPageSize + 1} to {Math.min((currentPage + 1) * usersPageSize, totalUsers)} of {totalUsers} users
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -682,7 +695,7 @@ export default function Users() {
                     {totalInvitationPages > 1 && (
                       <div className="flex items-center justify-between px-6 py-4 border-t">
                         <div className="text-sm text-muted-foreground">
-                          Showing {invitationsPage * pageSize + 1} to {Math.min((invitationsPage + 1) * pageSize, totalInvitations)} of {totalInvitations} invitations
+                          Showing {invitationsPage * invitationsPageSize + 1} to {Math.min((invitationsPage + 1) * invitationsPageSize, totalInvitations)} of {totalInvitations} invitations
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
