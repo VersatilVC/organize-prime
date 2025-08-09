@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/hooks/useUserRole';
 // Use the organization data structure from context
@@ -18,6 +18,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { debounce } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface NotificationHistoryProps {
   userRole: UserRole;
@@ -42,7 +44,13 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const [dateFilter, setDateFilter] = useState('all');
   const [selectedNotification, setSelectedNotification] = useState<NotificationRecord | null>(null);
   const [page, setPage] = useState(0);
-  const pageSize = 50;
+  const [pageSize, setPageSize] = useState(50);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const setDebouncedSearch = useMemo(() => debounce((v: string) => setDebouncedSearchTerm(v), 300), []);
+  const queryClient = useQueryClient();
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const exportControllerRef = useRef<AbortController | null>(null);
   const { user } = useAuth();
 
   const [virtualizationEnabled, setVirtualizationEnabled] = useState(true);
@@ -155,13 +163,22 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
     debouncedPersist(virtualizationEnabled, virtualizationThreshold);
   }, [virtualizationEnabled, virtualizationThreshold, settingsLoaded, debouncedPersist]);
 
+  // Debounce search term and reset page on filters/page size change
+  useEffect(() => {
+    setDebouncedSearch(searchTerm);
+  }, [searchTerm, setDebouncedSearch]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearchTerm, typeFilter, dateFilter, pageSize, currentOrganization?.id]);
+
   // Server-side filtered, paginated history
   const { data: notifications, isLoading } = useQuery({
     queryKey: [
       'notification-history',
       userRole,
       currentOrganization?.id,
-      searchTerm,
+      debouncedSearchTerm,
       typeFilter,
       dateFilter,
       page,
@@ -197,8 +214,8 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
         query = query.eq('type', typeFilter);
       }
 
-      if (searchTerm.trim()) {
-        const term = searchTerm.trim();
+      if (debouncedSearchTerm.trim()) {
+        const term = debouncedSearchTerm.trim();
         query = query.or(`title.ilike.%${term}%,message.ilike.%${term}%`);
       }
 
@@ -247,6 +264,87 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
 
   const items = notifications?.items ?? [];
   const totalCount = notifications?.total ?? 0;
+
+  // Prefetch next page for smoother pagination
+  useEffect(() => {
+    if (isLoading) return;
+    const hasNext = (page + 1) * pageSize < totalCount;
+    if (!hasNext) return;
+
+    queryClient.prefetchQuery({
+      queryKey: [
+        'notification-history',
+        userRole,
+        currentOrganization?.id,
+        debouncedSearchTerm,
+        typeFilter,
+        dateFilter,
+        page + 1,
+        pageSize,
+      ],
+      queryFn: async () => {
+        let query = supabase
+          .from('notifications')
+          .select(
+            `
+            id,
+            title,
+            message,
+            type,
+            created_at,
+            data,
+            organization_id,
+            organizations(name)
+          `
+          )
+          .order('created_at', { ascending: false });
+
+        if (currentOrganization?.id) {
+          query = query.eq('organization_id', currentOrganization.id);
+        } else if (userRole === 'user' && user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+        if (typeFilter !== 'all') query = query.eq('type', typeFilter);
+        if (debouncedSearchTerm.trim()) {
+          const term = debouncedSearchTerm.trim();
+          query = query.or(`title.ilike.%${term}%,message.ilike.%${term}%`);
+        }
+        if (dateFilter !== 'all') {
+          const now = new Date();
+          let since = new Date(0);
+          switch (dateFilter) {
+            case 'today':
+              since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              break;
+            case 'week':
+              since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+          }
+          query = query.gte('created_at', since.toISOString());
+        }
+
+        const from = (page + 1) * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await query.range(from, to);
+        if (error) return { items: [], total: totalCount };
+        const items = (data || []).map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: n.type,
+          created_at: n.created_at,
+          sender_name: (n.data as any)?.sender_name || 'System',
+          recipient_count: (n.data as any)?.recipient_count || 0,
+          organization_name: n.organizations?.name || 'Unknown',
+          delivery_status: 'sent' as const,
+        })) as NotificationRecord[];
+        return { items, total: totalCount };
+      },
+    });
+  }, [isLoading, page, pageSize, totalCount, debouncedSearchTerm, typeFilter, dateFilter, currentOrganization?.id, userRole, user?.id, queryClient]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const enableVirtual = virtualizationEnabled && totalCount > virtualizationThreshold;
