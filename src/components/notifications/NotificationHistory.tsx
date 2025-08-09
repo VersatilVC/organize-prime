@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { debounce } from '@/lib/utils';
 
 interface NotificationHistoryProps {
   userRole: UserRole;
@@ -46,6 +47,113 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
 
   const [virtualizationEnabled, setVirtualizationEnabled] = useState(true);
   const [virtualizationThreshold, setVirtualizationThreshold] = useState(150);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Load persisted preferences (user overrides, then org defaults)
+  useEffect(() => {
+    const loadPrefs = async () => {
+      if (!user?.id) return;
+      try {
+        const [userRes, orgRes] = await Promise.all([
+          supabase.from('profiles').select('preferences').eq('id', user.id).single(),
+          currentOrganization?.id
+            ? supabase
+                .from('organization_settings')
+                .select('value')
+                .eq('organization_id', currentOrganization.id)
+                .eq('category', 'notifications')
+                .eq('key', 'notification_history_defaults')
+                .maybeSingle()
+            : Promise.resolve({ data: null } as any),
+        ]);
+
+        const userPrefs = (userRes.data?.preferences as any)?.notification_history;
+        const orgDefaults = (orgRes as any)?.data?.value as any;
+
+        const enabled = (userPrefs?.virtualizationEnabled ?? orgDefaults?.virtualizationEnabled ?? true) as boolean;
+        const threshold = (userPrefs?.threshold ?? orgDefaults?.threshold ?? 150) as number;
+
+        setVirtualizationEnabled(Boolean(enabled));
+        setVirtualizationThreshold(Number.isFinite(threshold) ? threshold : 150);
+      } catch (e) {
+        console.error('Failed to load notification history preferences', e);
+      } finally {
+        setSettingsLoaded(true);
+      }
+    };
+    loadPrefs();
+  }, [user?.id, currentOrganization?.id]);
+
+  const saveUserPrefs = async (enabled: boolean, threshold: number) => {
+    if (!user?.id) return;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('preferences')
+        .eq('id', user.id)
+        .single();
+
+      const existing = (profile?.preferences as any) ?? {};
+      const next = {
+        ...existing,
+        notification_history: {
+          ...(existing.notification_history ?? {}),
+          virtualizationEnabled: enabled,
+          threshold,
+        },
+      };
+      await supabase.from('profiles').update({ preferences: next }).eq('id', user.id);
+    } catch (e) {
+      console.error('Failed to save user notification history preferences', e);
+    }
+  };
+
+  const saveOrgDefaults = async (enabled: boolean, threshold: number) => {
+    if (!currentOrganization?.id) return;
+    if (!(userRole === 'admin' || userRole === 'super_admin')) return;
+    try {
+      const { data: existing } = await supabase
+        .from('organization_settings')
+        .select('id')
+        .eq('organization_id', currentOrganization.id)
+        .eq('category', 'notifications')
+        .eq('key', 'notification_history_defaults')
+        .maybeSingle();
+
+      const value = { virtualizationEnabled: enabled, threshold } as any;
+
+      if (existing?.id) {
+        await supabase.from('organization_settings').update({ value }).eq('id', existing.id);
+      } else {
+        await supabase.from('organization_settings').insert({
+          organization_id: currentOrganization.id,
+          category: 'notifications',
+          key: 'notification_history_defaults',
+          value,
+        });
+      }
+    } catch (e) {
+      // Ignore permission errors for non-admins
+      console.warn('Org defaults not saved (insufficient rights or other issue).', e);
+    }
+  };
+
+  const debouncedPersist = useMemo(
+    () =>
+      debounce((enabled: boolean, threshold: number) => {
+        saveUserPrefs(enabled, threshold);
+        if (userRole === 'admin' || userRole === 'super_admin') {
+          saveOrgDefaults(enabled, threshold);
+        }
+      }, 600),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userRole, user?.id, currentOrganization?.id]
+  );
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    debouncedPersist(virtualizationEnabled, virtualizationThreshold);
+  }, [virtualizationEnabled, virtualizationThreshold, settingsLoaded, debouncedPersist]);
 
   // Server-side filtered, paginated history
   const { data: notifications, isLoading } = useQuery({
