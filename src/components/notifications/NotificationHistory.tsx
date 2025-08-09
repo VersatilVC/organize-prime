@@ -19,7 +19,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { debounce } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 
 interface NotificationHistoryProps {
   userRole: UserRole;
@@ -359,7 +359,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const paddingBottom = virtualRows.length > 0 ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end : 0;
   const COLS = 7;
 
-  const exportToCsv = () => {
+  const exportCurrentPageCsv = () => {
     if (totalCount > pageSize) {
       toast({
         title: 'Export limited',
@@ -372,10 +372,10 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
     const csvContent = [
       headers.join(','),
       ...items.map(notification => [
-        `"${notification.title}"`,
+        `"${notification.title.replace(/"/g, '""')}"`,
         notification.type,
         format(new Date(notification.created_at), 'yyyy-MM-dd HH:mm'),
-        `"${notification.sender_name}"`,
+        `"${notification.sender_name.replace(/"/g, '""')}"`,
         notification.recipient_count,
         notification.delivery_status,
       ].join(','))
@@ -388,6 +388,112 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
     a.download = `notification-history-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const exportAllToCsv = async () => {
+    if (exporting) return;
+    if (totalCount === 0) {
+      toast({ title: 'Nothing to export', description: 'No notifications match your current filters.' });
+      return;
+    }
+    try {
+      setExporting(true);
+      setExportProgress(0);
+      exportControllerRef.current = new AbortController();
+
+      const headers = ['Title', 'Type', 'Sent Date', 'Sender', 'Recipients', 'Status'];
+      const rows: string[] = [headers.join(',')];
+      const batchSize = 1000;
+      let fetched = 0;
+
+      for (let from = 0; from < totalCount; from += batchSize) {
+        if (exportControllerRef.current?.signal.aborted) break;
+        const to = Math.min(from + batchSize - 1, totalCount - 1);
+
+        let query = supabase
+          .from('notifications')
+          .select(
+            `
+            id,
+            title,
+            message,
+            type,
+            created_at,
+            data,
+            organization_id,
+            organizations(name)
+          `
+          )
+          .order('created_at', { ascending: false });
+
+        if (currentOrganization?.id) {
+          query = query.eq('organization_id', currentOrganization.id);
+        } else if (userRole === 'user' && user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+        if (typeFilter !== 'all') query = query.eq('type', typeFilter);
+        if (debouncedSearchTerm.trim()) {
+          const term = debouncedSearchTerm.trim();
+          query = query.or(`title.ilike.%${term}%,message.ilike.%${term}%`);
+        }
+        if (dateFilter !== 'all') {
+          const now = new Date();
+          let since = new Date(0);
+          switch (dateFilter) {
+            case 'today':
+              since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              break;
+            case 'week':
+              since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+          }
+          query = query.gte('created_at', since.toISOString());
+        }
+
+        const { data, error } = await query.range(from, to);
+        if (error) throw error;
+
+        const batch = (data || []).map((n: any) => [
+          `"${String(n.title ?? '').replace(/"/g, '""')}"`,
+          n.type,
+          format(new Date(n.created_at), 'yyyy-MM-dd HH:mm'),
+          `"${String((n.data as any)?.sender_name || 'System').replace(/"/g, '""')}"`,
+          (n.data as any)?.recipient_count || 0,
+          'sent',
+        ].join(','));
+        rows.push(...batch);
+
+        fetched += data?.length || 0;
+        setExportProgress(Math.round((Math.min(fetched, totalCount) / totalCount) * 100));
+      }
+
+      if (exportControllerRef.current?.signal.aborted) {
+        toast({ title: 'Export canceled', description: 'Your CSV export was canceled.' });
+        return;
+      }
+
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `notification-history-all-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast({ title: 'Export complete', description: `Exported ${totalCount} notifications.` });
+    } catch (e: any) {
+      toast({ title: 'Export failed', description: e.message || 'Unexpected error', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+      setExportProgress(0);
+      exportControllerRef.current = null;
+    }
+  };
+
+  const cancelExport = () => {
+    exportControllerRef.current?.abort();
   };
 
   const getTypeLabel = (type: string) => {
@@ -422,11 +528,28 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
             View and export sent notifications and announcements
           </p>
         </div>
-        <Button onClick={exportToCsv} variant="outline" className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={exportCurrentPageCsv} variant="outline" className="flex items-center gap-2" size="sm">
+            <Download className="h-4 w-4" />
+            Export page
+          </Button>
+          {exporting ? (
+            <Button onClick={cancelExport} variant="destructive" className="flex items-center gap-2" size="sm">
+              Cancel export
+            </Button>
+          ) : (
+            <Button onClick={exportAllToCsv} variant="default" className="flex items-center gap-2" size="sm">
+              <Download className="h-4 w-4" />
+              Export all
+            </Button>
+          )}
+        </div>
       </div>
+      {exporting && (
+        <div className="mt-2">
+          <Progress value={exportProgress} />
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
@@ -689,6 +812,20 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
           {Math.min((page + 1) * pageSize, totalCount)} of {totalCount}
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mr-2">
+            <Label htmlFor="page-size" className="text-sm">Rows</Label>
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <SelectTrigger id="page-size" className="w-[88px]">
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="200">200</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button variant="outline" size="sm" disabled={page === 0 || isLoading} onClick={() => setPage((p) => Math.max(0, p - 1))}>
             Previous
           </Button>
