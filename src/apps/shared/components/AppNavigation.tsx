@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { prefetchByPath } from '@/lib/route-prefetch';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchQueriesByPath } from '@/lib/query-prefetch';
+import { Icons } from '@/components/ui/icons';
 
 export interface AppNavigationProps {
   appId: string;
@@ -49,9 +50,14 @@ const location = useLocation();
           level > 0 && "ml-4"
         )}
       >
-        {showIcons && item.icon && (
-          <span className="h-4 w-4" dangerouslySetInnerHTML={{ __html: item.icon }} />
-        )}
+{showIcons && item.icon && (() => {
+          const IconCmp = Icons[item.icon as keyof typeof Icons];
+          return IconCmp ? (
+            <IconCmp className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Icons.package className="h-4 w-4" aria-hidden="true" />
+          );
+        })()}
         <span className="flex-1">{item.label}</span>
         {hasChildren && collapsible && (
           <button
@@ -119,16 +125,26 @@ const location = useLocation();
           >
             {item.path ? (
               <Link to={item.path} className="flex items-center gap-2" onMouseEnter={() => { prefetchByPath(item.path!); prefetchQueriesByPath(item.path!, queryClient); }}>
-                {showIcons && item.icon && (
-                  <span className="h-4 w-4" dangerouslySetInnerHTML={{ __html: item.icon }} />
-                )}
+{showIcons && item.icon && (() => {
+                  const IconCmp = Icons[item.icon as keyof typeof Icons];
+                  return IconCmp ? (
+                    <IconCmp className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Icons.package className="h-4 w-4" aria-hidden="true" />
+                  );
+                })()}
                 {item.label}
               </Link>
             ) : (
               <span className="flex items-center gap-2">
-                {showIcons && item.icon && (
-                  <span className="h-4 w-4" dangerouslySetInnerHTML={{ __html: item.icon }} />
-                )}
+{showIcons && item.icon && (() => {
+                  const IconCmp = Icons[item.icon as keyof typeof Icons];
+                  return IconCmp ? (
+                    <IconCmp className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Icons.package className="h-4 w-4" aria-hidden="true" />
+                  );
+                })()}
                 {item.label}
               </span>
             )}

@@ -9,16 +9,15 @@ import { Icons } from '@/components/ui/icons';
 
 interface InvitationData {
   id: string;
-  email: string;
   role: string;
   message: string | null;
   expires_at: string;
-  accepted_at: string | null;
   organization_id: string;
   organization_name: string;
   invited_by_name: string;
   invited_by: string;
 }
+
 
 export default function InviteAcceptance() {
   const { token } = useParams<{ token: string }>();
@@ -52,113 +51,35 @@ export default function InviteAcceptance() {
         return;
       }
 
-      // Fetch invitation details first
-      console.log('🔍 Query parameters:', { token });
-      
-      const query = supabase
-        .from('invitations')
-        .select(`
-          id,
-          email,
-          role,
-          message,
-          expires_at,
-          accepted_at,
-          organization_id,
-          invited_by
-        `)
-        .eq('token', token);
-      
-      console.log('🔍 About to execute query...');
-      const { data: invitationData, error: invitationError } = await query.maybeSingle();
+      // Use secure RPC to fetch sanitized invitation details
+      const { data, error: rpcError } = await supabase.rpc('get_invitation_by_token', { p_token: token });
 
-      console.log('📋 Raw query response:', { 
-        invitationData, 
-        invitationError, 
-        queryDebug: {
-          token,
-          tokenType: typeof token,
-          tokenLength: token ? token.length : 0
-        }
-      });
-
-      if (invitationError) {
-        console.error('❌ Invitation fetch error:', invitationError);
-        setError(`Invitation lookup failed: ${invitationError.message}`);
+      if (rpcError) {
+        console.error('❌ Invitation RPC error:', rpcError);
+        setError(`Invitation lookup failed: ${rpcError.message}`);
         return;
       }
 
-      if (!invitationData) {
-        console.error('❌ No invitation data found for token');
-        // Let's try a different approach - query without token filter to see if there are any invitations
-        const { data: allInvitations } = await supabase
-          .from('invitations')
-          .select('id, token, email')
-          .limit(5);
-        console.log('🔍 Available invitations (first 5):', allInvitations);
-        
+      const inv = Array.isArray(data) ? data[0] : null;
+      if (!inv) {
         setError('Invitation not found');
         return;
       }
 
-      // Check if invitation is expired
-      const expirationDate = new Date(invitationData.expires_at);
-      const now = new Date();
-      if (expirationDate < now) {
-        console.error('❌ Invitation expired:', { expirationDate, now });
-        setError('This invitation has expired');
+      if (!inv.is_valid) {
+        setError('This invitation has expired or was already accepted');
         return;
-      }
-
-      // Check if invitation is already accepted
-      if (invitationData.accepted_at) {
-        console.error('❌ Invitation already accepted:', invitationData.accepted_at);
-        setError('This invitation has already been accepted');
-        return;
-      }
-
-      console.log('✅ Invitation data processed successfully');
-
-      // Fetch organization and inviter details with graceful fallbacks
-      let organizationName = 'Unknown Organization';
-      let inviterName = 'Unknown User';
-
-      try {
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .select('name')
-          .eq('id', invitationData.organization_id)
-          .maybeSingle();
-        
-        if (orgError) {
-          console.warn('⚠️ Could not fetch organization name:', orgError);
-        } else if (orgData) {
-          organizationName = orgData.name;
-        }
-      } catch (error) {
-        console.warn('⚠️ Organization fetch failed:', error);
-      }
-
-      try {
-        const { data: inviterData, error: inviterError } = await supabase
-          .from('profiles')
-          .select('full_name, username')
-          .eq('id', invitationData.invited_by)
-          .maybeSingle();
-        
-        if (inviterError) {
-          console.warn('⚠️ Could not fetch inviter name:', inviterError);
-        } else if (inviterData) {
-          inviterName = inviterData.full_name || inviterData.username || 'Unknown User';
-        }
-      } catch (error) {
-        console.warn('⚠️ Inviter fetch failed:', error);
       }
 
       setInvitation({
-        ...invitationData,
-        organization_name: organizationName,
-        invited_by_name: inviterName
+        id: inv.id,
+        role: inv.role,
+        message: inv.message,
+        expires_at: inv.expires_at,
+        organization_id: inv.organization_id,
+        organization_name: inv.organization_name,
+        invited_by_name: inv.invited_by_name,
+        invited_by: inv.invited_by,
       });
 
     } catch (error) {
@@ -381,10 +302,6 @@ export default function InviteAcceptance() {
               </Badge>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Email:</span>
-              <span className="text-sm font-medium">{invitation.email}</span>
-            </div>
 
             {invitation.message && (
               <div className="space-y-2">

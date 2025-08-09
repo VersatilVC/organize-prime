@@ -1502,6 +1502,20 @@ export type Database = {
         }
         Returns: Json
       }
+      get_invitation_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          id: string
+          organization_id: string
+          role: string
+          invited_by: string
+          organization_name: string
+          invited_by_name: string
+          message: string
+          expires_at: string
+          is_valid: boolean
+        }[]
+      }
       get_invitations_optimized: {
         Args: {
           p_user_id: string

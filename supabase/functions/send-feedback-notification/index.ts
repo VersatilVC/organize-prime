@@ -25,13 +25,23 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { feedbackId, title, message, senderRole, currentOrganizationId }: NotificationRequest = await req.json();
+    // Authenticate caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 });
+    }
+
+    const { feedbackId, title, message }: { feedbackId: string; title?: string; message?: string } = await req.json();
 
     console.log('Processing feedback notification request:', {
       feedbackId,
       title,
-      senderRole,
-      currentOrganizationId
+      user_id: user.id
     });
 
     // Get feedback details and verify permissions
@@ -47,12 +57,27 @@ Deno.serve(async (req) => {
     }
 
     // Verify sender has permission to send notifications for this feedback
-    if (senderRole === 'admin' && currentOrganizationId && feedback.organization_id !== currentOrganizationId) {
-      throw new Error('Access denied - Admin can only send notifications for their organization');
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle();
+    const isSuperAdmin = profile?.is_super_admin === true;
+
+    let isOrgAdmin = false;
+    if (!isSuperAdmin) {
+      const { data: adminRows } = await supabase
+        .from('memberships')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('organization_id', feedback.organization_id)
+        .eq('role', 'admin')
+        .eq('status', 'active');
+      isOrgAdmin = Array.isArray(adminRows) && adminRows.length > 0;
     }
 
-    if (senderRole !== 'super_admin' && senderRole !== 'admin') {
-      throw new Error('Access denied - Only admins can send feedback notifications');
+    if (!(isSuperAdmin || isOrgAdmin)) {
+      throw new Error('Access denied - Only admins of the organization or super admins can send feedback notifications');
     }
 
     // Create notification for the feedback submitter

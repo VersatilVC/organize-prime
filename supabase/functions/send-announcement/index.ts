@@ -51,9 +51,28 @@ serve(async (req) => {
       recipientType, 
       organizationId, 
       specificUsers, 
-      senderRole,
       currentOrganizationId 
     } = requestData;
+
+    // Derive privileges server-side
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle();
+    const isSuperAdmin = profile?.is_super_admin === true;
+
+    const isAdminOfOrg = async (orgId: string) => {
+      const { data: rows, error } = await supabase
+        .from('memberships')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('organization_id', orgId)
+        .eq('role', 'admin')
+        .eq('status', 'active');
+      if (error) return false;
+      return Array.isArray(rows) && rows.length > 0;
+    };
 
     console.log('Processing announcement request:', { 
       title, 

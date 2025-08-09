@@ -157,6 +157,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         email: sanitizedEmail,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: sanitizedFullName,
           },
