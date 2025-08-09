@@ -67,7 +67,7 @@ export const MarketplaceAdminContent: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('marketplace_apps' as any)
-        .select('*')
+        .select('id, name, description, category, install_count, is_active, is_featured, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;

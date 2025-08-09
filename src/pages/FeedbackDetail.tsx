@@ -118,7 +118,7 @@ export default function FeedbackDetail() {
       // Get feedback details
       const { data: feedbackData, error: feedbackError } = await supabase
         .from('feedback')
-        .select('*')
+        .select('id, type, subject, description, category, status, priority, created_at, updated_at, user_id, organization_id, admin_response, responded_by, responded_at, internal_notes, attachments, status_history')
         .eq('id', id)
         .maybeSingle();
 

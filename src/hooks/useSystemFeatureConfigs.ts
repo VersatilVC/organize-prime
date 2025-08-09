@@ -15,7 +15,7 @@ export interface SystemFeatureConfig {
 async function fetchSystemFeatureConfigs(): Promise<SystemFeatureConfig[]> {
   const { data, error } = await supabase
     .from('system_feature_configs')
-    .select('*')
+    .select('id, feature_slug, is_enabled_globally, is_marketplace_visible, system_menu_order, created_at, updated_at')
     .order('system_menu_order', { ascending: true });
 
   if (error) {

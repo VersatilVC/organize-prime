@@ -182,7 +182,7 @@ export function OrganizationSetup({ open, onOpenChange, onSuccess }: Organizatio
       // Find invitation by token
       const { data: invitation, error: inviteError } = await supabase
         .from('invitations')
-        .select('*')
+        .select('id, role, organization_id, expires_at, email')
         .eq('token', values.invitationToken)
         .eq('email', user.email)
         .is('accepted_at', null)

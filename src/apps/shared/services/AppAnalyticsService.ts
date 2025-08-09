@@ -209,7 +209,7 @@ export class AppAnalyticsService {
     try {
       const { data, error } = await supabase
         .from('marketplace_app_analytics')
-        .select('*')
+        .select('event_type, user_id, session_id, event_data, created_at')
         .eq('app_id', appId)
         .eq('organization_id', organizationId)
         .gte('created_at', startDate)

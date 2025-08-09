@@ -36,7 +36,7 @@ export function useAppCategories() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('app_categories')
-        .select('*')
+        .select('id, name, slug, color_hex, icon_name, sort_order, is_active')
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true });
 

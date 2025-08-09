@@ -12,7 +12,7 @@ export class AppConfigService {
     try {
       const { data, error } = await supabase
         .from('marketplace_app_installations')
-        .select('*')
+        .select('id, app_id, organization_id, app_settings, custom_navigation, feature_flags, last_used_at, status')
         .eq('app_id', appId)
         .eq('organization_id', organizationId)
         .eq('status', 'active')
@@ -115,7 +115,7 @@ export class AppConfigService {
     try {
       const { data, error } = await supabase
         .from('marketplace_app_installations')
-        .select('*')
+        .select('id, app_id, organization_id, app_settings, custom_navigation, feature_flags, last_used_at, status')
         .eq('organization_id', organizationId)
         .eq('status', 'active')
         .order('installed_at', { ascending: false });

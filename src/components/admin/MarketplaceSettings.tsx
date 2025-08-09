@@ -47,7 +47,7 @@ export const MarketplaceSettings: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('marketplace_settings' as any)
-        .select('*')
+        .select('id, key, value, description, category')
         .order('key');
       
       if (error) throw error;

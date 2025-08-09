@@ -27,7 +27,7 @@ export const useAppReviews = (appId: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('marketplace_app_reviews')
-        .select('*')
+        .select('id, app_id, organization_id, user_id, rating, review_title, review_text, pros, cons, is_verified, is_featured, helpful_count, created_at, updated_at')
         .eq('app_id', appId)
         .order('created_at', { ascending: false });
 
@@ -50,7 +50,7 @@ export const useUserAppReview = (appId: string) => {
 
       const { data, error } = await supabase
         .from('marketplace_app_reviews')
-        .select('*')
+        .select('id, app_id, organization_id, user_id, rating, review_title, review_text, pros, cons, is_verified, is_featured, helpful_count, created_at, updated_at')
         .eq('app_id', appId)
         .eq('organization_id', currentOrganization.id)
         .eq('user_id', user.id)

@@ -17,7 +17,7 @@ export interface OrganizationFeatureConfig {
 async function fetchOrganizationFeatureConfigs(organizationId: string): Promise<OrganizationFeatureConfig[]> {
   const { data, error } = await supabase
     .from('organization_feature_configs')
-    .select('*')
+    .select('id, organization_id, feature_slug, is_enabled, is_user_accessible, org_menu_order, created_at, updated_at')
     .eq('organization_id', organizationId)
     .order('org_menu_order', { ascending: true });
 

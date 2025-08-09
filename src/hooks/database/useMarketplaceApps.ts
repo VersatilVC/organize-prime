@@ -55,7 +55,13 @@ export const useMarketplaceApps = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('marketplace_apps')
-        .select('*')
+        .select(`
+          id, name, slug, description, long_description, category, subcategory,
+          icon_name, icon_url, banner_url, screenshots, version, pricing_model,
+          base_price, currency, rating_average, rating_count, install_count,
+          is_featured, is_active, created_at, updated_at, required_permissions,
+          compatibility_version, demo_url, documentation_url
+        `)
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('install_count', { ascending: false });

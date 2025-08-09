@@ -91,7 +91,7 @@ export default function CompanySettings() {
       
       const { data, error } = await supabase
         .from('organizations')
-        .select('*')
+        .select('id, name, slug, logo_url, settings')
         .eq('id', currentOrganization.id)
         .maybeSingle();
       

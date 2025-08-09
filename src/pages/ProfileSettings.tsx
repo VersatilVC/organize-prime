@@ -49,7 +49,7 @@ export default function ProfileSettings() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, phone_number, bio, avatar_url')
         .eq('id', user.id)
         .maybeSingle();
       

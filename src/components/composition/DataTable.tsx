@@ -1,10 +1,11 @@
 // Composable data table component with sorting and selection
-import React, { memo } from 'react';
+import React, { memo, useRef } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 export interface TableColumn<T = any> {
   key: string;
@@ -38,6 +39,11 @@ interface DataTableProps<T = any> {
   isLoading?: boolean;
   emptyMessage?: string;
   
+  // Performance
+  virtualized?: boolean;
+  estimateSize?: number; // approximate row height in px
+  maxBodyHeight?: number; // max height of scrollable area in px
+  
   className?: string;
 }
 
@@ -55,6 +61,9 @@ export const DataTable = memo(<T,>({
   rowClassName,
   isLoading = false,
   emptyMessage = 'No data available',
+  virtualized = false,
+  estimateSize = 56,
+  maxBodyHeight = 480,
   className
 }: DataTableProps<T>) => {
   const hasSelection = onItemSelect && onSelectAll;
@@ -77,6 +86,7 @@ export const DataTable = memo(<T,>({
     onItemSelect?.(itemId, checked);
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className={cn("border rounded-lg", className)}>
@@ -112,6 +122,7 @@ export const DataTable = memo(<T,>({
     );
   }
 
+  // Empty state
   if (data.length === 0) {
     return (
       <div className={cn("border rounded-lg", className)}>
@@ -134,6 +145,118 @@ export const DataTable = memo(<T,>({
     );
   }
 
+  // Virtualization setup
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = virtualized
+    ? useVirtualizer({
+        count: data.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => estimateSize,
+        overscan: 8,
+      })
+    : null;
+
+  if (virtualized && rowVirtualizer) {
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+    const paddingBottom = virtualRows.length > 0
+      ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
+      : 0;
+
+    const colSpan = columns.length + (hasSelection ? 1 : 0);
+
+    return (
+      <div ref={parentRef} className={cn("border rounded-lg overflow-auto", className)} style={{ maxHeight: maxBodyHeight }}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {hasSelection && (
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all items"
+                    {...(someSelected && { "data-indeterminate": true })}
+                  />
+                </TableHead>
+              )}
+              {columns.map((column) => (
+                <TableHead 
+                  key={column.key} 
+                  className={cn(column.className, column.width && `w-[${column.width}]`)}
+                >
+                  {column.sortable && onSort ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-3 h-8 data-[state=open]:bg-accent"
+                      onClick={() => onSort(column.key)}
+                    >
+                      <span>{column.label}</span>
+                      {getSortIcon(column.key)}
+                    </Button>
+                  ) : (
+                    column.label
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paddingTop > 0 && (
+              <TableRow>
+                <TableCell colSpan={colSpan} style={{ height: paddingTop }} />
+              </TableRow>
+            )}
+
+            {virtualRows.map((virtualRow) => {
+              const item = data[virtualRow.index];
+              const itemId = getItemId(item);
+              const isSelected = selectedItems.includes(itemId);
+
+              return (
+                <TableRow 
+                  key={itemId}
+                  data-index={virtualRow.index}
+                  style={{ height: virtualRow.size }}
+                  className={cn(
+                    isSelected && "bg-muted/50",
+                    onRowClick && "cursor-pointer hover:bg-muted/30",
+                    rowClassName?.(item, virtualRow.index)
+                  )}
+                  onClick={() => onRowClick?.(item, virtualRow.index)}
+                >
+                  {hasSelection && (
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleItemSelect(item, !!checked)}
+                        aria-label={`Select item ${virtualRow.index + 1}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
+                  )}
+                  {columns.map((column) => (
+                    <TableCell key={column.key} className={column.className}>
+                      {column.render ? column.render(item, virtualRow.index) : (item as any)[column.key]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
+
+            {paddingBottom > 0 && (
+              <TableRow>
+                <TableCell colSpan={colSpan} style={{ height: paddingBottom }} />
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  // Non-virtualized fallback
   return (
     <div className={cn("border rounded-lg", className)}>
       <Table>
