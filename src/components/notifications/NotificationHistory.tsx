@@ -53,6 +53,12 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const exportControllerRef = useRef<AbortController | null>(null);
   const { user } = useAuth();
 
+  // Export filtered range dialog state
+  const [rangeDialogOpen, setRangeDialogOpen] = useState(false);
+  const [rangeFrom, setRangeFrom] = useState<string>('');
+  const [rangeTo, setRangeTo] = useState<string>('');
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
   const [virtualizationEnabled, setVirtualizationEnabled] = useState(true);
   const [virtualizationThreshold, setVirtualizationThreshold] = useState(150);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -492,6 +498,135 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
     }
   };
 
+  const exportFilteredRangeToCsv = async (fromDateStr: string, toDateStr: string) => {
+    if (exporting) return;
+    setRangeError(null);
+    if (!fromDateStr || !toDateStr) {
+      setRangeError('Please select both dates');
+      return;
+    }
+    const fromDate = new Date(fromDateStr);
+    const toDate = new Date(toDateStr);
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      setRangeError('Invalid dates');
+      return;
+    }
+    if (fromDate > toDate) {
+      setRangeError('From date must be before To date');
+      return;
+    }
+
+    const fromISO = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()).toISOString();
+    const toEnd = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999);
+    const toISO = toEnd.toISOString();
+
+    try {
+      setExporting(true);
+      setExportProgress(0);
+      exportControllerRef.current = new AbortController();
+
+      // Count total matching rows in range
+      let countQuery = supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true });
+
+      if (currentOrganization?.id) {
+        countQuery = countQuery.eq('organization_id', currentOrganization.id);
+      } else if (userRole === 'user' && user?.id) {
+        countQuery = countQuery.eq('user_id', user.id);
+      }
+      if (typeFilter !== 'all') countQuery = countQuery.eq('type', typeFilter);
+      if (debouncedSearchTerm.trim()) {
+        const term = debouncedSearchTerm.trim();
+        countQuery = countQuery.or(`title.ilike.%${term}%,message.ilike.%${term}%`);
+      }
+      countQuery = countQuery.gte('created_at', fromISO).lte('created_at', toISO);
+
+      const { count: totalInRange, error: countError } = await countQuery;
+      if (countError) throw countError;
+      const total = totalInRange || 0;
+      if (total === 0) {
+        toast({ title: 'Nothing to export', description: 'No notifications found in the selected date range.' });
+        return;
+      }
+
+      const headers = ['Title', 'Type', 'Sent Date', 'Sender', 'Recipients', 'Status'];
+      const rows: string[] = [headers.join(',')];
+      const batchSize = 1000;
+      let fetched = 0;
+
+      for (let offset = 0; offset < total; offset += batchSize) {
+        if (exportControllerRef.current?.signal.aborted) break;
+        const to = Math.min(offset + batchSize - 1, total - 1);
+
+        let query = supabase
+          .from('notifications')
+          .select(
+            `
+            id,
+            title,
+            message,
+            type,
+            created_at,
+            data,
+            organization_id,
+            organizations(name)
+          `
+          )
+          .order('created_at', { ascending: false });
+
+        if (currentOrganization?.id) {
+          query = query.eq('organization_id', currentOrganization.id);
+        } else if (userRole === 'user' && user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+        if (typeFilter !== 'all') query = query.eq('type', typeFilter);
+        if (debouncedSearchTerm.trim()) {
+          const term = debouncedSearchTerm.trim();
+          query = query.or(`title.ilike.%${term}%,message.ilike.%${term}%`);
+        }
+        query = query.gte('created_at', fromISO).lte('created_at', toISO);
+
+        const { data, error } = await query.range(offset, to);
+        if (error) throw error;
+
+        const batch = (data || []).map((n: any) => [
+          `"${String(n.title ?? '').replace(/"/g, '""')}"`,
+          n.type,
+          format(new Date(n.created_at), 'yyyy-MM-dd HH:mm'),
+          `"${String((n.data as any)?.sender_name || 'System').replace(/"/g, '""')}"`,
+          (n.data as any)?.recipient_count || 0,
+          'sent',
+        ].join(','));
+        rows.push(...batch);
+
+        fetched += data?.length || 0;
+        setExportProgress(Math.round((Math.min(fetched, total) / total) * 100));
+      }
+
+      if (exportControllerRef.current?.signal.aborted) {
+        toast({ title: 'Export canceled', description: 'Your CSV export was canceled.' });
+        return;
+      }
+
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `notification-history-range-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast({ title: 'Export complete', description: `Exported ${total} notifications.` });
+    } catch (e: any) {
+      toast({ title: 'Export failed', description: e.message || 'Unexpected error', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+      setExportProgress(0);
+      exportControllerRef.current = null;
+      setRangeDialogOpen(false);
+    }
+  };
+
   const cancelExport = () => {
     exportControllerRef.current?.abort();
   };
@@ -533,6 +668,48 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
             <Download className="h-4 w-4" />
             Export page
           </Button>
+
+          <Dialog open={rangeDialogOpen} onOpenChange={setRangeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" className="flex items-center gap-2" size="sm">
+                <Download className="h-4 w-4" />
+                Export filtered range
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Export filtered range</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="range-from" className="text-sm">From</Label>
+                  <Input id="range-from" type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="range-to" className="text-sm">To</Label>
+                  <Input id="range-to" type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
+                </div>
+              </div>
+              {rangeError && <p className="text-sm text-destructive mt-2">{rangeError}</p>}
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => setRangeDialogOpen(false)} disabled={exporting}>Cancel</Button>
+                <Button onClick={() => exportFilteredRangeToCsv(rangeFrom, rangeTo)} disabled={exporting} className="flex items-center gap-2">
+                  {exporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Export
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {exporting ? (
             <Button onClick={cancelExport} variant="destructive" className="flex items-center gap-2" size="sm">
               Cancel export
