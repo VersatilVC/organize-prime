@@ -20,6 +20,7 @@ import { Icons } from '@/components/ui/icons';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { OptimizedImage } from '@/components/ui/optimized-image';
+import { useAvatarCache } from '@/hooks/useImageCache';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
@@ -97,6 +98,8 @@ export function AppHeader() {
     }
   };
 
+  const { src: avatarSrc } = useAvatarCache(profile?.avatar_url || undefined);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between px-4">
@@ -105,22 +108,18 @@ export function AppHeader() {
           
           <Link to="/" className="flex items-center space-x-2">
             {systemSettings?.app_logo_url ? (
-              <img 
-                src={systemSettings.app_logo_url} 
-                alt="App logo" 
-                className="h-6 w-6 object-contain"
-                onError={(e) => {
-                  // Fallback to default icon if logo fails to load
-                  e.currentTarget.style.display = 'none';
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'block';
-                }}
+              <OptimizedImage
+                src={systemSettings.app_logo_url}
+                alt="App logo"
+                className="h-6 w-6"
+                aspectRatio="square"
+                sizes="24px"
+                priority
+                showSkeleton={false}
               />
-            ) : null}
-            <Icons.building 
-              className="h-6 w-6" 
-              style={{ display: systemSettings?.app_logo_url ? 'none' : 'block' }}
-            />
+            ) : (
+              <Icons.building className="h-6 w-6" />
+            )}
             <span className="hidden font-bold sm:inline-block">
               {systemSettings?.app_name || 'SaaS Platform'}
             </span>
@@ -150,7 +149,7 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || user?.email} />
+                  <AvatarImage src={avatarSrc || undefined} alt={profile?.full_name || user?.email} />
                   <AvatarFallback>
                     {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                   </AvatarFallback>

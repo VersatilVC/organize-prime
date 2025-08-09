@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { User } from '@/types/api';
+import { useAvatarCache } from '@/hooks/useImageCache';
 
 interface UserTableRowProps {
   user: User;
@@ -46,6 +47,8 @@ export const UserTableRow = memo(({
     return status === 'active' ? 'default' : 'secondary';
   };
 
+  const { src: avatarSrc } = useAvatarCache(user.avatar_url || undefined);
+
   return (
     <TableRow className={selected ? 'bg-muted/50' : ''}>
       <TableCell>
@@ -59,7 +62,7 @@ export const UserTableRow = memo(({
       <TableCell>
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url} alt={user.full_name} />
+            <AvatarImage src={avatarSrc || undefined} alt={user.full_name} />
             <AvatarFallback className="text-xs">
               {getInitials(user.full_name)}
             </AvatarFallback>

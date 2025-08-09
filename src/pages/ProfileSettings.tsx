@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Upload, Loader2, User, Bell } from 'lucide-react';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
+import { useAvatarCache } from '@/hooks/useImageCache';
 
 interface ProfileData {
   id: string;
@@ -58,6 +59,9 @@ export default function ProfileSettings() {
     },
     enabled: !!user?.id
   });
+
+  const { src: avatarSrc } = useAvatarCache(profile?.avatar_url || undefined);
+
 
   // Initialize form data when profile loads
   React.useEffect(() => {
@@ -250,7 +254,7 @@ export default function ProfileSettings() {
                     <div className="relative">
                       <Avatar className="h-20 w-20">
                         <AvatarImage 
-                          src={profile?.avatar_url || undefined} 
+                          src={avatarSrc || undefined} 
                           alt="Profile avatar" 
                         />
                         <AvatarFallback className="text-lg">
