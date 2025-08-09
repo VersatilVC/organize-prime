@@ -347,7 +347,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
     try {
       const { data: profile, error: selectError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, first_login_completed')
         .eq('id', user.id)
         .maybeSingle();
 

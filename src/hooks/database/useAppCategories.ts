@@ -18,7 +18,7 @@ export const useAppCategories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('app_categories')
-        .select('*')
+        .select('id, name, slug, description, icon_name, color_hex, sort_order, is_active')
         .eq('is_active', true)
         .order('sort_order');
 

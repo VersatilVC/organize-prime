@@ -89,7 +89,7 @@ function NotificationsContent() {
       // Build query
       let query = supabase
         .from('notifications')
-        .select('*', { count: 'exact' })
+        .select('id,title,message,type,read,action_url,created_at,category', { count: 'exact' })
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 

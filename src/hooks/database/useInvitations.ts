@@ -287,7 +287,7 @@ export function useAcceptInvitationMutation() {
     mutationFn: async (token: string) => {
       const { data: invitation, error: fetchError } = await supabase
         .from('invitations')
-        .select('*')
+        .select('id, token, accepted_at, expires_at, email, role, organization_id')
         .eq('token', token)
         .maybeSingle();
 
