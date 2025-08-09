@@ -98,87 +98,34 @@ export class N8NWebhookService {
     config: N8NWebhookConfig,
     payload: Record<string, any>
   ): Promise<{ data: any; status: number }> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...config.headers
-    };
+    // Proxy through secure edge function to avoid exposing secrets
+    const { data, error } = await supabase.functions.invoke('exec-n8n-webhook', {
+      body: {
+        webhookUrl: config.url,
+        method: config.method,
+        payload,
+        appId: payload.appId,
+        webhookId: config.webhookId,
+        organizationId: payload.organizationId,
+      },
+    });
 
-    // Add authentication headers
-    if (config.authentication) {
-      switch (config.authentication.type) {
-        case 'bearer':
-          headers['Authorization'] = `Bearer ${config.authentication.credentials.token}`;
-          break;
-        case 'basic':
-          const basicAuth = btoa(`${config.authentication.credentials.username}:${config.authentication.credentials.password}`);
-          headers['Authorization'] = `Basic ${basicAuth}`;
-          break;
-        case 'api_key':
-          const keyHeader = config.authentication.credentials.header || 'X-API-Key';
-          headers[keyHeader] = config.authentication.credentials.key;
-          break;
-      }
-    }
-
-    const requestOptions: RequestInit = {
-      method: config.method,
-      headers,
-      signal: AbortSignal.timeout(this.DEFAULT_TIMEOUT)
-    };
-
-    // Add body for POST/PUT requests
-    if (['POST', 'PUT'].includes(config.method)) {
-      requestOptions.body = JSON.stringify(payload);
-    }
-
-    try {
-      const response = await fetch(config.url, requestOptions);
-      
-      let responseData;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType?.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
-
-      if (!response.ok) {
-        throw new N8NWebhookError(
-          `HTTP ${response.status}: ${response.statusText}`,
-          config.webhookId,
-          response.status
-        );
-      }
-
-      return {
-        data: responseData,
-        status: response.status
-      };
-    } catch (error) {
-      if (error instanceof N8NWebhookError) {
-        throw error;
-      }
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new N8NWebhookError(
-            `Webhook ${config.webhookId} timed out after ${this.DEFAULT_TIMEOUT}ms`,
-            config.webhookId
-          );
-        }
-        
-        throw new N8NWebhookError(
-          `Network error: ${error.message}`,
-          config.webhookId
-        );
-      }
-      
+    if (error) {
       throw new N8NWebhookError(
-        'Unknown error occurred',
+        `Edge function error: ${error.message || 'Unknown error'}`,
         config.webhookId
       );
     }
+
+    if (!data?.success) {
+      throw new N8NWebhookError(
+        `Webhook failed: ${data?.error || 'Unknown error'}`,
+        config.webhookId,
+        data?.status
+      );
+    }
+
+    return { data: data.data, status: data.status || 200 };
   }
 
   /**
