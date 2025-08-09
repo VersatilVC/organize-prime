@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +43,9 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const [page, setPage] = useState(0);
   const pageSize = 50;
   const { user } = useAuth();
+
+  const [virtualizationEnabled, setVirtualizationEnabled] = useState(true);
+  const [virtualizationThreshold, setVirtualizationThreshold] = useState(150);
 
   // Server-side filtered, paginated history
   const { data: notifications, isLoading } = useQuery({
@@ -136,8 +141,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
   const totalCount = notifications?.total ?? 0;
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const VIRTUALIZE_THRESHOLD = 150;
-  const enableVirtual = totalCount > VIRTUALIZE_THRESHOLD;
+  const enableVirtual = virtualizationEnabled && totalCount > virtualizationThreshold;
   const rowVirtualizer = useVirtualizer({
     count: enableVirtual ? items.length : 0,
     getScrollElement: () => parentRef.current,
@@ -221,7 +225,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -261,6 +265,24 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
               <Calendar className="h-4 w-4 mr-2" />
               {totalCount} notifications
             </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Switch id="virtualize-switch" checked={virtualizationEnabled} onCheckedChange={setVirtualizationEnabled} />
+                <Label htmlFor="virtualize-switch" className="text-sm">Virtualize</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="virtualize-threshold" className="text-sm">Threshold</Label>
+                <Input
+                  id="virtualize-threshold"
+                  type="number"
+                  min={50}
+                  step={50}
+                  value={virtualizationThreshold}
+                  onChange={(e) => setVirtualizationThreshold(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-24"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -272,7 +294,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
             <Table>
             <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <TableRow>
-                <TableHead>Title</TableHead>
+                <TableHead className="sticky left-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">Title</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Sent Date</TableHead>
                 <TableHead>Sender</TableHead>
@@ -306,7 +328,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
                     const notification = items[virtualRow.index];
                     return (
                       <TableRow key={notification.id}>
-                        <TableCell className="font-medium max-w-xs">
+                        <TableCell className="sticky left-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 font-medium max-w-xs">
                           <div className="truncate" title={notification.title}>
                             {notification.title}
                           </div>
@@ -381,7 +403,7 @@ export function NotificationHistory({ userRole, currentOrganization }: Notificat
               ) : (
                 items.map((notification) => (
                   <TableRow key={notification.id}>
-                    <TableCell className="font-medium max-w-xs">
+                    <TableCell className="sticky left-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 font-medium max-w-xs">
                       <div className="truncate" title={notification.title}>
                         {notification.title}
                       </div>
