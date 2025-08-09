@@ -13,6 +13,7 @@ import { PageLoadingSpinner } from "@/components/LoadingSkeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryPersister } from "@/lib/query-persistence";
 import { PagePerformanceTracker } from "@/components/analytics/PagePerformanceTracker";
+import { PerformanceSinkConnector } from "@/components/analytics/PerformanceSinkConnector";
 // Lazy load all page components for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -53,6 +54,7 @@ const App = () => (
             <ErrorBoundary>
               <Suspense fallback={<PageLoadingSpinner />}>
                 <PagePerformanceTracker />
+                <PerformanceSinkConnector />
               <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />

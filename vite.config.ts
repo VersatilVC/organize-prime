@@ -42,6 +42,7 @@ export default defineConfig(({ mode }) => ({
           'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
           'utils': ['date-fns', 'clsx', 'tailwind-merge'],
           'icons': ['lucide-react'],
+          'charts': ['recharts'],
         },
       },
     },

@@ -10,6 +10,21 @@ export class PerformanceMonitor {
     return PerformanceMonitor.instance;
   }
 
+  // Lightweight sinks to forward metrics to external systems (e.g., Supabase)
+  private sinks: Array<(type: string, data: any) => void> = [];
+
+  registerSink(sink: (type: string, data: any) => void): () => void {
+    this.sinks.push(sink);
+    return () => {
+      this.sinks = this.sinks.filter((s) => s !== sink);
+    };
+  }
+
+  // Public helper to report custom metrics
+  reportCustom(type: string, data: any): void {
+    this.sendMetrics(type, data);
+  }
+
   // Track page load performance
   trackPageLoad(pageName: string): void {
     if (typeof window === 'undefined') return;
@@ -154,26 +169,31 @@ export class PerformanceMonitor {
   }
 
   private sendMetrics(type: string, data: any): void {
-    // In development, log to console
-    if (import.meta.env.DEV) {
-      console.log(`Performance metric [${type}]:`, data);
-    }
-    
-    // In production, send to analytics service
-    if (import.meta.env.PROD) {
-      // Example: Send to your analytics service
-      // analytics.track(`performance_${type}`, data);
-      
-      // Store in localStorage for debugging
-      const existingMetrics = JSON.parse(localStorage.getItem('performance_metrics') || '[]');
-      existingMetrics.push({ type, data, timestamp: Date.now() });
-      
-      // Keep only last 100 metrics
-      if (existingMetrics.length > 100) {
-        existingMetrics.splice(0, existingMetrics.length - 100);
+    try {
+      // Fan out to registered sinks
+      if (this.sinks.length) {
+        this.sinks.forEach((sink) => {
+          try { sink(type, data); } catch (e) { /* ignore sink errors */ }
+        });
+      }
+
+      // In development, log to console
+      if (import.meta.env.DEV) {
+        console.log(`Performance metric [${type}]:`, data);
       }
       
-      localStorage.setItem('performance_metrics', JSON.stringify(existingMetrics));
+      // In production, persist lightweight debug trace
+      if (import.meta.env.PROD) {
+        const existingMetrics = JSON.parse(localStorage.getItem('performance_metrics') || '[]');
+        existingMetrics.push({ type, data, timestamp: Date.now() });
+        if (existingMetrics.length > 100) {
+          existingMetrics.splice(0, existingMetrics.length - 100);
+        }
+        localStorage.setItem('performance_metrics', JSON.stringify(existingMetrics));
+      }
+    } catch (err) {
+      // Never throw from telemetry
+      if (import.meta.env.DEV) console.warn('sendMetrics failed', err);
     }
   }
 }
@@ -211,23 +231,43 @@ export const usePagePerformance = (pageName: string) => {
   useEffect(() => {
     const performanceMonitor = PerformanceMonitor.getInstance();
     
-    // Track page load after a short delay to ensure all resources are loaded
-    const timer = setTimeout(() => {
+    // Measure SPA route transition duration using idle callback as a settle signal
+    const start = performance.now();
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout?: number }) => number);
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+
+    const done = () => {
+      const duration = performance.now() - start;
+      performanceMonitor.reportCustom('route_change', { page: pageName, duration });
+    };
+
+    if (ric) {
+      // Use a timeout to cap waiting time
+      idleId = ric(done, { timeout: 1500 }) as unknown as number;
+    } else {
+      timeoutId = window.setTimeout(done, 0);
+    }
+
+    // Also keep a lightweight page load sample (useful on first load)
+    const timer = window.setTimeout(() => {
       performanceMonitor.trackPageLoad(pageName);
     }, 100);
-    
-    // Track web vitals after page load
-    const vitalTimer = setTimeout(async () => {
+
+    // Track coarse web vitals sample (legacy, replaced by web-vitals lib when available)
+    const vitalTimer = window.setTimeout(async () => {
       const vitals = await performanceMonitor.getWebVitals();
-      performanceMonitor['sendMetrics']('web_vitals', {
-        page: pageName,
-        ...vitals
-      });
+      performanceMonitor.reportCustom('web_vitals', { page: pageName, ...vitals });
     }, 2000);
     
     return () => {
-      clearTimeout(timer);
-      clearTimeout(vitalTimer);
+      if (idleId && 'cancelIdleCallback' in window) {
+        // @ts-ignore
+        (window as any).cancelIdleCallback(idleId);
+      }
+      if (timeoutId) window.clearTimeout(timeoutId);
+      window.clearTimeout(timer);
+      window.clearTimeout(vitalTimer);
     };
   }, [pageName]);
 };
