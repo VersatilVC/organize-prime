@@ -197,7 +197,7 @@ export class N8NWebhookService {
         .eq('app_id', appId)
         .eq('organization_id', organizationId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (error || !installation) {
         console.error('App installation not found:', error);

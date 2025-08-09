@@ -16,14 +16,15 @@ export class AppConfigService {
         .eq('app_id', appId)
         .eq('organization_id', organizationId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned - app not installed
-          return null;
-        }
         throw error;
+      }
+
+      if (!data) {
+        // No rows returned - app not installed
+        return null;
       }
 
       return {
@@ -82,9 +83,10 @@ export class AppConfigService {
         .eq('app_id', appId)
         .eq('organization_id', organizationId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned after update');
 
       return {
         id: data.id,
@@ -151,9 +153,9 @@ export class AppConfigService {
         .eq('app_id', appId)
         .eq('organization_id', organizationId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
 

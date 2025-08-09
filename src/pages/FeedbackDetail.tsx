@@ -151,7 +151,7 @@ export default function FeedbackDetail() {
         .from('profiles')
         .select('full_name, avatar_url')
         .eq('id', feedbackData.user_id)
-        .single();
+        .maybeSingle();
 
       // Get user email and organization details
       const { data: membershipData } = await supabase
@@ -162,7 +162,7 @@ export default function FeedbackDetail() {
         `)
         .eq('user_id', feedbackData.user_id)
         .eq('organization_id', feedbackData.organization_id)
-        .single();
+        .maybeSingle();
 
       // Get user email (only if super admin)
       let userEmail = '';
@@ -183,7 +183,7 @@ export default function FeedbackDetail() {
           .from('profiles')
           .select('full_name')
           .eq('id', feedbackData.responded_by)
-          .single();
+          .maybeSingle();
         responderName = responderData?.full_name || 'Unknown Admin';
       }
 

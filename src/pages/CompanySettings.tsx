@@ -93,7 +93,7 @@ export default function CompanySettings() {
         .from('organizations')
         .select('*')
         .eq('id', currentOrganization.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data as CompanyData;
