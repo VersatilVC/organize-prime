@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChartLoadingSkeleton } from '@/components/LoadingSkeletons';
+import { usePerformanceTracking } from '@/lib/performance';
 
 interface LazyChartProps {
   type: 'line' | 'bar' | 'pie' | 'area';
@@ -14,6 +15,8 @@ export function ChartWidget({ type, data, width = 400, height = 200, className, 
   const [chartComponents, setChartComponents] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  usePerformanceTracking('ChartWidget');
 
   useEffect(() => {
     const loadChartLibrary = async () => {

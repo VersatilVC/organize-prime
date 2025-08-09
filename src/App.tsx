@@ -12,6 +12,7 @@ import { initializeCacheCleanup } from "@/lib/local-storage";
 import { PageLoadingSpinner } from "@/components/LoadingSkeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryPersister } from "@/lib/query-persistence";
+import { PagePerformanceTracker } from "@/components/analytics/PagePerformanceTracker";
 // Lazy load all page components for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -51,6 +52,7 @@ const App = () => (
           <BrowserRouter>
             <ErrorBoundary>
               <Suspense fallback={<PageLoadingSpinner />}>
+                <PagePerformanceTracker />
               <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />

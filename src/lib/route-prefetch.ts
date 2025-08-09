@@ -19,6 +19,18 @@ const routeLoaders: Array<{ test: (path: string) => boolean; load: () => Promise
 
 const prefetched = new Set<string>();
 
+let inFlight = 0;
+const MAX_CONCURRENT = 2;
+
+const schedule = (fn: () => void) => {
+  const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout?: number }) => number);
+  if (ric) {
+    ric(() => fn(), { timeout: 1500 });
+  } else {
+    setTimeout(fn, 0);
+  }
+};
+
 export function prefetchByPath(path: string) {
   if (!path) return;
   // Normalize without query/hash
@@ -27,10 +39,19 @@ export function prefetchByPath(path: string) {
   const loader = routeLoaders.find((r) => r.test(clean));
   if (loader) {
     prefetched.add(clean);
-    // Fire and forget
-    loader.load().catch(() => {
-      // ignore preload errors
-      prefetched.delete(clean);
-    });
+    const run = () => {
+      if (inFlight >= MAX_CONCURRENT) {
+        setTimeout(run, 50);
+        return;
+      }
+      inFlight++;
+      loader.load().catch(() => {
+        // ignore preload errors
+        prefetched.delete(clean);
+      }).finally(() => {
+        inFlight--;
+      });
+    };
+    schedule(run);
   }
 }
