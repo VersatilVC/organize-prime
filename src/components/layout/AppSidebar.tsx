@@ -20,6 +20,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Icons } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 import { prefetchByPath } from '@/lib/route-prefetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchQueriesByPath } from '@/lib/query-prefetch';
 
 // Define sidebar sections with their navigation items
 interface SidebarSection {
@@ -242,35 +244,43 @@ const NavigationItem = React.memo(({
   item: { name: string; href: string; icon: any; badge?: number };
   isActive: boolean;
   feedbackCount: number;
-}) => (
-  <SidebarMenuItem>
-    <SidebarMenuButton asChild isActive={isActive}>
-      <NavLink 
-        to={item.href} 
-        className={isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
-        onMouseEnter={() => prefetchByPath(item.href)}
-      >
-        <item.icon className="h-4 w-4" />
-        <span>{item.name}</span>
-        {/* Show feature-specific badge if available */}
-        {item.badge && item.badge > 0 && (
-          <Badge 
-            variant={item.badge > 10 ? "destructive" : "secondary"} 
-            className="ml-auto h-5 px-1.5 text-xs"
-          >
-            {item.badge}
-          </Badge>
-        )}
-        {/* Show feedback count badge for feedback-related items */}
-        {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedbackCount > 0 && (
-          <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
-            {feedbackCount}
-          </Badge>
-        )}
-      </NavLink>
-    </SidebarMenuButton>
-  </SidebarMenuItem>
-), (prevProps, nextProps) => {
+}) => {
+  const queryClient = useQueryClient();
+  const handleHover = () => {
+    prefetchByPath(item.href);
+    prefetchQueriesByPath(item.href, queryClient);
+  };
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive}>
+        <NavLink 
+          to={item.href} 
+          className={isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
+          onMouseEnter={handleHover}
+        >
+          <item.icon className="h-4 w-4" />
+          <span>{item.name}</span>
+          {/* Show feature-specific badge if available */}
+          {item.badge && item.badge > 0 && (
+            <Badge 
+              variant={item.badge > 10 ? "destructive" : "secondary"} 
+              className="ml-auto h-5 px-1.5 text-xs"
+            >
+              {item.badge}
+            </Badge>
+          )}
+          {/* Show feedback count badge for feedback-related items */}
+          {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedbackCount > 0 && (
+            <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
+              {feedbackCount}
+            </Badge>
+          )}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}, (prevProps, nextProps) => {
   return (
     prevProps.isActive === nextProps.isActive &&
     prevProps.feedbackCount === nextProps.feedbackCount &&

@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/ui/icons';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();

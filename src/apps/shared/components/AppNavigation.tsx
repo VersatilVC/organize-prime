@@ -8,6 +8,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { prefetchByPath } from '@/lib/route-prefetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchQueriesByPath } from '@/lib/query-prefetch';
 
 export interface AppNavigationProps {
   appId: string;
@@ -25,7 +27,8 @@ export function AppNavigation({
   className,
 }: AppNavigationProps) {
   const { navigationItems, activeItem } = useAppNavigation({ appId });
-  const location = useLocation();
+const location = useLocation();
+  const queryClient = useQueryClient();
 
   // Render navigation item
   const renderNavItem = (item: NavigationItem, level: number = 0) => {
@@ -69,7 +72,7 @@ export function AppNavigation({
     );
 
     const navElement = item.path ? (
-      <Link key={item.id} to={item.path} className="block" onMouseEnter={() => prefetchByPath(item.path!)}>
+      <Link key={item.id} to={item.path} className="block" onMouseEnter={() => { prefetchByPath(item.path!); prefetchQueriesByPath(item.path!, queryClient); }}>
         {itemContent}
       </Link>
     ) : (
@@ -115,7 +118,7 @@ export function AppNavigation({
             asChild={!!item.path}
           >
             {item.path ? (
-              <Link to={item.path} className="flex items-center gap-2" onMouseEnter={() => prefetchByPath(item.path!)}>
+              <Link to={item.path} className="flex items-center gap-2" onMouseEnter={() => { prefetchByPath(item.path!); prefetchQueriesByPath(item.path!, queryClient); }}>
                 {showIcons && item.icon && (
                   <span className="h-4 w-4" dangerouslySetInnerHTML={{ __html: item.icon }} />
                 )}

@@ -32,4 +32,14 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   });
 }
 
+// Global recovery for dynamic import/chunk load errors
+window.addEventListener('unhandledrejection', (event) => {
+  const reason: any = (event as any).reason;
+  const msg = String(reason?.message || reason || '');
+  if (/Loading chunk|ChunkLoadError|dynamic import/i.test(msg)) {
+    console.warn('Chunk load error detected. Reloading to recover...');
+    window.location.reload();
+  }
+});
+
 createRoot(document.getElementById("root")!).render(<App />);
