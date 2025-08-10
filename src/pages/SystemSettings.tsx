@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -170,6 +171,101 @@ export default function SystemSettings() {
       } as SystemStats;
     },
     enabled: role === 'super_admin'
+  });
+
+  // KB Admin - system-wide Knowledge Base configuration
+  const kbConfigKeys = [
+    'kb_enabled',
+    'kb_default_embedding_model',
+    'kb_global_file_size_mb',
+    'kb_free_kb_limit',
+    'kb_premium_kb_price_usd',
+    'kb_enable_premium',
+    'kb_enable_chat',
+    'kb_enable_processing',
+    'kb_enable_cross_kb_search',
+    'kb_enable_analytics',
+    'kb_default_chunk_size',
+    'kb_default_chunk_overlap',
+    'kb_default_temperature',
+    'kb_default_max_tokens',
+    'kb_processing_timeout_ms',
+    'kb_n8n_base_url',
+    'kb_n8n_master_api_key',
+    'kb_n8n_webhook_file_processing',
+    'kb_n8n_webhook_ai_chat',
+    'kb_n8n_webhook_vector_search',
+    'kb_n8n_webhook_batch_process',
+    'kb_n8n_retry_max',
+    'kb_n8n_retry_backoff',
+    'kb_n8n_timeout_ms',
+  ] as const;
+
+  const defaultKbSystemConfig = {
+    kb_enabled: true,
+    kb_default_embedding_model: 'text-embedding-ada-002',
+    kb_global_file_size_mb: 50,
+    kb_free_kb_limit: 1,
+    kb_premium_kb_price_usd: 29,
+    kb_enable_premium: true,
+    kb_enable_chat: true,
+    kb_enable_processing: true,
+    kb_enable_cross_kb_search: false,
+    kb_enable_analytics: true,
+    kb_default_chunk_size: 1000,
+    kb_default_chunk_overlap: 200,
+    kb_default_temperature: 0.7,
+    kb_default_max_tokens: 2000,
+    kb_processing_timeout_ms: 5 * 60 * 1000,
+    kb_n8n_base_url: '',
+    kb_n8n_master_api_key: '',
+    kb_n8n_webhook_file_processing: '/webhook/kb-process-file',
+    kb_n8n_webhook_ai_chat: '/webhook/kb-ai-chat',
+    kb_n8n_webhook_vector_search: '/webhook/kb-vector-search',
+    kb_n8n_webhook_batch_process: '/webhook/kb-batch-process',
+    kb_n8n_retry_max: 3,
+    kb_n8n_retry_backoff: 2,
+    kb_n8n_timeout_ms: 30000,
+  };
+
+  const { data: kbSystemConfig, isLoading: kbLoading } = useQuery({
+    queryKey: ['kb-system-config'],
+    enabled: role === 'super_admin',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', [...kbConfigKeys]);
+      if (error) throw error;
+      const map: any = { ...defaultKbSystemConfig };
+      data?.forEach((row: any) => {
+        map[row.key] = row.value;
+      });
+      return map as typeof defaultKbSystemConfig;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [kbCfg, setKbCfg] = useState(defaultKbSystemConfig);
+  useEffect(() => { if (kbSystemConfig) setKbCfg(kbSystemConfig); }, [kbSystemConfig]);
+
+  const saveKbConfig = useMutation({
+    mutationFn: async (cfg: typeof defaultKbSystemConfig) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      for (const key of kbConfigKeys) {
+        const { error } = await supabase
+          .from('system_settings')
+          .upsert({ key, value: (cfg as any)[key], updated_by: user.id, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: 'Knowledge Base system config saved' });
+      queryClient.invalidateQueries({ queryKey: ['kb-system-config'] });
+    },
+    onError: (e) => {
+      toast({ title: 'Failed to save KB config', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' });
+    }
   });
 
   // Update system settings mutation
@@ -412,7 +508,7 @@ export default function SystemSettings() {
         </div>
 
         <Tabs defaultValue="application" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="application">Application</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
@@ -420,6 +516,7 @@ export default function SystemSettings() {
               <Store className="h-4 w-4 mr-1" />
               Marketplace Admin
             </TabsTrigger>
+            <TabsTrigger value="kb_admin">Knowledge Base Admin</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
           </TabsList>
 
@@ -731,6 +828,211 @@ export default function SystemSettings() {
 
           <TabsContent value="marketplace" className="space-y-6">
             <MarketplaceAdminContent />
+          </TabsContent>
+
+          <TabsContent value="kb_admin" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Global KB Management</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {kbLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="h-8 bg-muted rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Enable Knowledge Base App</Label>
+                        <p className="text-xs text-muted-foreground">Turn the KB app on or off system-wide</p>
+                      </div>
+                      <Switch checked={kbCfg.kb_enabled} onCheckedChange={(v) => setKbCfg((p) => ({ ...p, kb_enabled: v }))} />
+                    </div>
+                    <div>
+                      <Label>Default Embedding Model</Label>
+                      <Select value={kbCfg.kb_default_embedding_model} onValueChange={(v) => setKbCfg((p) => ({ ...p, kb_default_embedding_model: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text-embedding-ada-002">text-embedding-ada-002</SelectItem>
+                          <SelectItem value="text-embedding-3-small">text-embedding-3-small</SelectItem>
+                          <SelectItem value="text-embedding-3-large">text-embedding-3-large</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Global File Size Limit (MB)</Label>
+                      <Input type="number" value={kbCfg.kb_global_file_size_mb} onChange={(e) => setKbCfg((p) => ({ ...p, kb_global_file_size_mb: Number(e.target.value) }))} />
+                    </div>
+                    <div>
+                      <Label>Free KB Limit per Organization</Label>
+                      <Input type="number" value={kbCfg.kb_free_kb_limit} onChange={(e) => setKbCfg((p) => ({ ...p, kb_free_kb_limit: Number(e.target.value) }))} />
+                    </div>
+                    <div>
+                      <Label>Premium KB Pricing (USD/month)</Label>
+                      <Input type="number" value={kbCfg.kb_premium_kb_price_usd} onChange={(e) => setKbCfg((p) => ({ ...p, kb_premium_kb_price_usd: Number(e.target.value) }))} />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Feature Flags & Defaults</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable Premium KBs</Label>
+                      <p className="text-xs text-muted-foreground">Allow creation of premium knowledge bases</p>
+                    </div>
+                    <Switch checked={kbCfg.kb_enable_premium} onCheckedChange={(v) => setKbCfg((p) => ({ ...p, kb_enable_premium: v }))} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable AI Chat</Label>
+                      <p className="text-xs text-muted-foreground">System-wide chat functionality</p>
+                    </div>
+                    <Switch checked={kbCfg.kb_enable_chat} onCheckedChange={(v) => setKbCfg((p) => ({ ...p, kb_enable_chat: v }))} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable File Processing</Label>
+                      <p className="text-xs text-muted-foreground">Automatic ingestion pipeline</p>
+                    </div>
+                    <Switch checked={kbCfg.kb_enable_processing} onCheckedChange={(v) => setKbCfg((p) => ({ ...p, kb_enable_processing: v }))} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable Cross-KB Search</Label>
+                      <p className="text-xs text-muted-foreground">Search across multiple KBs</p>
+                    </div>
+                    <Switch checked={kbCfg.kb_enable_cross_kb_search} onCheckedChange={(v) => setKbCfg((p) => ({ ...p, kb_enable_cross_kb_search: v }))} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable Analytics</Label>
+                      <p className="text-xs text-muted-foreground">Collect usage analytics</p>
+                    </div>
+                    <Switch checked={kbCfg.kb_enable_analytics} onCheckedChange={(v) => setKbCfg((p) => ({ ...p, kb_enable_analytics: v }))} />
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Default Chunk Size</Label>
+                    <Input type="number" value={kbCfg.kb_default_chunk_size} onChange={(e) => setKbCfg((p) => ({ ...p, kb_default_chunk_size: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <Label>Default Chunk Overlap</Label>
+                    <Input type="number" value={kbCfg.kb_default_chunk_overlap} onChange={(e) => setKbCfg((p) => ({ ...p, kb_default_chunk_overlap: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <Label>Default Temperature</Label>
+                    <Input type="number" step="0.1" value={kbCfg.kb_default_temperature} onChange={(e) => setKbCfg((p) => ({ ...p, kb_default_temperature: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <Label>Default Max Tokens</Label>
+                    <Input type="number" value={kbCfg.kb_default_max_tokens} onChange={(e) => setKbCfg((p) => ({ ...p, kb_default_max_tokens: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <Label>Processing Timeout (ms)</Label>
+                    <Input type="number" value={kbCfg.kb_processing_timeout_ms} onChange={(e) => setKbCfg((p) => ({ ...p, kb_processing_timeout_ms: Number(e.target.value) }))} />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={() => saveKbConfig.mutate(kbCfg)} disabled={saveKbConfig.isPending}> 
+                    {saveKbConfig.isPending ? 'Saving...' : 'Save KB Settings'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setKbCfg(defaultKbSystemConfig)}>Reset Section</Button>
+                  <Button variant="outline" onClick={() => {
+                    const blob = new Blob([JSON.stringify(kbCfg, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'kb-system-config.json'; a.click(); URL.revokeObjectURL(url);
+                  }}>Export</Button>
+                  <Button variant="outline" onClick={() => (document.getElementById('kb-config-import') as HTMLInputElement)?.click()}>Import</Button>
+                  <input id="kb-config-import" type="file" accept="application/json" className="hidden" onChange={async (e) => {
+                    const f = e.target.files?.[0]; if (!f) return; const text = await f.text();
+                    try { const json = JSON.parse(text); setKbCfg((p) => ({ ...p, ...json })); } catch { 
+                      toast({ title: 'Invalid file', variant: 'destructive' }); }
+                  }} />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>N8N Webhook Management</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>N8N Base URL</Label>
+                    <Input value={kbCfg.kb_n8n_base_url} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_base_url: e.target.value }))} placeholder="https://n8n.example.com" />
+                  </div>
+                  <div>
+                    <Label>Master API Key</Label>
+                    <Input type="password" value={kbCfg.kb_n8n_master_api_key} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_master_api_key: e.target.value }))} placeholder="••••••" />
+                  </div>
+                  <div>
+                    <Label>File Processing Endpoint</Label>
+                    <Input value={kbCfg.kb_n8n_webhook_file_processing} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_webhook_file_processing: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>AI Chat Endpoint</Label>
+                    <Input value={kbCfg.kb_n8n_webhook_ai_chat} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_webhook_ai_chat: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Vector Search Endpoint</Label>
+                    <Input value={kbCfg.kb_n8n_webhook_vector_search} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_webhook_vector_search: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Batch Processing Endpoint</Label>
+                    <Input value={kbCfg.kb_n8n_webhook_batch_process} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_webhook_batch_process: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Max Retries</Label>
+                    <Input type="number" value={kbCfg.kb_n8n_retry_max} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_retry_max: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <Label>Backoff Multiplier</Label>
+                    <Input type="number" step="0.1" value={kbCfg.kb_n8n_retry_backoff} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_retry_backoff: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <Label>Timeout (ms)</Label>
+                    <Input type="number" value={kbCfg.kb_n8n_timeout_ms} onChange={(e) => setKbCfg((p) => ({ ...p, kb_n8n_timeout_ms: Number(e.target.value) }))} />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={async () => {
+                    const base = (kbCfg.kb_n8n_base_url || '').replace(/\/+$/, '');
+                    const url = `${base}${kbCfg.kb_n8n_webhook_file_processing}`;
+                    try {
+                      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(kbCfg.kb_n8n_master_api_key ? { 'X-API-Key': kbCfg.kb_n8n_master_api_key } : {}) }, mode: 'no-cors', body: JSON.stringify({ ping: 'kb-admin-test', type: 'file' }) });
+                      toast({ title: 'Request Sent', description: 'Check N8N execution logs.' });
+                    } catch (e) { toast({ title: 'Webhook failed', variant: 'destructive' }); }
+                  }}>Test File Processing</Button>
+                  <Button variant="secondary" onClick={async () => {
+                    const base = (kbCfg.kb_n8n_base_url || '').replace(/\/+$/, '');
+                    const url = `${base}${kbCfg.kb_n8n_webhook_ai_chat}`;
+                    try {
+                      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(kbCfg.kb_n8n_master_api_key ? { 'X-API-Key': kbCfg.kb_n8n_master_api_key } : {}) }, mode: 'no-cors', body: JSON.stringify({ ping: 'kb-admin-test', type: 'chat', message: 'Hello' }) });
+                      toast({ title: 'Request Sent', description: 'Check N8N execution logs.' });
+                    } catch (e) { toast({ title: 'Webhook failed', variant: 'destructive' }); }
+                  }}>Test AI Chat</Button>
+                  <Button onClick={() => saveKbConfig.mutate(kbCfg)} disabled={saveKbConfig.isPending}>{saveKbConfig.isPending ? 'Saving...' : 'Save N8N Settings'}</Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="statistics">
