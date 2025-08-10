@@ -88,7 +88,7 @@ export const MarketplaceAdminContent: React.FC = () => {
           created_at, updated_at,
           required_permissions, n8n_webhooks
         `)
-        .eq('is_active', true)
+        
         .order('is_featured', { ascending: false })
         .order('is_system_app', { ascending: false })
         .order('name', { ascending: true });

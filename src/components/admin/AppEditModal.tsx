@@ -21,6 +21,7 @@ import {
   X
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import { KBAppSettings } from './apps/KBAppSettings';
 
 import { type AppCategory } from '@/hooks/database/useAppCategories';
 
@@ -568,6 +569,12 @@ export const AppEditModal: React.FC<AppEditModalProps> = ({
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
         </div>
+
+        {((app.slug?.includes('knowledge') || app.name.toLowerCase().includes('knowledge'))) && (
+          <div className="mt-6">
+            <KBAppSettings app={{ id: app.id, name: app.name, slug: app.slug }} />
+          </div>
+        )}
 
         {/* Navigation */}
         <div className="flex justify-between pt-6 border-t">
