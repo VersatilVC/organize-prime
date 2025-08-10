@@ -4,8 +4,11 @@ import { AppLayout } from '@/apps/shared/components/AppLayout';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { KBPermissionGuard } from './shared/KBPermissionGuard';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { BookOpen, Settings, BarChart3, Database, FileText, MessageSquare } from 'lucide-react';
+import { BookOpen, Settings, BarChart3, Database, FileText, MessageSquare, Menu } from 'lucide-react';
+import { KBProvider } from '../context/KBContext';
+import { useKBData } from '../hooks/useKBData';
 
 interface KBLayoutProps {
   children: React.ReactNode;
@@ -14,6 +17,8 @@ interface KBLayoutProps {
 export function KBLayout({ children }: KBLayoutProps) {
   const { currentOrganization } = useOrganizationData();
   const { pathname } = useLocation();
+  const { stats } = useKBData();
+  const [showNav, setShowNav] = React.useState(false);
 
   const nav = useMemo(() => [
     { label: 'Dashboard', to: '/apps/knowledge-base/dashboard', icon: BookOpen },
@@ -32,61 +37,77 @@ export function KBLayout({ children }: KBLayoutProps) {
 
   return (
     <AppLayout appId="knowledge-base" appName="Knowledge Base" permissions={[]}>
-      <header className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
-          <BookOpen className="h-5 w-5" />
-          <div>
-            <h1 className="text-base font-semibold">Knowledge Base</h1>
-            <p className="text-sm text-muted-foreground">{currentOrganization?.name ?? 'Organization'}</p>
+      <KBProvider>
+        <header className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-3">
+            <button className="md:hidden p-2 rounded hover:bg-muted" aria-label="Toggle KB navigation" onClick={() => setShowNav((v) => !v)}>
+              <Menu className="h-5 w-5" />
+            </button>
+            <BookOpen className="h-5 w-5" />
+            <div>
+              <h1 className="text-base font-semibold">Knowledge Base</h1>
+              <p className="text-sm text-muted-foreground">{currentOrganization?.name ?? 'Organization'}</p>
+            </div>
           </div>
+          <div className="flex items-center gap-2">
+            <KBPermissionGuard can="can_create_kb">
+              <Button asChild size="sm">
+                <Link to="/apps/knowledge-base/databases">Create KB</Link>
+              </Button>
+            </KBPermissionGuard>
+            <KBPermissionGuard can="can_upload">
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/apps/knowledge-base/files">Upload Files</Link>
+              </Button>
+            </KBPermissionGuard>
+            <KBPermissionGuard can="can_chat">
+              <Button asChild size="sm" variant="outline">
+                <Link to="/apps/knowledge-base/chat">New Chat</Link>
+              </Button>
+            </KBPermissionGuard>
+          </div>
+        </header>
+
+        <nav className={`gap-1 p-2 border-b overflow-x-auto ${showNav ? 'flex' : 'hidden md:flex'}`}>
+          {nav.map(item => (
+            <KBPermissionGuard key={item.to} adminOnly={item.adminOnly}>
+              <Link
+                to={item.to}
+                className={`px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted ${pathname.startsWith(item.to) ? 'bg-muted font-medium' : ''}`}
+              >
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
+                {item.label === 'Files' && (stats?.overview.processing_files ?? 0) > 0 && (
+                  <Badge variant="secondary" className="ml-1">{stats?.overview.processing_files}</Badge>
+                )}
+                {item.label === 'Chat' && (stats?.overview.conversations ?? 0) > 0 && (
+                  <Badge variant="outline" className="ml-1">{stats?.overview.conversations}</Badge>
+                )}
+              </Link>
+            </KBPermissionGuard>
+          ))}
+        </nav>
+
+        <div className="p-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/apps/knowledge-base/dashboard">Knowledge Base</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{nav.find(n => pathname.startsWith(n.to))?.label ?? 'Dashboard'}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
+          <main className="mt-4">
+            {children}
+          </main>
         </div>
-        <div className="flex items-center gap-2">
-          <KBPermissionGuard can="can_create_kb">
-            <Button asChild size="sm">
-              <Link to="/apps/knowledge-base/databases">New KB</Link>
-            </Button>
-          </KBPermissionGuard>
-          <KBPermissionGuard can="can_upload">
-            <Button asChild size="sm" variant="secondary">
-              <Link to="/apps/knowledge-base/files">Upload</Link>
-            </Button>
-          </KBPermissionGuard>
-        </div>
-      </header>
-
-      <nav className="flex gap-1 p-2 border-b overflow-x-auto">
-        {nav.map(item => (
-          <KBPermissionGuard key={item.to} adminOnly={item.adminOnly}>
-            <Link
-              to={item.to}
-              className={`px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted ${pathname.startsWith(item.to) ? 'bg-muted font-medium' : ''}`}
-            >
-              <item.icon className="h-4 w-4" />
-              <span>{item.label}</span>
-            </Link>
-          </KBPermissionGuard>
-        ))}
-      </nav>
-
-      <div className="p-4">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/apps/knowledge-base/dashboard">Knowledge Base</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{nav.find(n => pathname.startsWith(n.to))?.label ?? 'Dashboard'}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        <main className="mt-4">
-          {children}
-        </main>
-      </div>
+      </KBProvider>
     </AppLayout>
   );
 }
