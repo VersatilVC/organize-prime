@@ -6,19 +6,19 @@ export function useKBFiles() {
   const { currentOrganization } = useOrganizationData();
   const orgId = currentOrganization?.id ?? null;
 
-  return useQuery({
+  return useQuery<any[]>({
     queryKey: ['kb.files', orgId],
     enabled: !!orgId,
     staleTime: 10_000,
     gcTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async (): Promise<any[]> => {
+      const { data, error } = await (supabase as any)
         .from('kb_files')
         .select('*')
         .eq('organization_id', orgId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as any[];
+      return data ?? [];
     }
   });
 }

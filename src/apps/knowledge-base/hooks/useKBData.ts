@@ -12,7 +12,7 @@ export function useKBData() {
     staleTime: 30_000,
     gcTime: 300_000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_kb_dashboard_stats', {
+      const { data, error } = await (supabase as any).rpc('get_kb_dashboard_stats', {
         org_id: orgId,
         user_id_param: (await supabase.auth.getUser()).data.user?.id ?? null,
         user_role: 'user'
