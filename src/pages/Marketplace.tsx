@@ -239,10 +239,10 @@ export default function Marketplace() {
               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span>{feature.rating_average.toFixed(1)}</span>
-                  <span>({feature.rating_count})</span>
+                  <span>{((feature.rating_average ?? 0) as number).toFixed(1)}</span>
+                  <span>({feature.rating_count ?? 0})</span>
                 </div>
-                <span>{feature.install_count.toLocaleString()} installs</span>
+                <span>{((feature.install_count ?? 0) as number).toLocaleString()} installs</span>
               </div>
             </div>
             <div className="flex flex-col gap-1 items-end flex-shrink-0 w-24">
