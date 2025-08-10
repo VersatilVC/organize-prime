@@ -45,6 +45,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Do NOT cache authenticated requests or any Supabase traffic
+  const hasAuth = request.headers.has('Authorization');
+  if (hasAuth || url.hostname.includes('supabase.co')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // Cache static assets (stale-while-revalidate)
   if (
     request.destination === 'document' ||
@@ -82,49 +89,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache API responses with TTL (network-first with cache fallback)
-  if (url.hostname.includes('supabase.co')) {
-    event.respondWith(
-      caches.open(API_CACHE_NAME).then(cache => {
-        return fetch(request).then(fetchResponse => {
-          // Only cache successful responses
-          if (fetchResponse.ok) {
-            const responseClone = fetchResponse.clone();
-            const headers = new Headers(responseClone.headers);
-            headers.set('cached-time', new Date().toISOString());
-            
-            const responseWithTime = new Response(responseClone.body, {
-              status: responseClone.status,
-              statusText: responseClone.statusText,
-              headers: headers
-            });
-
-            cache.put(request, responseWithTime);
-          }
-          return fetchResponse;
-        }).catch(() => {
-          // Network failed, try cache
-          return cache.match(request).then(response => {
-            if (response) {
-              const cachedTime = new Date(response.headers.get('cached-time') || 0);
-              const now = new Date();
-              
-              // Return cached response if it's still fresh
-              if (now.getTime() - cachedTime.getTime() < API_CACHE_DURATION) {
-                return response;
-              }
-            }
-            
-            // No valid cache, return network error
-            return new Response('Network error', { 
-              status: 503, 
-              statusText: 'Service Unavailable' 
-            });
-          });
-        });
-      })
-    );
-  }
+  // Default: network-first without caching
+  event.respondWith(fetch(request));
 });
 
 // Background sync for failed requests

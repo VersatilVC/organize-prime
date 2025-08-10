@@ -21,6 +21,16 @@ interface InvitationEmailRequest {
   position?: string;
 }
 
+function escapeHtml(str: string = '') {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  } as Record<string, string>)[m] || m);
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -126,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${invitation.message ? `
             <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
               <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;"><strong>Personal message:</strong></p>
-              <p style="color: #374151; font-size: 14px; font-style: italic; margin: 0;">"${invitation.message}"</p>
+              <p style="color: #374151; font-size: 14px; font-style: italic; margin: 0;">"${escapeHtml(invitation.message as string)}"</p>
             </div>
           ` : ''}
         </div>

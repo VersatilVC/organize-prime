@@ -91,137 +91,29 @@ export default function InviteAcceptance() {
   };
 
   const handleAcceptInvitation = async () => {
-    if (!invitation || !currentUser) return;
+    if (!invitation || !currentUser || !token) return;
 
     setAccepting(true);
     try {
-      // Check if user already has membership in this organization
-      const { data: existingMembership } = await supabase
-        .from('memberships')
-        .select('id, status')
-        .eq('user_id', currentUser.id)
-        .eq('organization_id', invitation.organization_id)
-        .maybeSingle();
+      // Use secure RPC that handles membership creation/reactivation and auditing server-side
+      const { data, error } = await supabase.rpc('accept_invitation', { p_token: token });
 
-      if (existingMembership) {
-        if (existingMembership.status === 'active') {
-          // User is already a member - just mark invitation as accepted and show success
-          console.log('✅ User already a member, marking invitation as accepted');
-          
-          const { error: invitationError } = await supabase
-            .from('invitations')
-            .update({
-              accepted_at: new Date().toISOString()
-            })
-            .eq('id', invitation.id);
-
-          if (invitationError) {
-            console.error('❌ Failed to mark invitation as accepted:', invitationError);
-          } else {
-            console.log('✅ Successfully marked invitation as accepted');
-          }
-
-          toast({
-            title: "Already a member!",
-            description: `You're already part of ${invitation.organization_name}`,
-          });
-
-          // Redirect to main page
-          navigate('/');
-          return;
-        } else {
-          // Reactivate existing membership
-          const { error: updateError } = await supabase
-            .from('memberships')
-            .update({
-              status: 'active',
-              role: invitation.role,
-              joined_at: new Date().toISOString()
-            })
-            .eq('id', existingMembership.id);
-
-          if (updateError) throw updateError;
-        }
-      } else {
-        // Create new membership
-        const { error: membershipError } = await supabase
-          .from('memberships')
-          .insert({
-            user_id: currentUser.id,
-            organization_id: invitation.organization_id,
-            role: invitation.role,
-            status: 'active',
-            joined_at: new Date().toISOString()
-          });
-
-        if (membershipError) throw membershipError;
-      }
-
-      // Mark invitation as accepted
-      const { error: invitationError } = await supabase
-        .from('invitations')
-        .update({
-          accepted_at: new Date().toISOString()
-        })
-        .eq('id', invitation.id);
-
-      if (invitationError) throw invitationError;
-
-      // Trigger notification to admins about new user joining
-      try {
-        const { data: inviterProfile } = await supabase
-          .from('profiles')
-          .select('full_name, username')
-          .eq('id', invitation.invited_by)
-          .maybeSingle();
-
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('full_name, username')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-
-        // Get all admins in the organization
-        const { data: admins } = await supabase
-          .from('memberships')
-          .select('user_id')
-          .eq('organization_id', invitation.organization_id)
-          .eq('role', 'admin')
-          .eq('status', 'active');
-
-        // Send notification to each admin
-        if (admins && admins.length > 0) {
-          await supabase.rpc('create_templated_notification', {
-            p_template_type: 'user_invitation_accepted',
-            p_user_id: admins[0].user_id, // For now, just notify first admin
-            p_organization_id: invitation.organization_id,
-            p_variables: {
-              new_user_name: currentProfile?.full_name || currentProfile?.username || currentUser.email,
-              organization_name: invitation.organization_name,
-              inviter_name: inviterProfile?.full_name || inviterProfile?.username || 'Unknown'
-            },
-            p_action_url: '/users'
-          });
-        }
-      } catch (notificationError) {
-        console.error('Error sending admin notification:', notificationError);
-        // Don't fail the invitation acceptance if notification fails
+      if (error) {
+        throw error;
       }
 
       toast({
-        title: "Welcome to the team!",
+        title: 'Welcome to the team!',
         description: `You've successfully joined ${invitation.organization_name}`,
       });
 
-      // Redirect to main page
       navigate('/');
-
     } catch (error: any) {
       console.error('Error accepting invitation:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to accept invitation",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to accept invitation',
+        variant: 'destructive',
       });
     } finally {
       setAccepting(false);
