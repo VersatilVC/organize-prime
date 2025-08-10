@@ -20,8 +20,10 @@ import {
   Users,
   TrendingUp,
   Activity,
-  Store
+  Store,
+  RotateCcw
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { AppCreationModal } from './AppCreationModal';
 import { AppEditModal } from './AppEditModal';
 import { MarketplaceAnalytics } from './MarketplaceAnalytics';
@@ -35,19 +37,28 @@ interface MarketplaceApp {
   description: string;
   long_description: string;
   category: string;
-  install_count: number;
-  is_active: boolean;
-  is_featured: boolean;
-  icon_name: string;
+  subcategory?: string;
   pricing_model: 'free' | 'paid' | 'freemium';
   base_price: number;
-  required_permissions: string[];
-  n8n_webhooks: Record<string, string>;
+  currency?: string;
+  app_config?: Record<string, any> | null;
+  navigation_config?: Record<string, any> | null;
+  settings_schema?: Record<string, any> | null;
+  icon_name: string;
+  is_featured: boolean;
+  is_active: boolean;
+  is_system_app?: boolean;
   requires_approval: boolean;
+  install_count: number;
   rating_average: number;
   rating_count: number;
+  version?: string;
   created_at: string;
+  updated_at?: string;
+  required_permissions: string[];
+  n8n_webhooks: Record<string, string>;
 }
+
 
 // AppCategory interface now imported from useAppCategories hook
 
@@ -65,11 +76,26 @@ export const MarketplaceAdminContent: React.FC = () => {
   const { data: apps = [], isLoading: appsLoading } = useQuery({
     queryKey: ['marketplace-apps'],
     queryFn: async () => {
+      console.log('Fetching marketplace apps...');
       const { data, error } = await supabase
         .from('marketplace_apps' as any)
-        .select('id, name, slug, description, long_description, category, install_count, is_active, is_featured, icon_name, pricing_model, base_price, required_permissions, n8n_webhooks, requires_approval, rating_average, rating_count, created_at')
-        .order('created_at', { ascending: false });
-      
+        .select(`
+          id, name, slug, description, long_description,
+          category, subcategory, pricing_model, base_price, currency,
+          app_config, navigation_config, settings_schema,
+          icon_name, is_featured, is_active, is_system_app, requires_approval,
+          install_count, rating_average, rating_count, version,
+          created_at, updated_at,
+          required_permissions, n8n_webhooks
+        `)
+        .eq('is_active', true)
+        .order('is_featured', { ascending: false })
+        .order('is_system_app', { ascending: false })
+        .order('name', { ascending: true });
+      console.log('Marketplace apps data:', data);
+      console.log('Marketplace apps error:', error);
+      const kbApp = (data || []).find((a: any) => a.slug === 'knowledge-base');
+      console.log('Knowledge Base app found:', kbApp);
       if (error) throw error;
       return (data || []) as unknown as MarketplaceApp[];
     }
@@ -138,8 +164,10 @@ export const MarketplaceAdminContent: React.FC = () => {
 
   // Filter apps based on search and filters
   const filteredApps = apps.filter(app => {
-    const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = app.name.toLowerCase().includes(term) ||
+                         app.slug?.toLowerCase().includes(term) ||
+                         app.description.toLowerCase().includes(term);
     const matchesCategory = selectedCategory === 'all' || app.category === selectedCategory;
     const matchesStatus = selectedStatus === 'all' || 
                          (selectedStatus === 'active' ? app.is_active : !app.is_active);
@@ -216,10 +244,16 @@ export const MarketplaceAdminContent: React.FC = () => {
               <Package className="h-5 w-5" />
               Marketplace Apps
             </CardTitle>
-            <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create New App
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['marketplace-apps'] })} variant="outline" className="flex items-center gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Refresh
+              </Button>
+              <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Create New App
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -303,14 +337,23 @@ export const MarketplaceAdminContent: React.FC = () => {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <Package className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="font-semibold truncate">{app.name}</h3>
+                        {(() => {
+                          const IconComponent = (LucideIcons as any)[app.icon_name] || Package;
+                          return <IconComponent className="h-5 w-5 text-muted-foreground" />;
+                        })()}
+                        <h3 className="font-semibold truncate" title={app.name}>{app.name}</h3>
                       </div>
-                      <div className="flex gap-1">
-                        {app.is_featured && (
-                          <Badge variant="secondary" className="text-xs">Featured</Badge>
+                      <div className="flex flex-wrap gap-1 justify-end">
+                        {app.version && (
+                          <Badge variant="outline" className="text-[10px]">v{app.version}</Badge>
                         )}
-                        <Badge variant={app.is_active ? "default" : "secondary"} className="text-xs">
+                        {app.is_system_app && (
+                          <Badge variant="outline" className="text-[10px]">System App</Badge>
+                        )}
+                        {app.is_featured && (
+                          <Badge variant="secondary" className="text-[10px]">Featured</Badge>
+                        )}
+                        <Badge variant={app.is_active ? 'default' : 'secondary'} className="text-[10px]">
                           {app.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
