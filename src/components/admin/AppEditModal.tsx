@@ -570,7 +570,7 @@ export const AppEditModal: React.FC<AppEditModalProps> = ({
           {currentStep === 3 && renderStep3()}
         </div>
 
-        {((app.slug?.includes('knowledge') || app.name.toLowerCase().includes('knowledge'))) && (
+        {app && ((app.slug?.includes('knowledge') || app.name.toLowerCase().includes('knowledge'))) && (
           <div className="mt-6">
             <KBAppSettings app={{ id: app.id, name: app.name, slug: app.slug }} />
           </div>

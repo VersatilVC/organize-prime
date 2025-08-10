@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -71,6 +73,11 @@ export const MarketplaceAdminContent: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingApp, setEditingApp] = useState<MarketplaceApp | null>(null);
+  const [showSystemApps, setShowSystemApps] = useState(true);
+  useEffect(() => {
+    console.debug('MarketplaceAdminContent mounted: invalidating marketplace-apps to force fresh data');
+    queryClient.invalidateQueries({ queryKey: ['marketplace-apps'] });
+  }, []);
 
   // Fetch marketplace apps
   const { data: apps = [], isLoading: appsLoading } = useQuery({
@@ -164,16 +171,37 @@ export const MarketplaceAdminContent: React.FC = () => {
 
   // Filter apps based on search and filters
   const filteredApps = apps.filter(app => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch = app.name.toLowerCase().includes(term) ||
-                         app.slug?.toLowerCase().includes(term) ||
-                         app.description.toLowerCase().includes(term);
-    const matchesCategory = selectedCategory === 'all' || app.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || 
-                         (selectedStatus === 'active' ? app.is_active : !app.is_active);
-    
-    return matchesSearch && matchesCategory && matchesStatus;
+    const term = searchTerm.trim().toLowerCase();
+    const name = (app.name || '').toLowerCase();
+    const slug = (app.slug || '').toLowerCase();
+    const desc = (app.description || '').toLowerCase();
+    const longDesc = (app.long_description || '').toLowerCase();
+
+    const matchesSearch =
+      term.length === 0 ||
+      name.includes(term) ||
+      slug.includes(term) ||
+      desc.includes(term) ||
+      longDesc.includes(term);
+
+    const matchesCategory =
+      selectedCategory === 'all' ||
+      (app.category || '').toLowerCase() === selectedCategory.toLowerCase();
+
+    const matchesStatus = selectedStatus === 'all' ||
+                           (selectedStatus === 'active' ? app.is_active : !app.is_active);
+
+    const matchesSystem = showSystemApps ? true : !app.is_system_app;
+
+    return matchesSearch && matchesCategory && matchesStatus && matchesSystem;
   });
+
+  useEffect(() => {
+    const kb = apps.find(a => a.slug === 'knowledge-base' || a.name?.toLowerCase().includes('knowledge'));
+    console.debug('[MarketplaceAdmin] apps:', apps.length, 'filtered:', filteredApps.length, {
+      searchTerm, selectedCategory, selectedStatus, showSystemApps, kbFound: !!kb, kbVisible: !!kb && filteredApps.some(a => a.id === kb.id),
+    });
+  }, [apps, filteredApps, searchTerm, selectedCategory, selectedStatus, showSystemApps]);
 
   const totalInstalls = apps.reduce((sum, app) => sum + app.install_count, 0);
   const activeApps = apps.filter(app => app.is_active).length;
@@ -293,8 +321,27 @@ export const MarketplaceAdminContent: React.FC = () => {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-          </div>
 
+            <div className="flex items-center gap-2">
+              <Label htmlFor="show-system-apps" className="whitespace-nowrap">System Apps</Label>
+              <Switch id="show-system-apps" checked={showSystemApps} onCheckedChange={setShowSystemApps} />
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => { 
+                setSearchTerm(''); 
+                setSelectedCategory('all'); 
+                setSelectedStatus('all'); 
+                setShowSystemApps(true);
+              }}
+              className="sm:ml-2"
+            >
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reset
+            </Button>
+
+          </div>
           {/* Apps Grid */}
           {appsLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -323,10 +370,24 @@ export const MarketplaceAdminContent: React.FC = () => {
                   ? 'Try adjusting your filters'
                   : 'Create your first marketplace app to get started'}
               </p>
-              {!searchTerm && selectedCategory === 'all' && selectedStatus === 'all' && (
+              {!searchTerm && selectedCategory === 'all' && selectedStatus === 'all' ? (
                 <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 mx-auto">
                   <Plus className="h-4 w-4" />
                   Create New App
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => { 
+                    setSearchTerm(''); 
+                    setSelectedCategory('all'); 
+                    setSelectedStatus('all'); 
+                    setShowSystemApps(true);
+                  }}
+                  className="flex items-center gap-2 mx-auto"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset Filters
                 </Button>
               )}
             </div>
