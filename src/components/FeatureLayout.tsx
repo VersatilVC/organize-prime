@@ -49,7 +49,7 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Link to="/marketplace">Features</Link>
+                <Link to="/features">Features</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
@@ -74,9 +74,9 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
           </div>
           
           <Button variant="outline" asChild>
-            <Link to="/marketplace">
+            <Link to="/features">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Marketplace
+              Back to Features
             </Link>
           </Button>
         </div>

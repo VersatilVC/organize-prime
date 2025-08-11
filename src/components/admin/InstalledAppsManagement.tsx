@@ -65,7 +65,7 @@ export function InstalledAppsManagement() {
       <Card>
         <CardHeader>
           <CardTitle>Installed Apps</CardTitle>
-          <CardDescription>Loading installed marketplace apps...</CardDescription>
+          <CardDescription>Loading enabled features...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -91,7 +91,7 @@ export function InstalledAppsManagement() {
         <CardHeader>
           <CardTitle>Installed Apps</CardTitle>
           <CardDescription>
-            Manage marketplace applications installed in your organization.
+            Manage features enabled in your organization.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center py-8">
@@ -99,7 +99,7 @@ export function InstalledAppsManagement() {
             No apps are currently installed in your organization.
           </div>
           <Button asChild>
-            <Link to="/marketplace">Browse Marketplace</Link>
+            <Link to="/features">Browse Features</Link>
           </Button>
         </CardContent>
       </Card>
@@ -111,7 +111,7 @@ export function InstalledAppsManagement() {
       <CardHeader>
         <CardTitle>Installed Apps</CardTitle>
         <CardDescription>
-          Manage marketplace applications installed in your organization.
+          Manage features enabled in your organization.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -242,7 +242,7 @@ export function InstalledAppsManagement() {
         <div className="mt-6 pt-4 border-t">
           <div className="text-center">
             <Button variant="outline" asChild>
-              <Link to="/marketplace">Browse More Apps</Link>
+              <Link to="/features">Browse More Features</Link>
             </Button>
           </div>
         </div>

@@ -70,7 +70,7 @@ const getSectionItems = (sectionKey: string, role: string, section?: SidebarSect
       return [
         { name: 'Company Settings', href: '/settings/company', icon: Icons.settings },
         { name: 'Billing', href: '/billing', icon: Icons.creditCard },
-        { name: 'Feature Marketplace', href: '/marketplace', icon: Icons.plus },
+        { name: 'Features', href: '/features', icon: Icons.package },
       ];
     
     case 'system-admin':

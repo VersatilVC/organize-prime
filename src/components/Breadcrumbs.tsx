@@ -20,7 +20,7 @@ const routeLabels: Record<string, string> = {
   '/admin/feedback': 'Manage Feedback',
   '/notifications': 'Notifications',
   '/billing': 'Billing',
-  '/marketplace': 'Feature Marketplace',
+  '/features': 'Features',
   '/organizations': 'Organizations',
   '/invite-acceptance': 'Accept Invitation',
 };

@@ -95,8 +95,8 @@ export default function FeatureDetail() {
             <p className="text-muted-foreground mb-6">
               The feature you're looking for doesn't exist or has been removed.
             </p>
-            <Button onClick={() => navigate('/marketplace')}>
-              Back to Marketplace
+            <Button onClick={() => navigate('/features')}>
+              Back to Features
             </Button>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function FeatureDetail() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbLink href="/marketplace">Feature Marketplace</BreadcrumbLink>
+                <BreadcrumbLink href="/features">Features</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -192,9 +192,9 @@ export default function FeatureDetail() {
                   {canInstall ? 'Install' : 'Contact Admin'}
                 </Button>
               )}
-              <Button variant="outline" onClick={() => navigate('/marketplace')}>
+              <Button variant="outline" onClick={() => navigate('/features')}>
                 <Icons.arrowLeft className="h-4 w-4 mr-2" />
-                Back to Marketplace
+                Back to Features
               </Button>
             </div>
           </div>

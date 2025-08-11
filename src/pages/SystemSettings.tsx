@@ -173,7 +173,7 @@ export default function SystemSettings() {
     enabled: role === 'super_admin'
   });
 
-  // KB Admin configuration moved into Marketplace Admin → App Edit for Knowledge Base app
+  // KB Admin configuration moved into Feature Management → Feature Edit for Knowledge Base feature
   // Removed standalone KB system config from System Settings to avoid duplication and ensure a unified admin experience.
 
   // Update system settings mutation
@@ -416,14 +416,10 @@ export default function SystemSettings() {
         </div>
 
         <Tabs defaultValue="application" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="application">Application</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="feature-management">
-              <Settings className="h-4 w-4 mr-1" />
-              Feature Management
-            </TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
           </TabsList>
 
@@ -733,9 +729,6 @@ export default function SystemSettings() {
             <FeatureCategoryManagement />
           </TabsContent>
 
-          <TabsContent value="feature-management" className="space-y-6">
-            <FeatureManagement />
-          </TabsContent>
 
 
           <TabsContent value="statistics">
