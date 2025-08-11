@@ -17,11 +17,11 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Loader2, Users, Building, Clock, Mail, Upload, Image, Store } from 'lucide-react';
+import { Loader2, Users, Building, Clock, Mail, Upload, Image, Settings } from 'lucide-react';
 import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedForm';
 import FeatureCategoryManagement from '@/components/settings/FeatureCategoryManagement';
 import { SystemFeatureManagement } from '@/components/admin/SystemFeatureManagement';
-import { MarketplaceAdminContent } from '@/components/admin/MarketplaceAdminContent';
+import { FeatureManagement } from '@/components/admin/FeatureManagement';
 
 interface SystemSettings {
   app_name: string;
@@ -416,15 +416,14 @@ export default function SystemSettings() {
         </div>
 
         <Tabs defaultValue="application" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="application">Application</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-            <TabsTrigger value="marketplace">
-              <Store className="h-4 w-4 mr-1" />
-              Marketplace Admin
+            <TabsTrigger value="feature-management">
+              <Settings className="h-4 w-4 mr-1" />
+              Feature Management
             </TabsTrigger>
-            
+            <TabsTrigger value="features">Features</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
           </TabsList>
 
@@ -734,8 +733,8 @@ export default function SystemSettings() {
             <FeatureCategoryManagement />
           </TabsContent>
 
-          <TabsContent value="marketplace" className="space-y-6">
-            <MarketplaceAdminContent />
+          <TabsContent value="feature-management" className="space-y-6">
+            <FeatureManagement />
           </TabsContent>
 
 
