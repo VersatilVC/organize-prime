@@ -121,8 +121,8 @@ export function FeatureManagement() {
 
         <TabsContent value="webhooks" className="space-y-6">
           <WebhooksManagementSection 
-            webhooks={webhooks}
-            features={features}
+            webhooks={webhooks || []}
+            features={features || []}
           />
         </TabsContent>
 

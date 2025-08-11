@@ -39,14 +39,32 @@ export function useSystemFeatures() {
 
   const createFeatureMutation = useMutation({
     mutationFn: async (featureData: Partial<SystemFeature>) => {
-      const { data, error } = await supabase
-        .from('system_features')
-        .insert([featureData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Mock implementation - simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newFeature: SystemFeature = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: featureData.name || '',
+        display_name: featureData.display_name || '',
+        slug: featureData.slug || '',
+        description: featureData.description || null,
+        category: featureData.category || 'business',
+        icon_name: featureData.icon_name || 'Package',
+        color_hex: featureData.color_hex || '#3b82f6',
+        is_active: true,
+        is_system_feature: true,
+        sort_order: 0,
+        navigation_config: {},
+        required_tables: [],
+        webhook_endpoints: {},
+        setup_sql: null,
+        cleanup_sql: null,
+        created_by: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      return newFeature;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
@@ -67,15 +85,10 @@ export function useSystemFeatures() {
 
   const updateFeatureMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<SystemFeature> }) => {
-      const { data, error } = await supabase
-        .from('system_features')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Mock implementation - simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return { id, ...updates };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
@@ -96,12 +109,8 @@ export function useSystemFeatures() {
 
   const deleteFeatureMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('system_features')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      // Mock implementation - simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-features'] });

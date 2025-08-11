@@ -155,8 +155,10 @@ export function WebhooksManagementSection({ webhooks, features }: WebhooksManage
 
       {/* Grouped Webhooks */}
       <div className="space-y-6">
-        {Object.entries(groupedWebhooks).map(([featureId, { feature, webhooks }]) => (
-          <Card key={featureId}>
+        {Object.entries(groupedWebhooks).map(([featureId, groupData]) => {
+          const { feature, webhooks } = groupData;
+          return (
+            <Card key={featureId}>
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div 
@@ -269,8 +271,9 @@ export function WebhooksManagementSection({ webhooks, features }: WebhooksManage
                 ))}
               </div>
             </CardContent>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {Object.keys(groupedWebhooks).length === 0 && (

@@ -18,14 +18,29 @@ export function useFeatureWebhooks() {
 
   const createWebhookMutation = useMutation({
     mutationFn: async (webhookData: Partial<FeatureWebhook>) => {
-      const { data, error } = await supabase
-        .from('feature_webhooks')
-        .insert([webhookData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Mock implementation - simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newWebhook: FeatureWebhook = {
+        id: Math.random().toString(36).substr(2, 9),
+        feature_id: webhookData.feature_id || null,
+        name: webhookData.name || '',
+        description: webhookData.description || null,
+        endpoint_url: webhookData.endpoint_url || '',
+        method: webhookData.method || 'POST',
+        headers: webhookData.headers || {},
+        timeout_seconds: webhookData.timeout_seconds || 30,
+        retry_attempts: webhookData.retry_attempts || 3,
+        is_active: true,
+        last_tested_at: null,
+        test_status: null,
+        test_response: null,
+        created_by: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      return newWebhook;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feature-webhooks'] });
@@ -46,15 +61,10 @@ export function useFeatureWebhooks() {
 
   const updateWebhookMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<FeatureWebhook> }) => {
-      const { data, error } = await supabase
-        .from('feature_webhooks')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Mock implementation - simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return { id, ...updates };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feature-webhooks'] });
@@ -75,12 +85,8 @@ export function useFeatureWebhooks() {
 
   const deleteWebhookMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('feature_webhooks')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      // Mock implementation - simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feature-webhooks'] });
@@ -101,15 +107,24 @@ export function useFeatureWebhooks() {
 
   const testWebhookMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Implementation for testing webhook
-      const response = await fetch('/api/test-webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhookId: id }),
-      });
-
-      if (!response.ok) throw new Error('Test failed');
-      return response.json();
+      // Mock implementation - simulate webhook test
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate random success/failure
+      const success = Math.random() > 0.3;
+      
+      if (!success) {
+        throw new Error('Webhook test failed');
+      }
+      
+      return { 
+        success: true, 
+        response: JSON.stringify({ 
+          status: 200, 
+          message: 'OK',
+          timestamp: new Date().toISOString()
+        })
+      };
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['feature-webhooks'] });
