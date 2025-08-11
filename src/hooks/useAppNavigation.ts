@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 export interface AppNavigationItem {
@@ -21,7 +21,9 @@ export interface AppNavigationSection {
 
 export const useAppNavigation = (organizationId?: string) => {
   const { currentOrganization } = useOrganization();
-  const { data: appInstallations = [], isLoading } = useAppInstallations();
+  // Mock app installations data - marketplace functionality removed
+  const appInstallations: any[] = [];
+  const isLoading = false;
   
   const effectiveOrgId = organizationId || currentOrganization?.id;
 

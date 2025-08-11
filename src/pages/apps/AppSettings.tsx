@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -15,7 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function AppSettings() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: appInstallations = [], isLoading } = useAppInstallations();
+  // Mock app installations data - marketplace functionality removed
+  const appInstallations: any[] = [];
+  const isLoading = false;
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
   const { toast } = useToast();

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
 import { useFeatureNavigationSections } from '@/hooks/database/useOrganizationFeatures';
 import { Badge } from '@/components/ui/badge';
@@ -401,7 +401,9 @@ export function AppSidebar() {
   try {
     const { role, loading: roleLoading } = useUserRole();
     const { feedback } = useDashboardData();
-    const { data: appInstallations = [], isLoading: appsLoading } = useAppInstallations();
+    // Mock app installations data - marketplace functionality removed
+    const appInstallations: any[] = [];
+    const appsLoading = false;
     const { configs, isLoading: configsLoading } = useOrganizationFeatureConfigs();
     const featureNavigationSections = useFeatureNavigationSections();
     const location = useLocation();

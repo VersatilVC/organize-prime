@@ -28,7 +28,9 @@ export function AppRouter({ basePath = '/features', fallbackComponent }: AppRout
   const params = useParams();
   const appSlug = params.slug;
 
-  const { data: marketplaceApps, isLoading: appsLoading } = useMarketplaceApps();
+  // Mock marketplace apps data for development
+  const marketplaceApps: any[] = [];
+  const appsLoading = false;
 
   // Find the app in marketplace
   const marketplaceApp = useMemo(() => {

@@ -30,7 +30,8 @@ import { AppCreationModal } from './AppCreationModal';
 import { AppEditModal } from './AppEditModal';
 import { MarketplaceAnalytics } from './MarketplaceAnalytics';
 import { MarketplaceSettings } from './MarketplaceSettings';
-import { useAppCategories, type AppCategory } from '@/hooks/database/useAppCategories';
+// import { useAppCategories, type AppCategory } from '@/hooks/database/useAppCategories'; // Removed - marketplace functionality
+type AppCategory = { id: string; name: string; slug: string; description: string; };
 
 interface MarketplaceApp {
   id: string;
@@ -108,8 +109,9 @@ export const MarketplaceAdminContent: React.FC = () => {
     }
   });
 
-  // Fetch app categories using unified hook
-  const { data: categories = [], isLoading: categoriesLoading } = useAppCategories();
+  // Mock app categories data - marketplace functionality removed
+  const categories: AppCategory[] = [];
+  const categoriesLoading = false;
 
   // Toggle app status mutation
   const toggleAppStatusMutation = useMutation({

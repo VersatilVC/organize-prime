@@ -27,7 +27,7 @@ import * as Icons from 'lucide-react';
 interface AppCreationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  categories: AppCategory[];
+  categories: { id: string; name: string; slug: string; description: string; }[];
   onSuccess: () => void;
 }
 

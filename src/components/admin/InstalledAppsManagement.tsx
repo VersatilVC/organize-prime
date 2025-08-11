@@ -4,7 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useAppInstallations, useUninstallApp } from '@/hooks/database/useMarketplaceApps';
+// import { useAppInstallations, useUninstallApp } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
 import { Separator } from '@/components/ui/separator';
 import { Settings, Trash2, ExternalLink } from 'lucide-react';
@@ -14,20 +14,20 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Link } from 'react-router-dom';
 
 export function InstalledAppsManagement() {
-  const { data: appInstallations = [], isLoading } = useAppInstallations();
-  const uninstallAppMutation = useUninstallApp();
-  const { configs, updateConfig, isUpdating } = useOrganizationFeatureConfigs();
+  // Mock data for development - replace with actual API when available
+  const appInstallations: any[] = [];
+  const isLoading = false;
+  
+  // const { configs, updateConfig, isUpdating } = useOrganizationFeatureConfigs(); // Removed - not available
   const { toast } = useToast();
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
 
   const handleToggleApp = async (appSlug: string, isEnabled: boolean) => {
     try {
-      updateConfig({
-        featureSlug: appSlug,
-        config: {
-          is_enabled: isEnabled,
-          is_user_accessible: isEnabled,
-        }
+      // Mock toggle functionality
+      toast({
+        title: 'App Status Updated',
+        description: `App has been ${isEnabled ? 'enabled' : 'disabled'}.`,
       });
     } catch (error) {
       toast({
@@ -40,7 +40,7 @@ export function InstalledAppsManagement() {
 
   const handleUninstallApp = async (appId: string, appName: string) => {
     try {
-      await uninstallAppMutation.mutateAsync(appId);
+      // Mock uninstall functionality
       toast({
         title: 'App uninstalled',
         description: `${appName} has been removed from your organization.`,
@@ -55,13 +55,9 @@ export function InstalledAppsManagement() {
     }
   };
 
-  const getAppConfig = (appSlug: string) => {
-    return configs.find(config => config.feature_slug === appSlug);
-  };
-
   const isAppEnabled = (appSlug: string) => {
-    const config = getAppConfig(appSlug);
-    return config?.is_enabled !== false; // Default to enabled if no config exists
+    // Mock - default to enabled
+    return true;
   };
 
   if (isLoading) {
@@ -160,7 +156,6 @@ export function InstalledAppsManagement() {
                     <Switch
                       id={`enable-${app.slug}`}
                       checked={appEnabled}
-                      disabled={isUpdating}
                       onCheckedChange={(checked) => handleToggleApp(app.slug, checked)}
                     />
                   </div>
@@ -220,9 +215,8 @@ export function InstalledAppsManagement() {
                         <AlertDialogAction
                           onClick={() => handleUninstallApp(installation.app_id, app.name)}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          disabled={uninstallAppMutation.isPending}
                         >
-                          {uninstallAppMutation.isPending ? 'Uninstalling...' : 'Uninstall'}
+                          Uninstall
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

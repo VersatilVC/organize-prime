@@ -3,14 +3,16 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
 import { Settings, ExternalLink } from 'lucide-react';
 
 export default function AppDashboard() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: appInstallations = [], isLoading } = useAppInstallations();
+  // Mock app installations data - marketplace functionality removed
+  const appInstallations: any[] = [];
+  const isLoading = false;
 
   const installation = appInstallations.find(
     inst => inst.marketplace_apps.slug === slug

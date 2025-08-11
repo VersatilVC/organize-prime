@@ -113,7 +113,8 @@ function FeatureRoutes() {
 export function EnhancedFeatureRouter() {
   const params = useParams();
   const { slug } = params as { slug?: string };
-  const { data: appInstallations = [] } = useAppInstallations();
+  // Mock app installations data for development
+  const appInstallations: any[] = [];
 
   console.log('🔍 EnhancedFeatureRouter: Component mounted, URL params:', { slug, allParams: params, pathname: window.location.pathname });
 

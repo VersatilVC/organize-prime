@@ -46,7 +46,7 @@ interface AppEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   app: MarketplaceApp | null;
-  categories: AppCategory[];
+  categories: { id: string; name: string; slug: string; description: string; }[];
   onSuccess: () => void;
 }
 
@@ -572,7 +572,7 @@ export const AppEditModal: React.FC<AppEditModalProps> = ({
 
         {app && ((app.slug?.includes('knowledge') || app.name.toLowerCase().includes('knowledge'))) && (
           <div className="mt-6">
-            <KBAppSettings app={{ id: app.id, name: app.name, slug: app.slug }} />
+            <KBAppSettings app={{ id: app.id, name: app.name, slug: app.slug, description: app.description || '', version: '1.0.0', icon_name: app.icon_name || 'Package' }} />
           </div>
         )}
 

@@ -28,9 +28,9 @@ export {
 // System features
 export { useSystemFeatures } from './useSystemFeatures';
 export { useOrganizationFeatures } from './useOrganizationFeatures';
-export { useUserRole } from './useOptimizedUserRole';
-export { useSystemFeatureConfigs } from './useSystemFeatureConfigs';
-export { useOrganizationFeatureConfigs } from './useOrganizationFeatureConfigs';
+// Legacy export for compatibility - use useOptimizedUserRole directly
+// export { useSystemFeatureConfigs } from './useSystemFeatureConfigs'; // Removed
+// export { useOrganizationFeatureConfigs } from './useOrganizationFeatureConfigs'; // Removed
 
 // Feature webhooks
 export { useFeatureWebhooks } from './useFeatureWebhooks';

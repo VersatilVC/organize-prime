@@ -28,13 +28,8 @@ export async function prefetchQueriesByPath(path: string, client: QueryClient) {
       await client.prefetchQuery({
         queryKey: ['app_categories', 'active'],
         queryFn: async () => {
-          const { data, error } = await supabase
-            .from('app_categories')
-            .select('id, name, slug, description, icon_name, color_hex, sort_order, is_active')
-            .eq('is_active', true)
-            .order('sort_order');
-          if (error) throw error;
-          return data || [];
+          // Mock app categories data - marketplace tables removed
+          return [];
         },
         staleTime: cacheConfig.static.staleTime,
       });
