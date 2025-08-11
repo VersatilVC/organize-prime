@@ -21,12 +21,12 @@ export function KBLayout({ children }: KBLayoutProps) {
   const [showNav, setShowNav] = React.useState(false);
 
   const nav = useMemo(() => [
-    { label: 'Dashboard', to: '/apps/knowledge-base/dashboard', icon: BookOpen },
-    { label: 'Knowledge Bases', to: '/apps/knowledge-base/databases', icon: Database },
-    { label: 'Files', to: '/apps/knowledge-base/files', icon: FileText },
-    { label: 'Chat', to: '/apps/knowledge-base/chat', icon: MessageSquare },
-    { label: 'Analytics', to: '/apps/knowledge-base/analytics', icon: BarChart3, adminOnly: true },
-    { label: 'Settings', to: '/apps/knowledge-base/settings', icon: Settings, adminOnly: true },
+    { label: 'Dashboard', to: '/features/knowledge-base/dashboard', icon: BookOpen },
+    { label: 'Knowledge Bases', to: '/features/knowledge-base/databases', icon: Database },
+    { label: 'Files', to: '/features/knowledge-base/files', icon: FileText },
+    { label: 'Chat', to: '/features/knowledge-base/chat', icon: MessageSquare },
+    { label: 'Analytics', to: '/features/knowledge-base/analytics', icon: BarChart3, adminOnly: true },
+    { label: 'Settings', to: '/features/knowledge-base/settings', icon: Settings, adminOnly: true },
   ], []);
 
   // SEO: set document title
@@ -52,17 +52,17 @@ export function KBLayout({ children }: KBLayoutProps) {
           <div className="flex items-center gap-2">
             <KBPermissionGuard can="can_create_kb">
               <Button asChild size="sm">
-                <Link to="/apps/knowledge-base/databases">Create KB</Link>
+                <Link to="/features/knowledge-base/databases">Create KB</Link>
               </Button>
             </KBPermissionGuard>
             <KBPermissionGuard can="can_upload">
               <Button asChild size="sm" variant="secondary">
-                <Link to="/apps/knowledge-base/files">Upload Files</Link>
+                <Link to="/features/knowledge-base/files">Upload Files</Link>
               </Button>
             </KBPermissionGuard>
             <KBPermissionGuard can="can_chat">
               <Button asChild size="sm" variant="outline">
-                <Link to="/apps/knowledge-base/chat">New Chat</Link>
+                <Link to="/features/knowledge-base/chat">New Chat</Link>
               </Button>
             </KBPermissionGuard>
           </div>
@@ -93,7 +93,7 @@ export function KBLayout({ children }: KBLayoutProps) {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/apps/knowledge-base/dashboard">Knowledge Base</Link>
+                  <Link to="/features/knowledge-base/dashboard">Knowledge Base</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />

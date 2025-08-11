@@ -169,7 +169,7 @@ export function InstalledAppsManagement() {
                     asChild
                     disabled={!appEnabled}
                   >
-                    <Link to={`/apps/${app.slug}`}>
+                    <Link to={`/features/${app.slug}`}>
                       <ExternalLink className="h-4 w-4 mr-1" />
                       Open
                     </Link>
@@ -182,7 +182,7 @@ export function InstalledAppsManagement() {
                     asChild
                     disabled={!appEnabled}
                   >
-                    <Link to={`/apps/${app.slug}/settings`}>
+                    <Link to={`/features/${app.slug}/settings`}>
                       <Settings className="h-4 w-4 mr-1" />
                       Settings
                     </Link>

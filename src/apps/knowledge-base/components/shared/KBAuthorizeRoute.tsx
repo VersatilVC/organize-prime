@@ -12,7 +12,7 @@ export function KBAuthorizeRoute({ permissions = [], children }: KBAuthorizeRout
 
   const hasAll = permissions.every((p) => perms[p]);
   if (!hasAll) {
-    return <Navigate to="/apps/knowledge-base/dashboard" replace />;
+    return <Navigate to="/features/knowledge-base/dashboard" replace />;
   }
   return <>{children}</>;
 }

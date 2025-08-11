@@ -71,7 +71,7 @@ export default function KBDashboard() {
   const [search, setSearch] = useState('');
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate(`/apps/knowledge-base/databases?query=${encodeURIComponent(search)}`);
+    navigate(`/features/knowledge-base/databases?query=${encodeURIComponent(search)}`);
   };
 
   return (
@@ -92,17 +92,17 @@ export default function KBDashboard() {
             <NotificationBell />
             <KBPermissionGuard can="can_upload">
               <Button asChild variant="secondary">
-                <Link to="/apps/knowledge-base/files">Upload Files</Link>
+                <Link to="/features/knowledge-base/files">Upload Files</Link>
               </Button>
             </KBPermissionGuard>
             <KBPermissionGuard can="can_chat">
               <Button asChild>
-                <Link to="/apps/knowledge-base/chat">Start Chat</Link>
+                <Link to="/features/knowledge-base/chat">Start Chat</Link>
               </Button>
             </KBPermissionGuard>
             <KBPermissionGuard can="can_create_kb">
               <Button asChild variant="outline">
-                <Link to="/apps/knowledge-base/databases">Create KB</Link>
+                <Link to="/features/knowledge-base/databases">Create KB</Link>
               </Button>
             </KBPermissionGuard>
           </div>
@@ -190,12 +190,12 @@ export default function KBDashboard() {
             <div className="flex flex-wrap gap-2">
               <KBPermissionGuard can="can_upload">
                 <Button asChild variant="secondary">
-                  <Link to="/apps/knowledge-base/files">Upload Documents</Link>
+                  <Link to="/features/knowledge-base/files">Upload Documents</Link>
                 </Button>
               </KBPermissionGuard>
               <KBPermissionGuard can="can_chat">
                 <Button asChild>
-                  <Link to="/apps/knowledge-base/chat">Ask AI</Link>
+                  <Link to="/features/knowledge-base/chat">Ask AI</Link>
                 </Button>
               </KBPermissionGuard>
             </div>
@@ -264,10 +264,10 @@ export default function KBDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Button asChild size="sm" variant="ghost">
-                      <Link to={`/apps/knowledge-base/files?kbId=${kb.id}`}>Files</Link>
+                      <Link to={`/features/knowledge-base/files?kbId=${kb.id}`}>Files</Link>
                     </Button>
                     <Button asChild size="sm" variant="ghost">
-                      <Link to={`/apps/knowledge-base/chat?kbId=${kb.id}`}>Chat</Link>
+                      <Link to={`/features/knowledge-base/chat?kbId=${kb.id}`}>Chat</Link>
                     </Button>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function KBDashboard() {
           </CardContent>
           <CardFooter>
             <Button asChild variant="link" className="px-0"> 
-              <Link to="/apps/knowledge-base/databases">View all</Link>
+              <Link to="/features/knowledge-base/databases">View all</Link>
             </Button>
           </CardFooter>
         </Card>

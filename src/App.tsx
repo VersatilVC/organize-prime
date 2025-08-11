@@ -35,7 +35,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const NotificationManagement = lazy(() => import("./pages/NotificationManagement"));
 
 // Import FeatureRouter directly since it's not a default export
-import { FeatureRouter, EnhancedFeatureRouter } from "./components/FeatureRouter";
+import { FeatureRouter } from "./components/FeatureRouter";
 
 // Initialize cache cleanup on app start
 initializeCacheCleanup();
@@ -99,15 +99,6 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <FeatureRouter />
-                    </ProtectedRoute>
-                  } 
-                />
-                {/* App Routes */}
-                <Route 
-                  path="/apps/:slug/*" 
-                  element={
-                    <ProtectedRoute>
-                      <EnhancedFeatureRouter />
                     </ProtectedRoute>
                   } 
                 />

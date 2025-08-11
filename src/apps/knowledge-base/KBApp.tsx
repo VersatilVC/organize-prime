@@ -38,7 +38,7 @@ export default function KBApp() {
             return (
               <Route
                 key={r.path}
-                path={r.path.replace('/apps/knowledge-base/', '')}
+                path={r.path.replace('/features/knowledge-base/', '')}
                 element={isAdminRoute ? (
                   <ProtectedRoute requiredRole="admin">{wrapped}</ProtectedRoute>
                 ) : (

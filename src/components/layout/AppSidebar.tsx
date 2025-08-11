@@ -116,8 +116,8 @@ const createAppSections = (appInstallations: any[], configs: any[]): SidebarSect
     
     // Default navigation items for all apps
     const defaultItems = [
-      { name: 'Dashboard', href: `/apps/${app.slug}`, icon: Icons.home },
-      { name: 'Settings', href: `/apps/${app.slug}/settings`, icon: Icons.settings }
+      { name: 'Dashboard', href: `/features/${app.slug}`, icon: Icons.home },
+      { name: 'Settings', href: `/features/${app.slug}/settings`, icon: Icons.settings }
     ];
 
     // Check if custom_navigation has items array, even if empty
@@ -126,7 +126,7 @@ const createAppSections = (appInstallations: any[], configs: any[]): SidebarSect
       // Use custom navigation items if they exist
       navigationItems = navigationConfig.items.map((navItem: any) => ({
         name: navItem.name || navItem.label,
-        href: navItem.href || navItem.path || `/apps/${app.slug}/${navItem.slug || navItem.name.toLowerCase()}`,
+        href: navItem.href || navItem.path || `/features/${app.slug}/${navItem.slug || navItem.name.toLowerCase()}`,
         icon: Icons[navItem.icon as keyof typeof Icons] || Icons.package,
         badge: navItem.badge
       }));

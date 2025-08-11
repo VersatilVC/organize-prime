@@ -3,7 +3,6 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
-// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
 import NotFound from '@/pages/NotFound';
 
@@ -18,8 +17,8 @@ const FeatureDashboard = React.lazy(() => import('@/pages/features/FeatureDashbo
 const FeatureSettings = React.lazy(() => import('@/pages/features/FeatureSettings'));
 const FeatureContent = React.lazy(() => import('@/pages/features/FeatureContent'));
 
+// Lazy load Knowledge Base app for feature routing
 const KBApp = React.lazy(() => import('@/apps/knowledge-base/KBApp'));
-
 // Lazy load Knowledge Base pages
 const KnowledgeBaseDashboard = React.lazy(() => import('@/features/knowledge-base/pages/KnowledgeBaseDashboard'));
 const KnowledgeBaseDocuments = React.lazy(() => import('@/features/knowledge-base/pages/KnowledgeBaseDocuments'));
@@ -82,6 +81,26 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
 }
 
 function FeatureRoutes() {
+  const { slug } = useParams<FeatureRouteParams>();
+  
+  // Special handling for Knowledge Base app
+  if (slug === 'knowledge-base') {
+    return (
+      <Suspense fallback={
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
+      }>
+        <KBApp />
+      </Suspense>
+    );
+  }
+
   return (
     <FeatureLayout>
       <Suspense fallback={
@@ -105,30 +124,6 @@ function FeatureRoutes() {
   );
 }
 
-// Enhanced router that supports both features and marketplace apps
-export function EnhancedFeatureRouter() {
-  const params = useParams();
-  const { slug } = params as { slug?: string };
-  console.log('🔍 EnhancedFeatureRouter: Component mounted, URL params:', { slug, allParams: params, pathname: window.location.pathname });
-
-  if (!slug) {
-    console.log('❌ EnhancedFeatureRouter: No slug in URL params, showing NotFound');
-    return <NotFound />;
-  }
-
-  console.log('✅ EnhancedFeatureRouter: Rendering traditional feature with slug:', slug);
-
-  // Fall back to traditional feature routing with new organization features
-  return (
-    <AppLayout>
-      <FeatureAccessCheck slug={slug}>
-        <FeatureRoutes />
-      </FeatureAccessCheck>
-    </AppLayout>
-  );
-}
-
-// Keep original for backward compatibility
 export function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
 
