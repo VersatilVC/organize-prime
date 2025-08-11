@@ -137,38 +137,43 @@ export class N8NWebhookService {
     webhookId: string
   ): Promise<N8NWebhookConfig | null> {
     try {
-      // Get app installation
-      const { data: installation, error } = await supabase
-        .from('marketplace_app_installations')
-        .select('app_settings')
-        .eq('app_id', appId)
-        .eq('organization_id', organizationId)
-        .eq('status', 'active')
-        .maybeSingle();
+      // TODO: Remove marketplace functionality - replaced with new feature system
+      console.log('Webhook config requested for:', { appId, organizationId, webhookId });
+      
+      // Return null since marketplace functionality is removed
+      return null;
 
-      if (error || !installation) {
-        console.error('App installation not found:', error);
-        return null;
-      }
+      // Marketplace functionality removed - tables don't exist
+      // const { data: installation, error } = await supabase
+      //   .from('marketplace_app_installations')
+      //   .select('app_settings')
+      //   .eq('app_id', appId)
+      //   .eq('organization_id', organizationId)
+      //   .eq('status', 'active')
+      //   .maybeSingle();
 
-      // Get webhook config from app settings
-      const appSettings = installation.app_settings as any;
-      const webhooks = appSettings?.webhooks || {};
-      const webhookConfig = webhooks[webhookId];
+      // if (error || !installation) {
+      //   console.error('App installation not found:', error);
+      //   return null;
+      // }
 
-      if (!webhookConfig) {
-        console.error(`Webhook ${webhookId} not configured for app ${appId}`);
-        return null;
-      }
+      // Commented out - appSettings no longer available
+      // const webhooks = appSettings?.webhooks || {};
+      // const webhookConfig = webhooks[webhookId];
 
-      return {
-        webhookId,
-        url: webhookConfig.url,
-        method: webhookConfig.method || 'POST',
-        headers: webhookConfig.headers || {},
-        authentication: webhookConfig.authentication,
-        retryConfig: webhookConfig.retryConfig
-      };
+      // if (!webhookConfig) {
+      //   console.error(`Webhook ${webhookId} not configured for app ${appId}`);
+      //   return null;
+      // }
+
+      // return {
+      //   webhookId,
+      //   url: webhookConfig.url,
+      //   method: webhookConfig.method || 'POST',
+      //   headers: webhookConfig.headers || {},
+      //   authentication: webhookConfig.authentication,
+      //   retryConfig: webhookConfig.retryConfig
+      // };
     } catch (error) {
       console.error('Failed to get webhook configuration:', error);
       return null;
@@ -189,19 +194,18 @@ export class N8NWebhookService {
     try {
       if (!appId) return;
 
-      await supabase
-        .from('marketplace_app_analytics')
-        .insert({
-          app_id: appId,
-          organization_id: organizationId,
-          user_id: userId,
-          event_type: `webhook_${eventType}`,
-          event_category: 'n8n_integration',
-          event_data: {
-            webhook_id: webhookId,
-            ...metadata
-          }
-        });
+      // TODO: Remove marketplace analytics - replaced with new feature system
+      console.log('Webhook event would be tracked:', {
+        webhookId,
+        eventType,
+        organizationId,
+        userId,
+        appId,
+        metadata
+      });
+
+      // Marketplace analytics functionality removed - tables don't exist
+      // await supabase.from('marketplace_app_analytics').insert({...});
     } catch (error) {
       console.error('Failed to track webhook event:', error);
       // Don't throw error - analytics shouldn't break the main flow

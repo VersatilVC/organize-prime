@@ -3,18 +3,18 @@ export interface KBDocument {
   organization_id: string;
   title: string;
   content: string;
-  file_path?: string;
+  file_path?: string | null;
   file_type: string;
-  category: string;
+  category: string | null;
   tags: string[];
-  processing_status: 'pending' | 'processing' | 'completed' | 'error';
-  embedding_status: 'pending' | 'processing' | 'completed' | 'error';
-  file_size?: number;
-  word_count?: number;
-  created_by: string;
-  updated_by?: string;
-  created_at: string;
-  updated_at: string;
+  processing_status: string; // Accept any string to match DB response
+  embedding_status: string; // Accept any string to match DB response
+  file_size?: number | null;
+  word_count?: number | null;
+  created_by: string | null;
+  updated_by?: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface KBSearch {

@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import { AppConfiguration, AppConfigurationError } from '../types/AppTypes';
 
 export class AppConfigService {
@@ -10,33 +9,14 @@ export class AppConfigService {
     organizationId: string
   ): Promise<AppConfiguration | null> {
     try {
-      const { data, error } = await supabase
-        .from('marketplace_app_installations')
-        .select('id, app_id, organization_id, app_settings, custom_navigation, feature_flags, last_used_at, status')
-        .eq('app_id', appId)
-        .eq('organization_id', organizationId)
-        .eq('status', 'active')
-        .maybeSingle();
+      // TODO: Remove marketplace functionality - replaced with new feature system
+      console.log('App configuration requested for:', { appId, organizationId });
+      
+      // Return null since marketplace functionality is removed
+      return null;
 
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        // No rows returned - app not installed
-        return null;
-      }
-
-      return {
-        id: data.id,
-        appId: data.app_id,
-        organizationId: data.organization_id,
-        settings: (typeof data.app_settings === 'object' ? data.app_settings : {}) as Record<string, any>,
-        customNavigation: (Array.isArray(data.custom_navigation) ? data.custom_navigation : []) as any[],
-        featureFlags: (typeof data.feature_flags === 'object' ? data.feature_flags : {}) as Record<string, boolean>,
-        lastUsedAt: data.last_used_at,
-        status: (data.status as 'active' | 'inactive' | 'pending') || 'inactive',
-      };
+      // Marketplace functionality removed - tables don't exist
+      // const { data, error } = await supabase.from('marketplace_app_installations')...
     } catch (error) {
       console.error('Failed to get app configuration:', error);
       throw new AppConfigurationError(
@@ -56,48 +36,23 @@ export class AppConfigService {
     updates: Partial<AppConfiguration>
   ): Promise<AppConfiguration> {
     try {
-      const updateData: any = {};
-      
-      if (updates.settings !== undefined) {
-        updateData.app_settings = updates.settings;
-      }
-      
-      if (updates.customNavigation !== undefined) {
-        updateData.custom_navigation = updates.customNavigation;
-      }
-      
-      if (updates.featureFlags !== undefined) {
-        updateData.feature_flags = updates.featureFlags;
-      }
+      // TODO: Remove marketplace functionality - replaced with new feature system
+      console.log('App configuration update requested:', { appId, organizationId, updates });
 
-      if (updates.status !== undefined) {
-        updateData.status = updates.status;
-      }
-
-      updateData.updated_at = new Date().toISOString();
-      updateData.last_used_at = new Date().toISOString();
-
-      const { data, error } = await supabase
-        .from('marketplace_app_installations')
-        .update(updateData)
-        .eq('app_id', appId)
-        .eq('organization_id', organizationId)
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) throw new Error('No data returned after update');
-
+      // Return mock data since marketplace functionality is removed
       return {
-        id: data.id,
-        appId: data.app_id,
-        organizationId: data.organization_id,
-        settings: (typeof data.app_settings === 'object' ? data.app_settings : {}) as Record<string, any>,
-        customNavigation: (Array.isArray(data.custom_navigation) ? data.custom_navigation : []) as any[],
-        featureFlags: (typeof data.feature_flags === 'object' ? data.feature_flags : {}) as Record<string, boolean>,
-        lastUsedAt: data.last_used_at,
-        status: (data.status as 'active' | 'inactive' | 'pending') || 'inactive',
+        id: 'mock-id',
+        appId,
+        organizationId,
+        settings: updates.settings || {},
+        customNavigation: updates.customNavigation || [],
+        featureFlags: updates.featureFlags || {},
+        lastUsedAt: new Date().toISOString(),
+        status: 'active',
       };
+
+      // Marketplace functionality removed - tables don't exist
+      // const { data, error } = await supabase.from('marketplace_app_installations')...
     } catch (error) {
       console.error('Failed to update app configuration:', error);
       throw new AppConfigurationError(
@@ -113,25 +68,14 @@ export class AppConfigService {
    */
   static async getInstalledApps(organizationId: string): Promise<AppConfiguration[]> {
     try {
-      const { data, error } = await supabase
-        .from('marketplace_app_installations')
-        .select('id, app_id, organization_id, app_settings, custom_navigation, feature_flags, last_used_at, status')
-        .eq('organization_id', organizationId)
-        .eq('status', 'active')
-        .order('installed_at', { ascending: false });
+      // TODO: Remove marketplace functionality - replaced with new feature system
+      console.log('Installed apps requested for organization:', organizationId);
 
-      if (error) throw error;
+      // Return empty array since marketplace functionality is removed
+      return [];
 
-      return data.map(installation => ({
-        id: installation.id,
-        appId: installation.app_id,
-        organizationId: installation.organization_id,
-        settings: (typeof installation.app_settings === 'object' ? installation.app_settings : {}) as Record<string, any>,
-        customNavigation: (Array.isArray(installation.custom_navigation) ? installation.custom_navigation : []) as any[],
-        featureFlags: (typeof installation.feature_flags === 'object' ? installation.feature_flags : {}) as Record<string, boolean>,
-        lastUsedAt: installation.last_used_at,
-        status: (installation.status as 'active' | 'inactive' | 'pending') || 'inactive',
-      }));
+      // Marketplace functionality removed - tables don't exist
+      // const { data, error } = await supabase.from('marketplace_app_installations')...
     } catch (error) {
       console.error('Failed to get installed apps:', error);
       throw new AppConfigurationError(
@@ -147,19 +91,14 @@ export class AppConfigService {
    */
   static async isAppInstalled(appId: string, organizationId: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase
-        .from('marketplace_app_installations')
-        .select('id')
-        .eq('app_id', appId)
-        .eq('organization_id', organizationId)
-        .eq('status', 'active')
-        .maybeSingle();
+      // TODO: Remove marketplace functionality - replaced with new feature system
+      console.log('App installation check requested:', { appId, organizationId });
 
-      if (error) {
-        throw error;
-      }
+      // Return false since marketplace functionality is removed
+      return false;
 
-      return !!data;
+      // Marketplace functionality removed - tables don't exist
+      // const { data, error } = await supabase.from('marketplace_app_installations')...
     } catch (error) {
       console.error('Failed to check app installation:', error);
       return false;
@@ -171,16 +110,11 @@ export class AppConfigService {
    */
   static async updateLastUsed(appId: string, organizationId: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('marketplace_app_installations')
-        .update({ 
-          last_used_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('app_id', appId)
-        .eq('organization_id', organizationId);
+      // TODO: Remove marketplace functionality - replaced with new feature system
+      console.log('Last used timestamp update requested:', { appId, organizationId });
 
-      if (error) throw error;
+      // Marketplace functionality removed - tables don't exist
+      // const { error } = await supabase.from('marketplace_app_installations')...
     } catch (error) {
       console.error('Failed to update last used timestamp:', error);
       // Don't throw error for this operation - it's not critical

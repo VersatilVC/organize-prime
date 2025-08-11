@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import { AppAnalyticsEvent } from '../types/AppTypes';
 
 export class AppAnalyticsService {
@@ -33,27 +32,19 @@ export class AppAnalyticsService {
     eventData?: Record<string, any>
   ): Promise<void> {
     try {
-      const event: Omit<AppAnalyticsEvent, 'timestamp'> = {
+      // TODO: Remove marketplace analytics - replaced with new feature system
+      console.log('Analytics event would be tracked:', {
         appId,
         organizationId,
         userId,
         eventType,
         eventCategory,
-        eventData: eventData || {},
+        eventData,
         sessionId: this.getSessionId()
-      };
+      });
 
-      await supabase
-        .from('marketplace_app_analytics')
-        .insert({
-          app_id: event.appId,
-          organization_id: event.organizationId,
-          user_id: event.userId,
-          event_type: event.eventType,
-          event_category: event.eventCategory,
-          event_data: event.eventData,
-          session_id: event.sessionId
-        });
+      // Marketplace analytics functionality removed - tables don't exist
+      // await supabase.from('marketplace_app_analytics').insert({...});
     } catch (error) {
       console.error('Failed to track app event:', error);
       // Don't throw error - analytics shouldn't break the main flow
@@ -207,65 +198,21 @@ export class AppAnalyticsService {
     averageSessionDuration: number;
   }> {
     try {
-      const { data, error } = await supabase
-        .from('marketplace_app_analytics')
-        .select('event_type, user_id, session_id, event_data, created_at')
-        .eq('app_id', appId)
-        .eq('organization_id', organizationId)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
+      // TODO: Remove marketplace analytics - replaced with new feature system
+      console.log('App analytics requested for:', { appId, organizationId, startDate, endDate });
 
-      if (error) throw error;
-
-      const events = data || [];
-      
-      // Calculate metrics
-      const pageViews = events.filter(e => e.event_type === 'page_view').length;
-      const uniqueUsers = new Set(events.map(e => e.user_id)).size;
-      const sessions = new Set(events.map(e => e.session_id).filter(Boolean)).size;
-      const errors = events.filter(e => e.event_type === 'error').length;
-
-      // Feature usage breakdown
-      const featureUsage: Record<string, number> = {};
-      events
-        .filter(e => e.event_type === 'feature_usage')
-        .forEach(e => {
-          const eventData = e.event_data as any;
-          const featureName = eventData?.feature_name;
-          if (featureName) {
-            featureUsage[featureName] = (featureUsage[featureName] || 0) + 1;
-          }
-        });
-
-      // Calculate average session duration (simplified)
-      const sessionEvents = events.filter(e => e.session_id);
-      const sessionDurations: Record<string, { start: number; end: number }> = {};
-      
-      sessionEvents.forEach(e => {
-        const sessionId = e.session_id!;
-        const timestamp = new Date(e.created_at).getTime();
-        
-        if (!sessionDurations[sessionId]) {
-          sessionDurations[sessionId] = { start: timestamp, end: timestamp };
-        } else {
-          sessionDurations[sessionId].start = Math.min(sessionDurations[sessionId].start, timestamp);
-          sessionDurations[sessionId].end = Math.max(sessionDurations[sessionId].end, timestamp);
-        }
-      });
-
-      const totalSessionDuration = Object.values(sessionDurations)
-        .reduce((sum, { start, end }) => sum + (end - start), 0);
-      
-      const averageSessionDuration = sessions > 0 ? totalSessionDuration / sessions : 0;
-
+      // Return mock data since marketplace tables don't exist
       return {
-        pageViews,
-        uniqueUsers,
-        sessions,
-        featureUsage,
-        errors,
-        averageSessionDuration: Math.round(averageSessionDuration / 1000) // Convert to seconds
+        pageViews: 0,
+        uniqueUsers: 0,
+        sessions: 0,
+        featureUsage: {},
+        errors: 0,
+        averageSessionDuration: 0
       };
+
+      // Marketplace analytics functionality removed - tables don't exist
+      // const { data, error } = await supabase.from('marketplace_app_analytics')...
     } catch (error) {
       console.error('Failed to get app analytics:', error);
       return {
