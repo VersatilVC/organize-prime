@@ -25,52 +25,21 @@ export {
   useOptimizedUserRole 
 } from './useOptimizedUserRole';
 
-// Enhanced marketplace hooks
-export {
-  useEnhancedMarketplaceApps,
-  useEnhancedAppInstallations,
-  useEnhancedInstallApp,
-  useEnhancedUninstallApp,
-  useTrackAppUsage,
-  useEnhancedAppReviews,
-  useMarketplaceSettings,
-  useCreateMarketplaceApp,
-  type MarketplaceApp,
-  type AppInstallation,
-  type AppReviewWithProfile,
-  type MarketplaceSettings
-} from './useEnhancedMarketplaceApps';
+// System features
+export { useSystemFeatures } from './useSystemFeatures';
+export { useOrganizationFeatures } from './useOrganizationFeatures';
+export { useUserRole } from './useOptimizedUserRole';
+export { useSystemFeatureConfigs } from './useSystemFeatureConfigs';
+export { useOrganizationFeatureConfigs } from './useOrganizationFeatureConfigs';
 
-// Legacy marketplace hooks (deprecated - use enhanced versions)
-export {
-  useMarketplaceApps,
-  useAppInstallations,
-  useInstallApp,
-  useUninstallApp,
-  useTrackAppView
-} from './useMarketplaceApps';
+// Feature webhooks
+export { useFeatureWebhooks } from './useFeatureWebhooks';
 
-export {
-  useAppCategories,
-  type AppCategory
-} from './useAppCategories';
-
-export {
-  useAppNavigation,
-  useAppNavigationItem,
-  useIsAppNavigationItemActive,
-  type AppNavigationItem,
-  type AppNavigationSection
-} from '../useAppNavigation';
-
-// Legacy app reviews hooks (deprecated - use enhanced versions from marketplace hooks)
-export {
-  useAppReviews,
-  useUserAppReview,
-  useCreateAppReview,
-  useUpdateAppReview,
-  type AppReview
-} from './useAppReviews';
+// Marketplace functionality removed - tables no longer exist
+// export { useEnhancedMarketplaceApps } from './useEnhancedMarketplaceApps';
+// export { useMarketplaceApps } from './useMarketplaceApps';
+// export { useAppCategories } from './useAppCategories';
+// export { useAppReviews } from './useAppReviews';
 
 // Re-export common types for convenience
 export type DatabaseHookResult<T> = {

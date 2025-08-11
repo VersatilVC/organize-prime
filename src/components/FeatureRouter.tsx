@@ -4,7 +4,7 @@ import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
 import { AppLayout as SharedAppLayout } from '@/apps/shared/components/AppLayout';
-import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
 import NotFound from '@/pages/NotFound';
 

@@ -23,7 +23,7 @@ import {
 import * as Icons from 'lucide-react';
 import { KBAppSettings } from './apps/KBAppSettings';
 
-import { type AppCategory } from '@/hooks/database/useAppCategories';
+// import { type AppCategory } from '@/hooks/database/useAppCategories'; // Removed - marketplace functionality
 
 interface MarketplaceApp {
   id: string;

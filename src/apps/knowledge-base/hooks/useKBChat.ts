@@ -165,15 +165,24 @@ export function useSendMessage() {
 
       if (error) throw error;
 
-      // Update conversation metadata
+      // Update conversation metadata - use separate query to increment message count
       if (params.message_type === 'user') {
-        await supabase
+        // Get current count and increment
+        const { data: conversation } = await supabase
           .from('kb_conversations')
-          .update({
-            message_count: supabase.rpc('increment', { x: 1 } as any),
-            last_message_at: new Date().toISOString(),
-          })
-          .eq('id', params.conversationId);
+          .select('message_count')
+          .eq('id', params.conversationId)
+          .single();
+
+        if (conversation) {
+          await supabase
+            .from('kb_conversations')
+            .update({
+              message_count: (conversation.message_count || 0) + 1,
+              last_message_at: new Date().toISOString(),
+            })
+            .eq('id', params.conversationId);
+        }
       }
 
       return data as ChatMessage;

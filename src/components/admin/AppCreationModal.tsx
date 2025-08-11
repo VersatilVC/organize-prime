@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
-import { type AppCategory } from '@/hooks/database/useAppCategories';
+// import { type AppCategory } from '@/hooks/database/useAppCategories'; // Removed - marketplace functionality
 
 interface AppCreationModalProps {
   open: boolean;

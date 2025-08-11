@@ -9,7 +9,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import { useMarketplaceApps } from '@/hooks/database/useMarketplaceApps';
+// import { useMarketplaceApps } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 
 // App registry - this would be populated dynamically in a real implementation
 const APP_REGISTRY: Record<string, () => Promise<{ default: AppModule }>> = {
