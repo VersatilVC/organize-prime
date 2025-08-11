@@ -67,48 +67,6 @@ export type Database = {
           },
         ]
       }
-      app_categories: {
-        Row: {
-          color_hex: string | null
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          icon_name: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          slug: string
-          sort_order: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          color_hex?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          icon_name?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          slug: string
-          sort_order?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          color_hex?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          icon_name?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          slug?: string
-          sort_order?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       audit_logs: {
         Row: {
           action: string
@@ -205,6 +163,71 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_webhooks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          endpoint_url: string
+          feature_id: string | null
+          headers: Json | null
+          id: string
+          is_active: boolean | null
+          last_tested_at: string | null
+          method: string | null
+          name: string
+          retry_attempts: number | null
+          test_response: string | null
+          test_status: string | null
+          timeout_seconds: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          endpoint_url: string
+          feature_id?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_tested_at?: string | null
+          method?: string | null
+          name: string
+          retry_attempts?: number | null
+          test_response?: string | null
+          test_status?: string | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          endpoint_url?: string
+          feature_id?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_tested_at?: string | null
+          method?: string | null
+          name?: string
+          retry_attempts?: number | null
+          test_response?: string | null
+          test_status?: string | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_webhooks_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "system_features"
             referencedColumns: ["id"]
           },
         ]
@@ -428,59 +451,69 @@ export type Database = {
           },
         ]
       }
-      marketplace_app_analytics: {
+      kb_analytics: {
         Row: {
-          app_id: string | null
+          conversation_id: string | null
           created_at: string | null
           event_category: string | null
           event_data: Json | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          kb_config_id: string | null
           organization_id: string | null
-          page_path: string | null
+          processing_time_ms: number | null
           session_id: string | null
-          user_agent: string | null
+          tokens_consumed: number | null
           user_id: string | null
+          vector_search_time_ms: number | null
         }
         Insert: {
-          app_id?: string | null
+          conversation_id?: string | null
           created_at?: string | null
           event_category?: string | null
           event_data?: Json | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          kb_config_id?: string | null
           organization_id?: string | null
-          page_path?: string | null
+          processing_time_ms?: number | null
           session_id?: string | null
-          user_agent?: string | null
+          tokens_consumed?: number | null
           user_id?: string | null
+          vector_search_time_ms?: number | null
         }
         Update: {
-          app_id?: string | null
+          conversation_id?: string | null
           created_at?: string | null
           event_category?: string | null
           event_data?: Json | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          kb_config_id?: string | null
           organization_id?: string | null
-          page_path?: string | null
+          processing_time_ms?: number | null
           session_id?: string | null
-          user_agent?: string | null
+          tokens_consumed?: number | null
           user_id?: string | null
+          vector_search_time_ms?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "marketplace_app_analytics_app_id_fkey"
-            columns: ["app_id"]
+            foreignKeyName: "kb_analytics_conversation_id_fkey"
+            columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "marketplace_apps"
+            referencedRelation: "kb_conversations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "marketplace_app_analytics_organization_id_fkey"
+            foreignKeyName: "kb_analytics_kb_config_id_fkey"
+            columns: ["kb_config_id"]
+            isOneToOne: false
+            referencedRelation: "kb_configurations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kb_analytics_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -488,71 +521,76 @@ export type Database = {
           },
         ]
       }
-      marketplace_app_installations: {
+      kb_configurations: {
         Row: {
-          app_id: string | null
-          app_settings: Json | null
+          allowed_roles: string[] | null
+          chunk_overlap: number | null
+          chunk_size: number | null
           created_at: string | null
-          custom_navigation: Json | null
-          feature_flags: Json | null
+          created_by: string | null
+          description: string | null
+          display_name: string
+          embedding_model: string | null
+          file_count: number | null
           id: string
-          installation_type: string | null
-          installed_at: string | null
-          installed_by: string | null
-          last_used_at: string | null
+          is_default: boolean | null
+          is_premium: boolean | null
+          last_indexed_at: string | null
+          max_tokens: number | null
+          name: string
           organization_id: string | null
           status: string | null
-          uninstalled_at: string | null
-          uninstalled_by: string | null
+          table_suffix: string
+          total_vectors: number | null
           updated_at: string | null
-          usage_stats: Json | null
         }
         Insert: {
-          app_id?: string | null
-          app_settings?: Json | null
+          allowed_roles?: string[] | null
+          chunk_overlap?: number | null
+          chunk_size?: number | null
           created_at?: string | null
-          custom_navigation?: Json | null
-          feature_flags?: Json | null
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          embedding_model?: string | null
+          file_count?: number | null
           id?: string
-          installation_type?: string | null
-          installed_at?: string | null
-          installed_by?: string | null
-          last_used_at?: string | null
+          is_default?: boolean | null
+          is_premium?: boolean | null
+          last_indexed_at?: string | null
+          max_tokens?: number | null
+          name: string
           organization_id?: string | null
           status?: string | null
-          uninstalled_at?: string | null
-          uninstalled_by?: string | null
+          table_suffix: string
+          total_vectors?: number | null
           updated_at?: string | null
-          usage_stats?: Json | null
         }
         Update: {
-          app_id?: string | null
-          app_settings?: Json | null
+          allowed_roles?: string[] | null
+          chunk_overlap?: number | null
+          chunk_size?: number | null
           created_at?: string | null
-          custom_navigation?: Json | null
-          feature_flags?: Json | null
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          embedding_model?: string | null
+          file_count?: number | null
           id?: string
-          installation_type?: string | null
-          installed_at?: string | null
-          installed_by?: string | null
-          last_used_at?: string | null
+          is_default?: boolean | null
+          is_premium?: boolean | null
+          last_indexed_at?: string | null
+          max_tokens?: number | null
+          name?: string
           organization_id?: string | null
           status?: string | null
-          uninstalled_at?: string | null
-          uninstalled_by?: string | null
+          table_suffix?: string
+          total_vectors?: number | null
           updated_at?: string | null
-          usage_stats?: Json | null
         }
         Relationships: [
           {
-            foreignKeyName: "marketplace_app_installations_app_id_fkey"
-            columns: ["app_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_apps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketplace_app_installations_organization_id_fkey"
+            foreignKeyName: "kb_configurations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -560,65 +598,65 @@ export type Database = {
           },
         ]
       }
-      marketplace_app_reviews: {
+      kb_conversations: {
         Row: {
-          app_id: string | null
-          cons: string[] | null
           created_at: string | null
-          helpful_count: number | null
           id: string
-          is_featured: boolean | null
-          is_verified: boolean | null
+          kb_config_id: string | null
+          last_message_at: string | null
+          max_tokens: number | null
+          message_count: number | null
+          model: string | null
           organization_id: string | null
-          pros: string[] | null
-          rating: number
-          review_text: string | null
-          review_title: string | null
+          summary: string | null
+          temperature: number | null
+          title: string | null
+          total_tokens_used: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
-          app_id?: string | null
-          cons?: string[] | null
           created_at?: string | null
-          helpful_count?: number | null
           id?: string
-          is_featured?: boolean | null
-          is_verified?: boolean | null
+          kb_config_id?: string | null
+          last_message_at?: string | null
+          max_tokens?: number | null
+          message_count?: number | null
+          model?: string | null
           organization_id?: string | null
-          pros?: string[] | null
-          rating: number
-          review_text?: string | null
-          review_title?: string | null
+          summary?: string | null
+          temperature?: number | null
+          title?: string | null
+          total_tokens_used?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
-          app_id?: string | null
-          cons?: string[] | null
           created_at?: string | null
-          helpful_count?: number | null
           id?: string
-          is_featured?: boolean | null
-          is_verified?: boolean | null
+          kb_config_id?: string | null
+          last_message_at?: string | null
+          max_tokens?: number | null
+          message_count?: number | null
+          model?: string | null
           organization_id?: string | null
-          pros?: string[] | null
-          rating?: number
-          review_text?: string | null
-          review_title?: string | null
+          summary?: string | null
+          temperature?: number | null
+          title?: string | null
+          total_tokens_used?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "marketplace_app_reviews_app_id_fkey"
-            columns: ["app_id"]
+            foreignKeyName: "kb_conversations_kb_config_id_fkey"
+            columns: ["kb_config_id"]
             isOneToOne: false
-            referencedRelation: "marketplace_apps"
+            referencedRelation: "kb_configurations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "marketplace_app_reviews_organization_id_fkey"
+            foreignKeyName: "kb_conversations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -626,170 +664,330 @@ export type Database = {
           },
         ]
       }
-      marketplace_apps: {
-        Row: {
-          app_config: Json | null
-          approved_at: string | null
-          approved_by: string | null
-          banner_url: string | null
-          base_price: number | null
-          category: string
-          changelog: string | null
-          compatibility_version: string | null
-          created_at: string | null
-          created_by: string | null
-          currency: string | null
-          dashboard_config: Json | null
-          database_tables: string[] | null
-          demo_url: string | null
-          description: string
-          documentation_url: string | null
-          github_repo_url: string | null
-          icon_name: string | null
-          icon_url: string | null
-          id: string
-          install_count: number | null
-          is_active: boolean | null
-          is_featured: boolean | null
-          is_system_app: boolean | null
-          long_description: string | null
-          lovable_project_url: string | null
-          n8n_webhooks: Json | null
-          name: string
-          navigation_config: Json | null
-          pricing_model: string
-          rating_average: number | null
-          rating_count: number | null
-          required_permissions: string[] | null
-          requires_approval: boolean | null
-          screenshots: string[] | null
-          settings_schema: Json | null
-          slug: string
-          subcategory: string | null
-          updated_at: string | null
-          version: string | null
-        }
-        Insert: {
-          app_config?: Json | null
-          approved_at?: string | null
-          approved_by?: string | null
-          banner_url?: string | null
-          base_price?: number | null
-          category?: string
-          changelog?: string | null
-          compatibility_version?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          currency?: string | null
-          dashboard_config?: Json | null
-          database_tables?: string[] | null
-          demo_url?: string | null
-          description: string
-          documentation_url?: string | null
-          github_repo_url?: string | null
-          icon_name?: string | null
-          icon_url?: string | null
-          id?: string
-          install_count?: number | null
-          is_active?: boolean | null
-          is_featured?: boolean | null
-          is_system_app?: boolean | null
-          long_description?: string | null
-          lovable_project_url?: string | null
-          n8n_webhooks?: Json | null
-          name: string
-          navigation_config?: Json | null
-          pricing_model?: string
-          rating_average?: number | null
-          rating_count?: number | null
-          required_permissions?: string[] | null
-          requires_approval?: boolean | null
-          screenshots?: string[] | null
-          settings_schema?: Json | null
-          slug: string
-          subcategory?: string | null
-          updated_at?: string | null
-          version?: string | null
-        }
-        Update: {
-          app_config?: Json | null
-          approved_at?: string | null
-          approved_by?: string | null
-          banner_url?: string | null
-          base_price?: number | null
-          category?: string
-          changelog?: string | null
-          compatibility_version?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          currency?: string | null
-          dashboard_config?: Json | null
-          database_tables?: string[] | null
-          demo_url?: string | null
-          description?: string
-          documentation_url?: string | null
-          github_repo_url?: string | null
-          icon_name?: string | null
-          icon_url?: string | null
-          id?: string
-          install_count?: number | null
-          is_active?: boolean | null
-          is_featured?: boolean | null
-          is_system_app?: boolean | null
-          long_description?: string | null
-          lovable_project_url?: string | null
-          n8n_webhooks?: Json | null
-          name?: string
-          navigation_config?: Json | null
-          pricing_model?: string
-          rating_average?: number | null
-          rating_count?: number | null
-          required_permissions?: string[] | null
-          requires_approval?: boolean | null
-          screenshots?: string[] | null
-          settings_schema?: Json | null
-          slug?: string
-          subcategory?: string | null
-          updated_at?: string | null
-          version?: string | null
-        }
-        Relationships: []
-      }
-      marketplace_settings: {
+      kb_documents: {
         Row: {
           category: string | null
+          content: string
           created_at: string | null
-          description: string | null
+          created_by: string | null
+          embedding_status: string | null
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
           id: string
-          is_public: boolean | null
-          key: string
+          organization_id: string | null
+          processing_status: string | null
+          tags: string[] | null
+          title: string
           updated_at: string | null
           updated_by: string | null
-          value: Json
+          word_count: number | null
         }
         Insert: {
           category?: string | null
+          content: string
           created_at?: string | null
-          description?: string | null
+          created_by?: string | null
+          embedding_status?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
           id?: string
-          is_public?: boolean | null
-          key: string
+          organization_id?: string | null
+          processing_status?: string | null
+          tags?: string[] | null
+          title: string
           updated_at?: string | null
           updated_by?: string | null
-          value: Json
+          word_count?: number | null
         }
         Update: {
           category?: string | null
+          content?: string
           created_at?: string | null
-          description?: string | null
+          created_by?: string | null
+          embedding_status?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
           id?: string
-          is_public?: boolean | null
-          key?: string
+          organization_id?: string | null
+          processing_status?: string | null
+          tags?: string[] | null
+          title?: string
           updated_at?: string | null
           updated_by?: string | null
-          value?: Json
+          word_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kb_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kb_files: {
+        Row: {
+          chunk_count: number | null
+          created_at: string | null
+          extracted_text_length: number | null
+          file_hash: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          kb_config_id: string | null
+          metadata: Json | null
+          mime_type: string | null
+          organization_id: string | null
+          original_name: string
+          processing_completed_at: string | null
+          processing_error: string | null
+          processing_progress: number | null
+          processing_started_at: string | null
+          processing_status: string | null
+          updated_at: string | null
+          uploaded_by: string | null
+          vector_count: number | null
+        }
+        Insert: {
+          chunk_count?: number | null
+          created_at?: string | null
+          extracted_text_length?: number | null
+          file_hash?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          kb_config_id?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          organization_id?: string | null
+          original_name: string
+          processing_completed_at?: string | null
+          processing_error?: string | null
+          processing_progress?: number | null
+          processing_started_at?: string | null
+          processing_status?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+          vector_count?: number | null
+        }
+        Update: {
+          chunk_count?: number | null
+          created_at?: string | null
+          extracted_text_length?: number | null
+          file_hash?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          kb_config_id?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          organization_id?: string | null
+          original_name?: string
+          processing_completed_at?: string | null
+          processing_error?: string | null
+          processing_progress?: number | null
+          processing_started_at?: string | null
+          processing_status?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+          vector_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_files_kb_config_id_fkey"
+            columns: ["kb_config_id"]
+            isOneToOne: false
+            referencedRelation: "kb_configurations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kb_files_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kb_messages: {
+        Row: {
+          confidence_score: number | null
+          content: string
+          context_length: number | null
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          message_type: string
+          metadata: Json | null
+          model_used: string | null
+          organization_id: string | null
+          response_time_ms: number | null
+          source_count: number | null
+          sources: Json | null
+          temperature_used: number | null
+          tokens_used: number | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          content: string
+          context_length?: number | null
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          message_type: string
+          metadata?: Json | null
+          model_used?: string | null
+          organization_id?: string | null
+          response_time_ms?: number | null
+          source_count?: number | null
+          sources?: Json | null
+          temperature_used?: number | null
+          tokens_used?: number | null
+        }
+        Update: {
+          confidence_score?: number | null
+          content?: string
+          context_length?: number | null
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          message_type?: string
+          metadata?: Json | null
+          model_used?: string | null
+          organization_id?: string | null
+          response_time_ms?: number | null
+          source_count?: number | null
+          sources?: Json | null
+          temperature_used?: number | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "kb_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kb_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kb_searches: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string | null
+          query: string
+          results_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          query: string
+          results_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          query?: string
+          results_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_searches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kb_workflows: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          execution_count: number | null
+          failure_count: number | null
+          id: string
+          is_active: boolean | null
+          kb_config_id: string | null
+          last_executed_at: string | null
+          last_execution_status: string | null
+          organization_id: string | null
+          retry_config: Json | null
+          updated_at: string | null
+          webhook_config: Json | null
+          webhook_url: string
+          workflow_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          execution_count?: number | null
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          kb_config_id?: string | null
+          last_executed_at?: string | null
+          last_execution_status?: string | null
+          organization_id?: string | null
+          retry_config?: Json | null
+          updated_at?: string | null
+          webhook_config?: Json | null
+          webhook_url: string
+          workflow_name: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          execution_count?: number | null
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          kb_config_id?: string | null
+          last_executed_at?: string | null
+          last_execution_status?: string | null
+          organization_id?: string | null
+          retry_config?: Json | null
+          updated_at?: string | null
+          webhook_config?: Json | null
+          webhook_url?: string
+          workflow_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_workflows_kb_config_id_fkey"
+            columns: ["kb_config_id"]
+            isOneToOne: false
+            referencedRelation: "kb_configurations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kb_workflows_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       memberships: {
         Row: {
@@ -934,6 +1132,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "organization_feature_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_features: {
+        Row: {
+          created_at: string | null
+          enabled_at: string | null
+          enabled_by: string | null
+          feature_id: string | null
+          feature_settings: Json | null
+          id: string
+          is_enabled: boolean | null
+          organization_id: string | null
+          setup_error: string | null
+          setup_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enabled_at?: string | null
+          enabled_by?: string | null
+          feature_id?: string | null
+          feature_settings?: Json | null
+          id?: string
+          is_enabled?: boolean | null
+          organization_id?: string | null
+          setup_error?: string | null
+          setup_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enabled_at?: string | null
+          enabled_by?: string | null
+          feature_id?: string | null
+          feature_settings?: Json | null
+          id?: string
+          is_enabled?: boolean | null
+          organization_id?: string | null
+          setup_error?: string | null
+          setup_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "system_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_features_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1241,6 +1496,72 @@ export type Database = {
         }
         Relationships: []
       }
+      system_features: {
+        Row: {
+          category: string
+          cleanup_sql: string | null
+          color_hex: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_name: string
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          is_system_feature: boolean | null
+          name: string
+          navigation_config: Json | null
+          required_tables: Json | null
+          setup_sql: string | null
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+          webhook_endpoints: Json | null
+        }
+        Insert: {
+          category?: string
+          cleanup_sql?: string | null
+          color_hex?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_feature?: boolean | null
+          name: string
+          navigation_config?: Json | null
+          required_tables?: Json | null
+          setup_sql?: string | null
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+          webhook_endpoints?: Json | null
+        }
+        Update: {
+          category?: string
+          cleanup_sql?: string | null
+          color_hex?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_feature?: boolean | null
+          name?: string
+          navigation_config?: Json | null
+          required_tables?: Json | null
+          setup_sql?: string | null
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          webhook_endpoints?: Json | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           category: string | null
@@ -1467,6 +1788,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       check_rate_limit: {
         Args: {
           p_identifier: string
@@ -1475,6 +1800,10 @@ export type Database = {
           p_window_minutes?: number
         }
         Returns: boolean
+      }
+      create_organization_vector_table: {
+        Args: { org_name: string; table_suffix?: string }
+        Returns: string
       }
       create_templated_notification: {
         Args: {
@@ -1489,6 +1818,15 @@ export type Database = {
       delete_feedback_with_files: {
         Args: { feedback_id: string }
         Returns: boolean
+      }
+      execute_kb_workflow: {
+        Args: {
+          workflow_name: string
+          payload: Json
+          org_id: string
+          user_id_param?: string
+        }
+        Returns: Json
       }
       extract_org_id_from_path: {
         Args: { file_path: string }
@@ -1541,6 +1879,35 @@ export type Database = {
           invited_by_name: string
           total_count: number
         }[]
+      }
+      get_kb_analytics: {
+        Args: {
+          org_id: string
+          date_range_start?: string
+          date_range_end?: string
+          metrics?: string[]
+          kb_config_id_filter?: string
+        }
+        Returns: Json
+      }
+      get_kb_conversations: {
+        Args: {
+          org_id: string
+          user_id_param: string
+          user_role?: string
+          kb_config_id_filter?: string
+          limit_count?: number
+          offset_count?: number
+        }
+        Returns: Json
+      }
+      get_kb_dashboard_stats: {
+        Args: { org_id: string; user_id_param: string; user_role?: string }
+        Returns: Json
+      }
+      get_kb_permissions: {
+        Args: { org_id: string }
+        Returns: Json
       }
       get_notification_template: {
         Args: { template_type: string }
@@ -1628,9 +1995,49 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
       hash_api_key: {
         Args: { key_text: string }
         Returns: string
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      initialize_default_kb: {
+        Args: { org_id: string; org_name: string }
+        Returns: string
+      }
+      is_kb_admin: {
+        Args: { org_id: string }
+        Returns: boolean
       }
       is_org_admin: {
         Args: { org_id: string }
@@ -1643,6 +2050,26 @@ export type Database = {
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: unknown
       }
       log_security_event: {
         Args: {
@@ -1657,6 +2084,15 @@ export type Database = {
         }
         Returns: string
       }
+      manage_kb_configuration: {
+        Args: {
+          org_id: string
+          config_data: Json
+          user_id_param: string
+          action?: string
+        }
+        Returns: Json
+      }
       render_notification_template: {
         Args: { template_type: string; variables?: Json }
         Returns: {
@@ -1667,6 +2103,17 @@ export type Database = {
       sanitize_input: {
         Args: { input_text: string }
         Returns: string
+      }
+      search_kb_files: {
+        Args: {
+          org_id: string
+          search_query?: string
+          kb_config_id_filter?: string
+          status_filter?: string
+          limit_count?: number
+          offset_count?: number
+        }
+        Returns: Json
       }
       set_limit: {
         Args: { "": number }
@@ -1680,6 +2127,18 @@ export type Database = {
         Args: { "": string }
         Returns: string[]
       }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
       test_rls_security: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1688,6 +2147,18 @@ export type Database = {
           policy_count: number
           test_result: string
         }[]
+      }
+      track_kb_usage: {
+        Args: {
+          org_id: string
+          user_id_param: string
+          event_type: string
+          event_data?: Json
+          kb_config_id_param?: string
+          processing_time_ms?: number
+          tokens_consumed?: number
+        }
+        Returns: undefined
       }
       update_user_profile_and_role: {
         Args: {
@@ -1715,6 +2186,30 @@ export type Database = {
       validate_session_security: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
       verify_api_key: {
         Args: { key_text: string; hash_text: string }

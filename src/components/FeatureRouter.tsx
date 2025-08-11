@@ -24,6 +24,12 @@ const AppDashboard = React.lazy(() => import('@/pages/apps/AppDashboard'));
 const AppSettings = React.lazy(() => import('@/pages/apps/AppSettings'));
 const KBApp = React.lazy(() => import('@/apps/knowledge-base/KBApp'));
 
+// Lazy load Knowledge Base pages
+const KnowledgeBaseDashboard = React.lazy(() => import('@/features/knowledge-base/pages/KnowledgeBaseDashboard'));
+const KnowledgeBaseDocuments = React.lazy(() => import('@/features/knowledge-base/pages/KnowledgeBaseDocuments'));
+const KnowledgeBaseSearch = React.lazy(() => import('@/features/knowledge-base/pages/KnowledgeBaseSearch'));
+const KnowledgeBaseSettings = React.lazy(() => import('@/features/knowledge-base/pages/KnowledgeBaseSettings'));
+
 interface FeatureRouteParams extends Record<string, string> {
   slug: string;
 }
