@@ -4,6 +4,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
 import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
+import { useFeatureNavigationSections } from '@/hooks/database/useOrganizationFeatures';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -149,6 +150,22 @@ const createAppSections = (appInstallations: any[], configs: any[]): SidebarSect
   });
 };
 
+// Create dynamic sections for enabled features
+const createFeatureSections = (featureNavigationSections: any[]): SidebarSection[] => {
+  return featureNavigationSections.map(featureSection => ({
+    key: featureSection.key,
+    title: featureSection.title,
+    items: featureSection.items.map((item: any) => ({
+      name: item.name,
+      href: item.href,
+      icon: Icons[item.icon as keyof typeof Icons] || Icons.package,
+    })),
+    isVisible: () => true,
+    isApp: false,
+    appIcon: featureSection.icon,
+  }));
+};
+
 const baseSidebarSections: SidebarSection[] = [
   {
     key: 'main',
@@ -176,14 +193,15 @@ const baseSidebarSections: SidebarSection[] = [
   },
 ];
 
-// Combine base sections with dynamic app sections
-const getAllSidebarSections = (appInstallations: any[], configs: any[]): SidebarSection[] => {
+// Combine base sections with dynamic app and feature sections
+const getAllSidebarSections = (appInstallations: any[], configs: any[], featureNavigationSections: any[]): SidebarSection[] => {
   const appSections = createAppSections(appInstallations, configs);
+  const featureSections = createFeatureSections(featureNavigationSections);
   
-  // Insert app sections after 'main' section but before management sections
+  // Insert feature sections first, then app sections after 'main' section but before management sections
   const sections = [...baseSidebarSections];
   const mainIndex = sections.findIndex(s => s.key === 'main');
-  sections.splice(mainIndex + 1, 0, ...appSections);
+  sections.splice(mainIndex + 1, 0, ...featureSections, ...appSections);
   
   return sections;
 };
@@ -385,13 +403,14 @@ export function AppSidebar() {
     const { feedback } = useDashboardData();
     const { data: appInstallations = [], isLoading: appsLoading } = useAppInstallations();
     const { configs, isLoading: configsLoading } = useOrganizationFeatureConfigs();
+    const featureNavigationSections = useFeatureNavigationSections();
     const location = useLocation();
 
-    // Get all sections including dynamic app sections
+    // Get all sections including dynamic app and feature sections
     const allSections = useMemo(() => {
       if (!role) return [];
-      return getAllSidebarSections(appInstallations, configs).filter(section => section.isVisible(role));
-    }, [role, appInstallations, configs]);
+      return getAllSidebarSections(appInstallations, configs, featureNavigationSections).filter(section => section.isVisible(role));
+    }, [role, appInstallations, configs, featureNavigationSections]);
 
     const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 

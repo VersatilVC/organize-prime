@@ -19,6 +19,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Upload, Loader2, Building } from 'lucide-react';
 import { CompanyFeatureManagement } from '@/components/admin/CompanyFeatureManagement';
 import { InstalledAppsManagement } from '@/components/admin/InstalledAppsManagement';
+import { FeatureToggleSection } from '@/components/settings/FeatureToggleSection';
 
 interface CompanyData {
   id: string;
@@ -426,7 +427,8 @@ export default function CompanySettings() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="features">
+          <TabsContent value="features" className="space-y-6">
+            <FeatureToggleSection />
             <CompanyFeatureManagement />
           </TabsContent>
 

@@ -5,6 +5,7 @@ import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
 import { AppLayout as SharedAppLayout } from '@/apps/shared/components/AppLayout';
 import { useAppInstallations } from '@/hooks/database/useMarketplaceApps';
+import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
 import NotFound from '@/pages/NotFound';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,100 +28,54 @@ interface FeatureRouteParams extends Record<string, string> {
   slug: string;
 }
 
-function FeatureAccessCheck({ children }: { children: React.ReactNode }) {
-  const { feature, isLoading, hasAccess } = useFeatureContext();
+function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slug: string }) {
+  const { data: organizationFeatures = [], isLoading } = useOrganizationFeatures();
 
-  console.log('🔍 FeatureAccessCheck:', {
-    feature: feature ? { slug: feature.slug, isInstalled: feature.isInstalled } : null,
-    isLoading,
-    hasAccess
+  console.log('🔐 FeatureAccessCheck: Checking access for slug:', slug, {
+    organizationFeatures: organizationFeatures.map(f => ({ slug: f.system_feature.slug, enabled: f.is_enabled })),
+    isLoading
   });
 
   if (isLoading) {
-    console.log('⏳ FeatureAccessCheck: Still loading...');
     return (
-      <div className="flex flex-col space-y-6 p-6">
-        <div className="space-y-4">
-          <Skeleton className="h-4 w-96" />
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-12 w-12 rounded-lg" />
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          </div>
-          <Skeleton className="h-10 w-full" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
+
+  const feature = organizationFeatures.find(f => f.system_feature.slug === slug);
 
   if (!feature) {
-    console.log('❌ FeatureAccessCheck: No feature found, showing 404');
-    return <NotFound />;
-  }
-
-  if (!feature.isInstalled) {
+    console.log('🚫 FeatureAccessCheck: Feature not found or not enabled:', slug);
     return (
-      <div className="flex items-center justify-center min-h-[400px] p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 p-3 rounded-full bg-orange-100 w-fit">
-              <Package className="h-6 w-6 text-orange-600" />
-            </div>
-            <CardTitle>Feature Not Installed</CardTitle>
-            <CardDescription>
-              The "{feature.displayName}" feature is not installed for your organization.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Install this feature from the marketplace to access its functionality.
-            </p>
-            <Button asChild>
-              <Link to="/marketplace">
-                Go to Marketplace
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Feature Not Available</h2>
+          <p className="text-muted-foreground">The feature "{slug}" is not enabled for your organization.</p>
+        </div>
       </div>
     );
   }
 
-  if (!hasAccess) {
+  if (feature.setup_status !== 'completed') {
+    console.log('🚫 FeatureAccessCheck: Feature setup not completed:', slug, feature.setup_status);
     return (
-      <div className="flex items-center justify-center min-h-[400px] p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 p-3 rounded-full bg-red-100 w-fit">
-              <Lock className="h-6 w-6 text-red-600" />
-            </div>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>
-              You don't have permission to access the "{feature.displayName}" feature.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Contact your organization administrator to request access to this feature.
-            </p>
-            <Button variant="outline" asChild>
-              <Link to="/">
-                Return to Dashboard
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Feature Setup Required</h2>
+          <p className="text-muted-foreground">
+            The feature "{feature.system_feature.display_name}" is being set up for your organization.
+          </p>
+          {feature.setup_error && (
+            <p className="text-destructive mt-2">Setup Error: {feature.setup_error}</p>
+          )}
+        </div>
       </div>
     );
   }
 
+  console.log('✅ FeatureAccessCheck: Access granted for feature:', slug);
   return <>{children}</>;
 }
 
@@ -198,14 +153,12 @@ export function EnhancedFeatureRouter() {
 
   console.log('✅ EnhancedFeatureRouter: Rendering traditional feature with slug:', slug);
 
-  // Fall back to traditional feature routing
+  // Fall back to traditional feature routing with new organization features
   return (
     <AppLayout>
-      <FeatureProvider slug={slug}>
-        <FeatureAccessCheck>
-          <FeatureRoutes />
-        </FeatureAccessCheck>
-      </FeatureProvider>
+      <FeatureAccessCheck slug={slug}>
+        <FeatureRoutes />
+      </FeatureAccessCheck>
     </AppLayout>
   );
 }
@@ -225,11 +178,9 @@ export function FeatureRouter() {
 
   return (
     <AppLayout>
-      <FeatureProvider slug={slug}>
-        <FeatureAccessCheck>
-          <FeatureRoutes />
-        </FeatureAccessCheck>
-      </FeatureProvider>
+      <FeatureAccessCheck slug={slug}>
+        <FeatureRoutes />
+      </FeatureAccessCheck>
     </AppLayout>
   );
 }
