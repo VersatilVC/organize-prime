@@ -3,7 +3,6 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
-import { AppLayout as SharedAppLayout } from '@/apps/shared/components/AppLayout';
 // import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
 import NotFound from '@/pages/NotFound';
@@ -19,9 +18,6 @@ const FeatureDashboard = React.lazy(() => import('@/pages/features/FeatureDashbo
 const FeatureSettings = React.lazy(() => import('@/pages/features/FeatureSettings'));
 const FeatureContent = React.lazy(() => import('@/pages/features/FeatureContent'));
 
-// Lazy load app pages
-const AppDashboard = React.lazy(() => import('@/pages/apps/AppDashboard'));
-const AppSettings = React.lazy(() => import('@/pages/apps/AppSettings'));
 const KBApp = React.lazy(() => import('@/apps/knowledge-base/KBApp'));
 
 // Lazy load Knowledge Base pages
@@ -113,49 +109,11 @@ function FeatureRoutes() {
 export function EnhancedFeatureRouter() {
   const params = useParams();
   const { slug } = params as { slug?: string };
-  // Mock app installations data for development
-  const appInstallations: any[] = [];
-
   console.log('🔍 EnhancedFeatureRouter: Component mounted, URL params:', { slug, allParams: params, pathname: window.location.pathname });
 
   if (!slug) {
     console.log('❌ EnhancedFeatureRouter: No slug in URL params, showing NotFound');
     return <NotFound />;
-  }
-
-  // Check if this is a marketplace app
-  const appInstallation = appInstallations.find(
-    installation => installation.marketplace_apps.slug === slug
-  );
-
-  if (appInstallation) {
-    console.log('✅ EnhancedFeatureRouter: Found marketplace app installation:', appInstallation.marketplace_apps.name);
-    
-    return (
-      <SharedAppLayout
-        appId={appInstallation.app_id}
-        appName={appInstallation.marketplace_apps.name}
-        permissions={[]}
-      >
-        <Suspense fallback={
-          <div className="space-y-4">
-            <div className="h-8 bg-muted rounded w-48"></div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="h-32 bg-muted rounded"></div>
-              <div className="h-32 bg-muted rounded"></div>
-              <div className="h-32 bg-muted rounded"></div>
-            </div>
-          </div>
-        }>
-          <Routes>
-            <Route path="" element={<AppDashboard />} />
-            <Route path="dashboard" element={<AppDashboard />} />
-            <Route path="settings" element={<AppSettings />} />
-            <Route path="*" element={<AppDashboard />} />
-          </Routes>
-        </Suspense>
-      </SharedAppLayout>
-    );
   }
 
   console.log('✅ EnhancedFeatureRouter: Rendering traditional feature with slug:', slug);

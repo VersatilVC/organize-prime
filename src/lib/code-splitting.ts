@@ -162,7 +162,7 @@ export class PreloadManager {
       '/settings/company': () => import('../pages/CompanySettings'),
       '/settings/system': () => import('../pages/SystemSettings'),
       '/billing': () => import('../pages/Billing'),
-      '/marketplace': () => import('../pages/Marketplace'),
+      
     };
 
     const importFn = routeMap[path];

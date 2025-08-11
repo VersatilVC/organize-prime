@@ -10,7 +10,7 @@ export const CompanySettings = lazy(() => import('../pages/CompanySettings'));
 export const ProfileSettings = lazy(() => import('../pages/ProfileSettings'));
 export const SystemSettings = lazy(() => import('../pages/SystemSettings'));
 export const Billing = lazy(() => import('../pages/Billing'));
-export const Marketplace = lazy(() => import('../pages/Marketplace'));
+
 export const Feedback = lazy(() => import('../pages/Feedback'));
 export const FeedbackDetail = lazy(() => import('../pages/FeedbackDetail'));
 export const MyFeedback = lazy(() => import('../pages/MyFeedback'));

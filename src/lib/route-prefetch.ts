@@ -5,7 +5,7 @@ const routeLoaders: Array<{ test: (path: string) => boolean; load: () => Promise
   { test: (p) => p === '/' || p === '/dashboard', load: () => import('@/pages/Index') },
   { test: (p) => p.startsWith('/users'), load: () => import('@/pages/Users') },
   { test: (p) => p.startsWith('/organizations'), load: () => import('@/pages/Organizations') },
-  { test: (p) => p.startsWith('/marketplace'), load: () => import('@/pages/Marketplace') },
+  
   { test: (p) => p.startsWith('/billing'), load: () => import('@/pages/Billing') },
   { test: (p) => p.startsWith('/feedback/my'), load: () => import('@/pages/MyFeedback') },
   { test: (p) => p.startsWith('/feedback'), load: () => import('@/pages/Feedback') },
