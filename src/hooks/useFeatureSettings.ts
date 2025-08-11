@@ -89,8 +89,15 @@ export function useFeatureSettings(featureSlug: string) {
     queryKey,
     queryFn: () => fetchFeatureSettings(featureSlug, currentOrganization?.id),
     enabled: !!currentOrganization?.id,
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      if (failureCount < 3 && error?.message?.includes('network')) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
   });
 
   const updateMutation = useMutation({
@@ -116,15 +123,27 @@ export function useFeatureSettings(featureSlug: string) {
       // Return a context object with the snapshotted value
       return { previousSettings };
     },
-    onError: (error, newSettings, context) => {
+    onError: (error: any, newSettings, context) => {
       // Rollback to the previous value
       if (context?.previousSettings) {
         queryClient.setQueryData(queryKey, context.previousSettings);
       }
       
+      let errorMessage = "Failed to save settings. Please try again.";
+      
+      if (error?.message?.includes('rate limit')) {
+        errorMessage = "Too many requests. Please wait a moment before trying again.";
+      } else if (error?.message?.includes('permission')) {
+        errorMessage = "You do not have permission to modify these settings.";
+      } else if (error?.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error?.message?.includes('validation')) {
+        errorMessage = "Invalid settings data. Please check your inputs.";
+      }
+      
       toast({
         title: 'Failed to save settings',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -155,10 +174,20 @@ export function useFeatureSettings(featureSlug: string) {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Failed to reset feature settings:', error);
+      
+      let errorMessage = "Failed to reset settings. Please try again.";
+      
+      if (error?.message?.includes('permission')) {
+        errorMessage = "You do not have permission to reset these settings.";
+      } else if (error?.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
       toast({
         title: 'Failed to reset settings',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: errorMessage,
         variant: 'destructive',
       });
     },

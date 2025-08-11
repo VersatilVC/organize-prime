@@ -89,6 +89,14 @@ export function useOrganizationFeatures(organizationId?: string) {
       ];
     },
     enabled: !!orgId,
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      if (failureCount < 3 && error?.message?.includes('network')) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
@@ -148,10 +156,22 @@ export function useToggleOrganizationFeature() {
       queryClient.invalidateQueries({ queryKey: ['organization-features'] });
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Failed to toggle feature:', error);
+      
+      let errorMessage = "Failed to update feature status. Please try again.";
+      
+      if (error?.message?.includes('rate limit')) {
+        errorMessage = "Too many requests. Please wait a moment before trying again.";
+      } else if (error?.message?.includes('permission')) {
+        errorMessage = "You do not have permission to perform this action.";
+      } else if (error?.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
       toast({
         title: 'Failed to update feature',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: errorMessage,
         variant: 'destructive',
       });
     },

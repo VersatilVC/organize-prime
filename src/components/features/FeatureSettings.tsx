@@ -4,7 +4,8 @@ import { DynamicSettingsForm } from './DynamicSettingsForm';
 import { useFeatureSettings } from '@/hooks/useFeatureSettings';
 import { getFeatureSettings } from '@/lib/feature-settings-schemas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Lock, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, AlertTriangle, Lock, Settings } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 
 export function FeatureSettings() {
@@ -86,21 +87,35 @@ export function FeatureSettings() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 p-3 rounded-full bg-red-100 w-fit">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
-            </div>
-            <CardTitle>Error Loading Settings</CardTitle>
-            <CardDescription>
-              {error instanceof Error ? error.message : 'Failed to load feature settings'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
+            <h3 className="font-semibold mb-2">Failed to Load Settings</h3>
+            <p className="text-muted-foreground mb-4">
+              We couldn't load the settings for this feature. Please try again.
+            </p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

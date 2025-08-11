@@ -5,11 +5,9 @@ import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
 import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
 import NotFound from '@/pages/NotFound';
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, Lock, Package } from 'lucide-react';
+import { EmptyState } from '@/components/composition/EmptyState';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Loader2, AlertTriangle, Lock, Settings } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy load feature pages
@@ -30,7 +28,7 @@ interface FeatureRouteParams extends Record<string, string> {
 }
 
 function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slug: string }) {
-  const { data: organizationFeatures = [], isLoading } = useOrganizationFeatures();
+  const { data: organizationFeatures = [], isLoading, error } = useOrganizationFeatures();
 
   console.log('🔐 FeatureAccessCheck: Checking access for slug:', slug, {
     organizationFeatures: organizationFeatures.map(f => ({ slug: f.system_feature.slug, enabled: f.is_enabled })),
@@ -39,9 +37,27 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading feature...</p>
+        </div>
       </div>
+    );
+  }
+
+  if (error) {
+    console.error('❌ FeatureAccessCheck: Error loading features:', error);
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Error Loading Feature"
+        description="We encountered an error while loading this feature. Please try again."
+        action={{
+          label: "Retry",
+          onClick: () => window.location.reload()
+        }}
+      />
     );
   }
 
@@ -50,29 +66,34 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
   if (!feature) {
     console.log('🚫 FeatureAccessCheck: Feature not found or not enabled:', slug);
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Feature Not Available</h2>
-          <p className="text-muted-foreground">The feature "{slug}" is not enabled for your organization.</p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Lock}
+        title="Feature Not Available"
+        description={`The ${slug.replace('-', ' ')} feature is not enabled for your organization.`}
+        action={{
+          label: "Browse Features",
+          onClick: () => window.location.href = "/features"
+        }}
+      />
     );
   }
 
   if (feature.setup_status !== 'completed') {
     console.log('🚫 FeatureAccessCheck: Feature setup not completed:', slug, feature.setup_status);
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Feature Setup Required</h2>
-          <p className="text-muted-foreground">
-            The feature "{feature.system_feature.display_name}" is being set up for your organization.
-          </p>
-          {feature.setup_error && (
-            <p className="text-destructive mt-2">Setup Error: {feature.setup_error}</p>
-          )}
-        </div>
-      </div>
+      <EmptyState
+        icon={Settings}
+        title="Feature Setup Required"
+        description={`The ${feature.system_feature.display_name} feature is being set up for your organization.`}
+      >
+        {feature.setup_error && (
+          <Alert variant="destructive" className="mt-4 max-w-md mx-auto">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Setup Error</AlertTitle>
+            <AlertDescription>{feature.setup_error}</AlertDescription>
+          </Alert>
+        )}
+      </EmptyState>
     );
   }
 
