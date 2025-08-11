@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
-import { useCreateAppReview, useUpdateAppReview, useUserAppReview } from '@/hooks/database/useAppReviews';
+// import { useCreateAppReview, useUpdateAppReview, useUserAppReview } from '@/hooks/database/useAppReviews'; // Removed - marketplace functionality
 
 interface ReviewModalProps {
   appId: string;
