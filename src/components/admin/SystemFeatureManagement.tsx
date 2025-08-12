@@ -6,32 +6,21 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { Icons } from '@/components/ui/icons';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
-import { useSystemFeatureConfigs } from '@/hooks/useSystemFeatureConfigs';
 
 export function SystemFeatureManagement() {
-  const { features: systemFeatures, isLoading: featuresLoading } = useSystemFeatures();
-  const { configs, isLoading: configsLoading, updateConfig } = useSystemFeatureConfigs();
+  const { features: systemFeatures, isLoading: featuresLoading, updateFeature } = useSystemFeatures();
 
-  const isFeatureGloballyEnabled = (featureSlug: string) => {
-    const config = configs.find(c => c.feature_slug === featureSlug);
-    return config?.is_enabled_globally ?? false;
+  const handleToggleGlobalFeature = (feature: typeof systemFeatures[0], isEnabled: boolean) => {
+    updateFeature({
+      id: feature.id,
+      updates: {
+        is_active: isEnabled,
+        sort_order: feature.sort_order,
+      }
+    });
   };
 
-  const handleToggleGlobalFeature = (featureSlug: string, isEnabled: boolean) => {
-    const config = configs.find(c => c.feature_slug === featureSlug);
-    if (config) {
-      updateConfig({
-        id: config.id,
-        updates: {
-          is_enabled_globally: isEnabled,
-          // When disabling globally, also hide from marketplace
-          is_marketplace_visible: isEnabled ? config.is_marketplace_visible : false,
-        }
-      });
-    }
-  };
-
-  if (featuresLoading || configsLoading) {
+  if (featuresLoading) {
     return (
       <Card>
         <CardHeader>
@@ -58,7 +47,6 @@ export function SystemFeatureManagement() {
       <CardContent>
         <div className="space-y-6">
           {systemFeatures.map((feature) => {
-            const isGloballyEnabled = isFeatureGloballyEnabled(feature.slug);
             const IconComponent = Icons[feature.icon_name as keyof typeof Icons] || Icons.package;
             
             return (
@@ -81,7 +69,7 @@ export function SystemFeatureManagement() {
                       <Badge variant="outline" className="text-xs">
                         {feature.category}
                       </Badge>
-                      {!isGloballyEnabled && (
+                      {!feature.is_active && (
                         <Badge variant="secondary" className="text-xs">
                           Disabled Globally
                         </Badge>
@@ -95,8 +83,8 @@ export function SystemFeatureManagement() {
                   </div>
                 </div>
                 <Switch
-                  checked={isGloballyEnabled}
-                  onCheckedChange={(checked) => handleToggleGlobalFeature(feature.slug, checked)}
+                  checked={feature.is_active}
+                  onCheckedChange={(checked) => handleToggleGlobalFeature(feature, checked)}
                 />
               </div>
             );

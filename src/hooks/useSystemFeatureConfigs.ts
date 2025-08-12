@@ -84,6 +84,9 @@ export function useSystemFeatureConfigs() {
     onSuccess: () => {
       toast({ title: 'Feature configuration updated successfully' });
       queryClient.invalidateQueries({ queryKey });
+      // Invalidate organization features to update sidebar immediately
+      queryClient.invalidateQueries({ queryKey: ['organization-features'] });
+      queryClient.invalidateQueries({ queryKey: ['system-features'] });
     },
     onError: (error) => {
       toast({
@@ -99,6 +102,9 @@ export function useSystemFeatureConfigs() {
     onSuccess: () => {
       toast({ title: 'Menu order updated successfully' });
       queryClient.invalidateQueries({ queryKey });
+      // Invalidate organization features to update sidebar immediately
+      queryClient.invalidateQueries({ queryKey: ['organization-features'] });
+      queryClient.invalidateQueries({ queryKey: ['system-features'] });
     },
     onError: (error) => {
       toast({
