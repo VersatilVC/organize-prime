@@ -87,8 +87,12 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
 function FeatureRoutes() {
   const { slug } = useParams<FeatureRouteParams>();
   
+  console.log('🔍 FeatureRoutes: Component mounted with slug:', slug);
+  console.log('🔍 FeatureRoutes: Current pathname:', window.location.pathname);
+  
   // Special handling for Knowledge Base app
   if (slug === 'knowledge-base') {
+    console.log('🔍 FeatureRoutes: Detected knowledge-base slug, rendering KBApp');
     return (
       <Suspense fallback={
         <div className="space-y-4">
