@@ -12,7 +12,15 @@ interface KBPlaceholderPageProps {
 
 export function KBPlaceholderPage({ title }: KBPlaceholderPageProps) {
   return (
-    <div className="container mx-auto py-16">
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link to="/features/knowledge-base/dashboard" className="hover:text-foreground">
+          Knowledge Base
+        </Link>
+        <span>/</span>
+        <span className="text-foreground">{title}</span>
+      </div>
+
       <Card className="max-w-md mx-auto text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">
