@@ -262,21 +262,32 @@ const NavigationItem = React.memo(({
   isActive: boolean;
   feedbackCount: number;
 }) => {
+  const location = useLocation();
   const queryClient = useQueryClient();
+  
   const handleHover = () => {
     prefetchByPath(item.href);
     prefetchQueriesByPath(item.href, queryClient);
   };
 
+  // More precise active state detection
+  const isItemActive = useMemo(() => {
+    if (!item.href) return false;
+    return location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+  }, [location.pathname, item.href]);
+
+  // Get the correct icon component, fallback to package if not found
+  const IconComponent = typeof item.icon === 'string' ? Icons[item.icon as keyof typeof Icons] || Icons.package : item.icon;
+
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive}>
+      <SidebarMenuButton asChild isActive={isItemActive}>
         <NavLink 
           to={item.href} 
-          className={isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
+          className={isItemActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
           onMouseEnter={handleHover}
         >
-          <item.icon className="h-4 w-4" />
+          <IconComponent className="h-4 w-4" />
           <span>{item.name}</span>
           {/* Show feature-specific badge if available */}
           {item.badge && item.badge > 0 && (

@@ -188,10 +188,20 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
           href = href.replace('/apps/knowledge-base/', '/features/knowledge-base/');
         }
         
+        // Helper function to convert PascalCase/capital case icons to camelCase
+        const normalizeIconName = (iconName: string): string => {
+          if (!iconName) return 'package';
+          
+          // Convert first letter to lowercase for camelCase  
+          const normalized = iconName.charAt(0).toLowerCase() + iconName.slice(1);
+          console.log('🔍 Icon normalization:', iconName, '->', normalized);
+          return normalized;
+        };
+        
         return {
           name: page.title || page.name,
           href,
-          icon: page.icon || 'package',
+          icon: normalizeIconName(page.icon || 'package'),
         };
       });
       
