@@ -44,7 +44,12 @@ export function useOrganizationFeatures(organizationId?: string) {
   return useQuery({
     queryKey: ['organization-features', orgId],
     queryFn: async (): Promise<OrganizationFeatureWithSystem[]> => {
-      if (!orgId) return [];
+      if (!orgId) {
+        console.log('🔍 useOrganizationFeatures: No organization ID available');
+        return [];
+      }
+
+      console.log('🔍 useOrganizationFeatures: Fetching features for org:', orgId);
 
       // Get organization features with their system feature details
       const { data, error } = await supabase
@@ -64,14 +69,39 @@ export function useOrganizationFeatures(organizationId?: string) {
         .eq('is_user_accessible', true);
 
       if (error) {
-        console.error('Error fetching organization features:', error);
+        console.error('❌ useOrganizationFeatures: Error fetching organization features:', error);
         throw new Error('Failed to fetch organization features');
       }
 
-      if (!data || data.length === 0) return [];
+      console.log('🔍 useOrganizationFeatures: Raw organization features:', data);
+
+      if (!data || data.length === 0) {
+        console.log('🔍 useOrganizationFeatures: No organization features found');
+        return [];
+      }
+
+      // Validate feature_slug is not null/undefined
+      const validOrgFeatures = data.filter(item => {
+        if (!item.feature_slug) {
+          console.error('❌ useOrganizationFeatures: Invalid feature with missing slug:', item);
+          return false;
+        }
+        return true;
+      });
+
+      if (validOrgFeatures.length !== data.length) {
+        console.warn('⚠️ useOrganizationFeatures: Filtered out invalid features');
+      }
 
       // Get feature slugs to check if they're globally enabled
-      const featureSlugs = data.map(item => item.feature_slug);
+      const featureSlugs = validOrgFeatures.map(item => item.feature_slug);
+      console.log('🔍 useOrganizationFeatures: Feature slugs to check:', featureSlugs);
+
+      if (featureSlugs.length === 0) {
+        console.log('🔍 useOrganizationFeatures: No valid feature slugs found');
+        return [];
+      }
+
       const { data: systemFeatures, error: systemError } = await supabase
         .from('system_feature_configs')
         .select('*')
@@ -79,18 +109,27 @@ export function useOrganizationFeatures(organizationId?: string) {
         .eq('is_enabled_globally', true);
 
       if (systemError) {
-        console.error('Error fetching system features:', systemError);
+        console.error('❌ useOrganizationFeatures: Error fetching system features:', systemError);
         throw new Error('Failed to fetch system features');
       }
 
+      console.log('🔍 useOrganizationFeatures: System features found:', systemFeatures);
+
       // Only include organization features where the system feature is globally enabled
       const enabledSystemFeatures = new Set(systemFeatures?.map(sf => sf.feature_slug) || []);
+      console.log('🔍 useOrganizationFeatures: Enabled system features set:', enabledSystemFeatures);
       
-      return data
-        .filter(item => enabledSystemFeatures.has(item.feature_slug))
+      const finalFeatures = validOrgFeatures
+        .filter(item => {
+          const hasSystemFeature = enabledSystemFeatures.has(item.feature_slug);
+          if (!hasSystemFeature) {
+            console.warn(`⚠️ useOrganizationFeatures: Feature ${item.feature_slug} not globally enabled, filtering out`);
+          }
+          return hasSystemFeature;
+        })
         .map(item => {
           const systemFeature = systemFeatures?.find(sf => sf.feature_slug === item.feature_slug);
-          return {
+          const feature = {
             id: item.id,
             organization_id: item.organization_id,
             feature_slug: item.feature_slug,
@@ -109,7 +148,12 @@ export function useOrganizationFeatures(organizationId?: string) {
               updated_at: systemFeature?.updated_at || item.updated_at,
             }
           };
+          console.log('🔍 useOrganizationFeatures: Created feature object:', feature);
+          return feature;
         });
+
+      console.log('🔍 useOrganizationFeatures: Final features to return:', finalFeatures);
+      return finalFeatures;
     },
     enabled: !!orgId,
     retry: (failureCount, error) => {
@@ -127,34 +171,52 @@ export function useOrganizationFeatures(organizationId?: string) {
 export function useFeatureNavigationSections(organizationId?: string): FeatureNavigationSection[] {
   const { data: features = [] } = useOrganizationFeatures(organizationId);
 
-  return features.map(feature => {
-    const featureSlug = feature.feature_slug;
-    const navigationConfig = getFeatureNavigation(featureSlug);
-    
-    // Default navigation items for all features
-    const defaultItems = [
-      { name: 'Dashboard', href: `/features/${featureSlug}`, icon: 'home' },
-      { name: 'Settings', href: `/features/${featureSlug}/settings`, icon: 'settings' }
-    ];
+  console.log('🔍 useFeatureNavigationSections: Processing features for navigation:', features);
 
-    // Use custom navigation items if they exist
-    let navigationItems = defaultItems;
-    if (navigationConfig.items && Array.isArray(navigationConfig.items) && navigationConfig.items.length > 0) {
-      navigationItems = navigationConfig.items.map((navItem: any) => ({
-        name: navItem.name || navItem.label,
-        href: navItem.href || `/features/${featureSlug}/${navItem.slug || navItem.name.toLowerCase()}`,
-        icon: navItem.icon || 'package'
-      }));
-    }
+  const sections = features
+    .filter(feature => {
+      if (!feature.feature_slug) {
+        console.error('❌ useFeatureNavigationSections: Feature missing slug:', feature);
+        return false;
+      }
+      return true;
+    })
+    .map(feature => {
+      const featureSlug = feature.feature_slug;
+      console.log('🔍 useFeatureNavigationSections: Processing feature:', featureSlug);
+      
+      const navigationConfig = getFeatureNavigation(featureSlug);
+      
+      // Default navigation items for all features
+      const defaultItems = [
+        { name: 'Dashboard', href: `/features/${featureSlug}`, icon: 'home' },
+        { name: 'Settings', href: `/features/${featureSlug}/settings`, icon: 'settings' }
+      ];
 
-    return {
-      key: `feature-${featureSlug}`,
-      title: getFeatureDisplayName(featureSlug),
-      icon: getFeatureIcon(featureSlug),
-      color: getFeatureColor(featureSlug),
-      items: navigationItems
-    };
-  });
+      // Use custom navigation items if they exist
+      let navigationItems = defaultItems;
+      if (navigationConfig.items && Array.isArray(navigationConfig.items) && navigationConfig.items.length > 0) {
+        navigationItems = navigationConfig.items.map((navItem: any) => ({
+          name: navItem.name || navItem.label,
+          href: navItem.href || `/features/${featureSlug}/${navItem.slug || navItem.name.toLowerCase()}`,
+          icon: navItem.icon || 'package'
+        }));
+      }
+
+      const section = {
+        key: `feature-${featureSlug}`,
+        title: getFeatureDisplayName(featureSlug),
+        icon: getFeatureIcon(featureSlug),
+        color: getFeatureColor(featureSlug),
+        items: navigationItems
+      };
+
+      console.log('🔍 useFeatureNavigationSections: Created section:', section);
+      return section;
+    });
+
+  console.log('🔍 useFeatureNavigationSections: Final navigation sections:', sections);
+  return sections;
 }
 
 export function useToggleOrganizationFeature() {
