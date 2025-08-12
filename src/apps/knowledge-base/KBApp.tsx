@@ -39,9 +39,10 @@ export default function KBApp() {
   const defaultRoute = React.useMemo(() => {
     const defaultPageRoute = routes.find(r => r.isDefault);
     if (defaultPageRoute) {
-      return defaultPageRoute.path.replace('/apps/knowledge-base/', '');
+      // Remove the /knowledge-base/ prefix to get the local route
+      return defaultPageRoute.path.replace('/knowledge-base/', '');
     }
-    return routes.length > 0 ? routes[0].path.replace('/apps/knowledge-base/', '') : 'dashboard';
+    return routes.length > 0 ? routes[0].path.replace('/knowledge-base/', '') : 'dashboard';
   }, [routes]);
 
   if (isLoading) {
@@ -63,7 +64,8 @@ export default function KBApp() {
           <Routes>
             <Route path="" element={<Navigate to={defaultRoute} replace />} />
             {routes.map((route) => {
-              const routePath = route.path.replace('/apps/knowledge-base/', '');
+              // Remove the /knowledge-base/ prefix to get the local route path
+              const routePath = route.path.replace('/knowledge-base/', '');
               console.log('🔍 KBApp: Creating route:', { originalPath: route.path, routePath, title: route.title });
               return (
                 <Route
