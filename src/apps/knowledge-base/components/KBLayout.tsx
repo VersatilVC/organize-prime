@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { KBProvider } from '../context/KBContext';
 import { useFeatureRoutes } from '@/hooks/useFeatureRoutes';
+import { useRouteHierarchy } from '@/hooks/useNavigationState';
 
 interface KBLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface KBLayoutProps {
 export function KBLayout({ children }: KBLayoutProps) {
   const { pathname } = useLocation();
   const { routes } = useFeatureRoutes('knowledge-base');
+  const { activeRoute } = useRouteHierarchy(routes);
 
   // Use the centralized navigation system for route matching
   const currentPage = React.useMemo(() => {

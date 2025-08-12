@@ -1,88 +1,72 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Icons } from '@/components/ui/icons';
+
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useDashboardData } from '@/hooks/useDashboardData';
-// import { useAppInstallations } from '@/hooks/database/useMarketplaceApps'; // Removed - marketplace functionality
 import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
 import { useFeatureNavigationSections } from '@/hooks/database/useOrganizationFeatures';
-import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Icons } from '@/components/ui/icons';
-import { cn } from '@/lib/utils';
 import { prefetchByPath } from '@/lib/route-prefetch';
-import { useQueryClient } from '@tanstack/react-query';
-import { prefetchQueriesByPath } from '@/lib/query-prefetch';
 
-// Define sidebar sections with their navigation items
-interface SidebarSection {
-  key: string;
-  title: string;
-  items: Array<{
-    name: string;
-    href: string;
-    icon: any;
-    badge?: number;
-  }>;
-  isVisible: (role: string) => boolean;
-  isApp?: boolean;
-  appIcon?: string;
+// Types
+interface SidebarItem {
+  name: string;
+  href: string;
+  icon: any;
+  badge?: number;
+  requiresRole?: string;
 }
 
-// Helper function to get items for each section based on role
-const getSectionItems = (sectionKey: string, role: string, section?: SidebarSection) => {
-  // For app sections, return the items from the section itself
-  if (sectionKey.startsWith('app-') && section) {
-    console.log(`Returning items for app section ${sectionKey}:`, section.items);
-    return section.items;
-  }
-  
-  // For feature sections, return the items from the section itself
-  if (sectionKey.startsWith('feature-') && section) {
-    return section.items;
-  }
-  
-  switch (sectionKey) {
+interface SidebarSection {
+  title: string;
+  key: string;
+  items: SidebarItem[];
+  requiresRole?: string;
+  collapsible?: boolean;
+  defaultExpanded?: boolean;
+}
+
+// Helper functions for section creation
+const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support', role: string) => {
+  switch (type) {
     case 'main':
-      const mainItems = [
-        { name: 'Dashboard', href: '/', icon: Icons.home },
-        { name: 'Notifications', href: '/notifications', icon: Icons.bell }
+      return [
+        { name: 'Dashboard', href: '/dashboard', icon: Icons.home },
+        { name: 'Organizations', href: '/organizations', icon: Icons.building },
       ];
-      if (role === 'super_admin') {
-        mainItems.push({ name: 'Organizations', href: '/organizations', icon: Icons.building });
-      }
-      if (role === 'admin' || role === 'super_admin') {
-        mainItems.push({ name: 'Users', href: '/users', icon: Icons.users });
-      }
-      return mainItems;
     
     case 'management':
-      return [
-        { name: 'Company Settings', href: '/settings/company', icon: Icons.settings },
-        { name: 'Billing', href: '/billing', icon: Icons.creditCard },
+      const managementItems = [
+        { name: 'Users', href: '/users', icon: Icons.users },
+        { name: 'Feedback', href: '/feedback', icon: Icons.messageSquare },
       ];
+      
+      if (role === 'admin') {
+        managementItems.push({ name: 'Manage Feedback', href: '/admin/feedback', icon: Icons.settings });
+      }
+      
+      return managementItems;
     
     case 'system-admin':
-      return [
+      return role === 'super_admin' ? [
         { name: 'System Settings', href: '/settings/system', icon: Icons.settings },
-        { name: 'Notification Management', href: '/settings/notifications', icon: Icons.bell },
-        { name: 'Feedback Management', href: '/admin/feedback', icon: Icons.mail },
-      ];
+        { name: 'All Organizations', href: '/admin/organizations', icon: Icons.building },
+        { name: 'System Users', href: '/admin/users', icon: Icons.users },
+        { name: 'Feature Management', href: '/admin/features', icon: Icons.settings },
+        { name: 'Global Notifications', href: '/notifications/manage', icon: Icons.bell }
+      ] : [];
     
     case 'support':
       return [
-        { name: 'Send Feedback', href: '/feedback', icon: Icons.mail },
-        { name: 'Help Center', href: '/help', icon: Icons.helpCircle },
+        { name: 'Notifications', href: '/notifications', icon: Icons.bell },
+        { name: 'Profile Settings', href: '/settings/profile', icon: Icons.user },
+        { name: 'Company Settings', href: '/settings/company', icon: Icons.building, requiresRole: 'admin' },
       ];
     
     default:
@@ -90,176 +74,139 @@ const getSectionItems = (sectionKey: string, role: string, section?: SidebarSect
   }
 };
 
-// Create dynamic sections for installed marketplace apps
-const createAppSections = (appInstallations: any[], configs: any[]): SidebarSection[] => {
-  console.log('Creating app sections for installations:', appInstallations);
-  console.log('Organization feature configs:', configs);
-  
-  // Helper function to check if app is enabled
-  const isAppEnabled = (appSlug: string) => {
-    const config = configs.find(c => c.feature_slug === appSlug);
-    return config?.is_enabled !== false; // Default to enabled if no config exists
-  };
-  
-  // Filter installations to only include enabled apps
-  const enabledInstallations = appInstallations.filter(installation => {
-    const app = installation.marketplace_apps;
-    const enabled = isAppEnabled(app.slug);
-    console.log(`App ${app.name} (${app.slug}) enabled:`, enabled);
-    return enabled;
-  });
-  
-  return enabledInstallations.map(installation => {
-    const app = installation.marketplace_apps;
-    const navigationConfig = installation.custom_navigation || {};
-    
-    // Default navigation items for all apps
-    const defaultItems = [
-      { name: 'Dashboard', href: `/features/${app.slug}`, icon: Icons.home },
-      { name: 'Settings', href: `/features/${app.slug}/settings`, icon: Icons.settings }
-    ];
-
-    // Check if custom_navigation has items array, even if empty
-    let navigationItems = defaultItems;
-    if (navigationConfig && Array.isArray(navigationConfig.items) && navigationConfig.items.length > 0) {
-      // Use custom navigation items if they exist
-      navigationItems = navigationConfig.items.map((navItem: any) => ({
-        name: navItem.name || navItem.label,
-        href: navItem.href || navItem.path || `/features/${app.slug}/${navItem.slug || navItem.name.toLowerCase()}`,
-        icon: Icons[navItem.icon as keyof typeof Icons] || Icons.package,
-        badge: navItem.badge
-      }));
-    }
-    // Otherwise, always use default items
-
-    console.log(`Creating section for enabled app ${app.name}:`, {
-      slug: app.slug,
-      navigationItems,
-      hasCustomNav: navigationConfig && Array.isArray(navigationConfig.items)
-    });
-
-    return {
+// Create app sections for marketplace applications
+const createAppSections = (installedApps: any[]) => {
+  return installedApps
+    .filter(app => app.status === 'enabled')
+    .map(app => ({
+      title: app.display_name || app.name,
       key: `app-${app.slug}`,
-      title: app.name,
-      items: navigationItems,
-      isVisible: () => true,
-      isApp: true,
-      appIcon: app.icon_name || 'package',
-    };
-  });
+      items: app.navigation || [
+        { name: 'Dashboard', href: `/apps/${app.slug}`, icon: Icons.home },
+        { name: 'Settings', href: `/apps/${app.slug}/settings`, icon: Icons.settings, requiresRole: 'admin' }
+      ],
+      collapsible: true,
+      defaultExpanded: false
+    }));
 };
 
-// Create dynamic sections for enabled features
-const createFeatureSections = (featureNavigationSections: any[]): SidebarSection[] => {
-  return featureNavigationSections.map(featureSection => ({
-    key: featureSection.key,
-    title: featureSection.title,
-    items: featureSection.items.map((item: any) => ({
-      name: item.name,
-      href: item.href,
-      icon: Icons[item.icon as keyof typeof Icons] || Icons.package,
-    })),
-    isVisible: () => true,
-    isApp: false,
-    appIcon: featureSection.icon,
+// Create feature sections
+const createFeatureSections = (featureNavigationSections: any[]) => {
+  return featureNavigationSections.map(section => ({
+    title: section.title,
+    key: `feature-${section.title.toLowerCase().replace(/\s+/g, '-')}`,
+    items: section.items,
+    collapsible: true,
+    defaultExpanded: true
   }));
 };
 
-const baseSidebarSections: SidebarSection[] = [
+// Base sidebar sections
+const baseSidebarSections = (role: string): SidebarSection[] => [
   {
-    key: 'main',
     title: 'Main',
-    items: [], // Will be populated dynamically
-    isVisible: () => true,
+    key: 'main',
+    items: getSectionItems('main', role),
+    collapsible: false,
+    defaultExpanded: true
   },
   {
-    key: 'management',
     title: 'Management',
-    items: [], // Will be populated dynamically
-    isVisible: (role) => role === 'admin' || role === 'super_admin',
+    key: 'management',
+    items: getSectionItems('management', role),
+    collapsible: true,
+    defaultExpanded: true
   },
   {
+    title: 'System Administration',
     key: 'system-admin',
-    title: 'System Admin',
-    items: [], // Will be populated dynamically
-    isVisible: (role) => role === 'super_admin',
+    items: getSectionItems('system-admin', role),
+    collapsible: true,
+    defaultExpanded: false,
+    requiresRole: 'super_admin'
   },
   {
-    key: 'support',
     title: 'Support',
-    items: [], // Will be populated dynamically
-    isVisible: () => true,
-  },
+    key: 'support',
+    items: getSectionItems('support', role),
+    collapsible: true,
+    defaultExpanded: false
+  }
 ];
 
-// Combine base sections with dynamic app and feature sections
-const getAllSidebarSections = (appInstallations: any[], configs: any[], featureNavigationSections: any[]): SidebarSection[] => {
-  const appSections = createAppSections(appInstallations, configs);
+// Get all sidebar sections
+const getAllSidebarSections = (
+  role: string,
+  organizationFeatureConfigs: any[],
+  featureNavigationSections: any[]
+) => {
+  const baseSections = baseSidebarSections(role).filter(section => {
+    if (section.requiresRole) {
+      return role === section.requiresRole;
+    }
+    return section.items.length > 0;
+  });
+
   const featureSections = createFeatureSections(featureNavigationSections);
-  
-  // Insert feature sections first, then app sections after 'main' section but before management sections
-  const sections = [...baseSidebarSections];
-  const mainIndex = sections.findIndex(s => s.key === 'main');
-  sections.splice(mainIndex + 1, 0, ...featureSections, ...appSections);
-  
-  return sections;
+
+  // Insert feature sections after management
+  const managementIndex = baseSections.findIndex(s => s.key === 'management');
+  if (managementIndex >= 0) {
+    baseSections.splice(managementIndex + 1, 0, ...featureSections);
+  } else {
+    baseSections.push(...featureSections);
+  }
+
+  return baseSections;
 };
 
-// Hook for managing sidebar section states
-function useSidebarSectionState(allSections: SidebarSection[] = []) {
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+// Hook for managing section collapse state
+const useSidebarSectionState = (sections: SidebarSection[]) => {
   const location = useLocation();
 
-  // Load initial state from localStorage
-  useEffect(() => {
-    if (!allSections || allSections.length === 0) return;
+  const collapsedSections = useMemo(() => {
+    const state: Record<string, boolean> = {};
     
-    const savedStates: Record<string, boolean> = {};
-    allSections.forEach(section => {
-      const saved = localStorage.getItem(`sidebar_section_${section.key}_collapsed`);
-      savedStates[section.key] = saved === 'true';
-    });
-    setCollapsedSections(savedStates);
-  }, [allSections]);
+    sections.forEach(section => {
+      const storageKey = `sidebar-section-${section.key}`;
+      const stored = localStorage.getItem(storageKey);
+      const defaultState = !section.defaultExpanded;
+      
+      state[section.key] = stored !== null ? stored === 'true' : defaultState;
 
-  // Auto-expand section if user navigates to a page within collapsed section
-  useEffect(() => {
-    if (!allSections || allSections.length === 0) return;
-    
-    allSections.forEach(section => {
-      const items = getSectionItems(section.key, 'user', section); // Pass section for feature sections
-      const hasActiveItem = items.some(item => {
-        if (item.href === '/') {
-          return location.pathname === '/';
-        }
-        return location.pathname.startsWith(item.href);
-      });
-
-      if (hasActiveItem && collapsedSections[section.key]) {
-        toggleSection(section.key);
+      // Auto-expand section if current route is within it
+      const isCurrentSectionActive = section.items.some(item => 
+        location.pathname === item.href || 
+        (item.href !== '/' && location.pathname.startsWith(item.href + '/'))
+      );
+      
+      if (isCurrentSectionActive) {
+        state[section.key] = false; // false means expanded
       }
     });
-  }, [location.pathname, allSections, collapsedSections]);
+    
+    return state;
+  }, [sections, location.pathname]);
 
   const toggleSection = (sectionKey: string) => {
-    setCollapsedSections(prev => {
-      const newState = { ...prev, [sectionKey]: !prev[sectionKey] };
-      localStorage.setItem(`sidebar_section_${sectionKey}_collapsed`, String(newState[sectionKey]));
-      return newState;
-    });
+    const newState = !collapsedSections[sectionKey];
+    const storageKey = `sidebar-section-${sectionKey}`;
+    
+    localStorage.setItem(storageKey, String(newState));
+    
+    // Force a re-render by updating a state value that affects the hook
+    window.dispatchEvent(new CustomEvent('sidebar-toggle'));
   };
 
   return { collapsedSections, toggleSection };
-}
+};
 
-// Memoized NavigationItem component
+// Enhanced NavigationItem component with precise active state detection
 const NavigationItem = React.memo(({ 
   item, 
-  isActive, 
-  feedbackCount 
+  feedbackCount
 }: {
   item: { name: string; href: string; icon: any; badge?: number };
-  isActive: boolean;
   feedbackCount: number;
 }) => {
   const location = useLocation();
@@ -267,26 +214,43 @@ const NavigationItem = React.memo(({
   
   const handleHover = () => {
     prefetchByPath(item.href);
-    prefetchQueriesByPath(item.href, queryClient);
   };
 
-  // More precise active state detection
+  // Enhanced active state detection with hierarchical logic
   const isItemActive = useMemo(() => {
-    if (!item.href) return false;
+    const currentPath = location.pathname;
     
-    // Exact match for current path
-    if (location.pathname === item.href) return true;
-    
-    // For nested paths, only match if this is the most specific route
-    if (location.pathname.startsWith(item.href + '/')) {
-      // Don't highlight parent routes if a more specific child exists
-      // This prevents both "/features/knowledge-base" and "/features/knowledge-base/ai-chat" 
-      // from being active when on the AI Chat page
-      const pathSegments = location.pathname.split('/');
-      const hrefSegments = item.href.split('/');
+    // Exact match has highest priority
+    if (item.href === currentPath) {
+      return true;
+    }
+
+    // For feature routes, handle /features vs /apps prefix differences
+    if (item.href.includes('/features/') || currentPath.includes('/features/')) {
+      const normalizeFeaturePath = (path: string) => {
+        return path.replace(/\/apps\/([^\/]+)/, '/features/$1');
+      };
       
-      // Only active if this is the direct parent (no intermediate segments)
-      return pathSegments.length === hrefSegments.length + 1;
+      const normalizedItemHref = normalizeFeaturePath(item.href);
+      const normalizedCurrentPath = normalizeFeaturePath(currentPath);
+      
+      if (normalizedItemHref === normalizedCurrentPath) {
+        return true;
+      }
+      
+      // Only allow parent-child if this is the direct parent (not grandparent)
+      if (normalizedCurrentPath.startsWith(normalizedItemHref + '/')) {
+        const childPath = normalizedCurrentPath.replace(normalizedItemHref + '/', '');
+        // Only active if there's exactly one more segment (direct child)
+        return !childPath.includes('/');
+      }
+    }
+    
+    // Default parent-child logic for other routes
+    if (currentPath.startsWith(item.href + '/') && item.href !== '/') {
+      const childPath = currentPath.replace(item.href + '/', '');
+      // Only active if there's exactly one more segment (direct child)
+      return !childPath.includes('/');
     }
     
     return false;
@@ -324,12 +288,6 @@ const NavigationItem = React.memo(({
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.isActive === nextProps.isActive &&
-    prevProps.feedbackCount === nextProps.feedbackCount &&
-    prevProps.item.badge === nextProps.item.badge
-  );
 });
 
 NavigationItem.displayName = 'NavigationItem';
@@ -340,69 +298,62 @@ const SidebarSectionComponent = React.memo(({
   role, 
   collapsedSections, 
   toggleSection, 
-  feedback, 
-  isActive 
+  feedback
 }: {
   section: SidebarSection;
   role: string;
   collapsedSections: Record<string, boolean>;
   toggleSection: (key: string) => void;
   feedback: number;
-  isActive: (path: string) => boolean;
 }) => {
-  if (!section.isVisible(role)) return null;
-  
-  const items = getSectionItems(section.key, role, section);
-  if (items.length === 0) return null;
-  
   const isCollapsed = collapsedSections[section.key];
-  const itemCount = items.length;
-  const activeItems = items.filter(item => isActive(item.href));
-  const hasActiveItem = activeItems.length > 0;
+  
+  const filteredItems = section.items.filter(item => {
+    if (item.requiresRole) {
+      return role === item.requiresRole;
+    }
+    return true;
+  });
+
+  if (filteredItems.length === 0) {
+    return null;
+  }
+
+  if (!section.collapsible) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {filteredItems.map((item) => (
+              <NavigationItem
+                key={item.href}
+                item={item}
+                feedbackCount={feedback}
+              />
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
 
   return (
-    <Collapsible 
-      open={!isCollapsed} 
-      onOpenChange={() => toggleSection(section.key)}
-    >
+    <Collapsible open={!isCollapsed} onOpenChange={() => toggleSection(section.key)}>
       <SidebarGroup>
-        <CollapsibleTrigger asChild>
-          <SidebarGroupLabel
-            className={cn(
-              "group flex w-full items-center justify-between py-2 px-2 text-sm font-medium transition-colors",
-              "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground cursor-pointer",
-              hasActiveItem && "text-sidebar-accent-foreground"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              {section.isApp && section.appIcon && (
-                <div className="w-4 h-4 flex items-center justify-center">
-                  {React.createElement(Icons[section.appIcon as keyof typeof Icons] || Icons.package, {
-                    className: "w-4 h-4"
-                  })}
-                </div>
-              )}
-              <span>
-                {section.title}
-                {isCollapsed && ` (${itemCount})`}
-              </span>
-            </div>
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4 transition-transform duration-300 ease-in-out" />
-            ) : (
-              <ChevronDown className="h-4 w-4 transition-transform duration-300 ease-in-out" />
-            )}
-          </SidebarGroupLabel>
-        </CollapsibleTrigger>
-        
-        <CollapsibleContent className="overflow-hidden transition-all duration-300 ease-in-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+        <SidebarGroupLabel asChild>
+          <CollapsibleTrigger className="flex w-full items-center justify-between">
+            {section.title}
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
+        <CollapsibleContent>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <NavigationItem
-                  key={item.name}
+                  key={item.href}
                   item={item}
-                  isActive={isActive(item.href)}
                   feedbackCount={feedback}
                 />
               ))}
@@ -412,85 +363,74 @@ const SidebarSectionComponent = React.memo(({
       </SidebarGroup>
     </Collapsible>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.role === nextProps.role &&
-    prevProps.feedback === nextProps.feedback &&
-    JSON.stringify(prevProps.collapsedSections) === JSON.stringify(nextProps.collapsedSections)
-  );
 });
 
 SidebarSectionComponent.displayName = 'SidebarSectionComponent';
 
+// Main AppSidebar component
 export function AppSidebar() {
-  // Add early return if React context is not available
-  try {
-    const { role, loading: roleLoading } = useUserRole();
-    const { feedback } = useDashboardData();
-    // Mock app installations data - marketplace functionality removed
-    const appInstallations: any[] = [];
-    const appsLoading = false;
-    const { configs, isLoading: configsLoading } = useOrganizationFeatureConfigs();
-    const featureNavigationSections = useFeatureNavigationSections();
-    const location = useLocation();
+  const { role } = useOptimizedUserRole();
+  const dashboardData = useDashboardData();
+  const organizationFeatureConfigs = useOrganizationFeatureConfigs();
+  const featureNavigationSections = useFeatureNavigationSections();
 
-    // Get all sections including dynamic app and feature sections
-    const allSections = useMemo(() => {
-      if (!role) return [];
-      return getAllSidebarSections(appInstallations, configs, featureNavigationSections).filter(section => section.isVisible(role));
-    }, [role, appInstallations, configs, featureNavigationSections]);
+  const allSections = useMemo(() => {
+    if (!role || !organizationFeatureConfigs.configs) return [];
+    
+    console.log('🔍 AppSidebar: Building sections with role:', role);
+    
+    const sections = getAllSidebarSections(
+      role, 
+      organizationFeatureConfigs.configs, 
+      featureNavigationSections
+    );
+    
+    console.log('🔍 AppSidebar: Final sections:', sections.map(s => ({
+      title: s.title,
+      itemCount: s.items.length
+    })));
+    
+    return sections;
+  }, [role, organizationFeatureConfigs.configs, featureNavigationSections]);
 
-    const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
+  const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
-    // Memoized isActive function to prevent recreation on every render
-    const isActive = useCallback((path: string) => {
-      if (path === '/') {
-        return location.pathname === '/';
-      }
-      return location.pathname.startsWith(path);
-    }, [location.pathname]);
+  // Feedback count for badges
+  const feedback = dashboardData?.totalFeedback || 0;
 
-    return (
-      <Sidebar collapsible="icon">
-        <SidebarContent className="space-y-1">
-          {roleLoading || appsLoading || configsLoading ? (
-            // Show loading skeleton while role is being determined
-            <div className="space-y-4 p-4">
-              <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-muted rounded w-1/2"></div>
-                <div className="h-8 bg-muted rounded"></div>
-                <div className="h-8 bg-muted rounded"></div>
-              </div>
-              <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-muted rounded w-1/3"></div>
-                <div className="h-8 bg-muted rounded"></div>
-              </div>
+  // Loading states
+  const roleLoading = !role;
+  const configsLoading = !organizationFeatureConfigs;
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarContent className="space-y-1">
+        {roleLoading || configsLoading ? (
+          // Show loading skeleton while role is being determined
+          <div className="space-y-4 p-4">
+            <div className="animate-pulse space-y-2">
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+              <div className="h-8 bg-muted rounded"></div>
+              <div className="h-8 bg-muted rounded"></div>
             </div>
-          ) : (
-            allSections.map(section => (
-              <SidebarSectionComponent
-                key={section.key}
-                section={section}
-                role={role}
-                collapsedSections={collapsedSections}
-                toggleSection={toggleSection}
-                feedback={feedback}
-                isActive={isActive}
-              />
-            ))
-          )}
-        </SidebarContent>
-      </Sidebar>
-    );
-  } catch (error) {
-    console.error('AppSidebar error:', error);
-    // Fallback UI
-    return (
-      <div className="w-60 h-screen bg-sidebar border-r">
-        <div className="p-4">
-          <div className="text-sm text-muted-foreground">Loading sidebar...</div>
-        </div>
-      </div>
-    );
-  }
+            <div className="animate-pulse space-y-2">
+              <div className="h-4 bg-muted rounded w-1/3"></div>
+              <div className="h-8 bg-muted rounded"></div>
+            </div>
+          </div>
+        ) : (
+          allSections.map(section => (
+            <SidebarSectionComponent
+              key={section.key}
+              section={section}
+              role={role}
+              collapsedSections={collapsedSections}
+              toggleSection={toggleSection}
+              feedback={feedback}
+            />
+          ))
+        )}
+      </SidebarContent>
+    </Sidebar>
+  );
 }
