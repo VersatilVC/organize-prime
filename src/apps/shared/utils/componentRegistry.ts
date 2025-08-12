@@ -11,8 +11,7 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 
 // Only implemented components - everything else gets placeholder
 export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
-  'Settings', // KB Settings page
-  'KBSettings', // Alternative name
+  // No components implemented yet - all will show placeholder
 ]);
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
