@@ -28,10 +28,11 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
 };
 
 export function getComponent(componentName: string): React.ComponentType<any> {
+  console.log('🔍 ComponentRegistry: Looking for component:', componentName);
   const Component = COMPONENT_REGISTRY[componentName];
   
   if (!Component) {
-    console.warn(`Component "${componentName}" not found in registry, using placeholder`);
+    console.log(`🔍 ComponentRegistry: Component "${componentName}" not found in registry, using placeholder`);
     return () => React.createElement(KBPlaceholderPage, {
       component: componentName,
       title: componentName,
@@ -39,6 +40,7 @@ export function getComponent(componentName: string): React.ComponentType<any> {
     });
   }
   
+  console.log('🔍 ComponentRegistry: Found component:', componentName);
   return Component;
 }
 

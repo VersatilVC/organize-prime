@@ -125,8 +125,10 @@ export function useSystemFeatures() {
       if (updates.iconName !== undefined) updateData.icon_name = updates.iconName;
       if (updates.colorHex !== undefined) updateData.color_hex = updates.colorHex;
       if (updates.navigation_config !== undefined) {
+        console.log('🔍 useSystemFeatures: Updating navigation_config:', updates.navigation_config);
         updateData.navigation_config = updates.navigation_config;
         updateData.feature_pages = updates.navigation_config.pages || [];
+        console.log('🔍 useSystemFeatures: Setting feature_pages:', updateData.feature_pages);
       }
 
       const { error } = await supabase

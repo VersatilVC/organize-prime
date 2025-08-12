@@ -139,6 +139,21 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
     }
 
     try {
+      console.log('🔍 EditFeatureModal: Submitting pages:', pages);
+      console.log('🔍 EditFeatureModal: Full update payload:', {
+        id: feature.id,
+        updates: {
+          displayName: formData.displayName,
+          description: formData.description,
+          category: formData.category,
+          iconName: formData.iconName,
+          colorHex: formData.colorHex,
+          navigation_config: {
+            pages: pages
+          }
+        }
+      });
+      
       await updateFeature({
         id: feature.id,
         updates: {
