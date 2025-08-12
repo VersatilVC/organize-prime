@@ -71,25 +71,48 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         colorHex: feature.color_hex
       });
       
+      // Debug: Log the feature data to understand the structure
+      console.log('🔍 EditFeatureModal: Feature data:', feature);
+      console.log('🔍 EditFeatureModal: Navigation config:', feature.navigation_config);
+      
       // Load existing pages from navigation_config  
       // Convert from navigation_config.items to FeaturePage format
       const navItems = feature.navigation_config?.items || [];
-      const existingPages: FeaturePage[] = navItems.map((item: any, index: number) => ({
-        id: `${item.name}-${index}`,
-        title: item.name,
-        route: item.href,
-        description: '',
-        component: item.name === 'Dashboard' ? 'Dashboard' : 
-                   item.name === 'Settings' ? 'Settings' :
-                   item.name === 'Analytics' ? 'Analytics' :
-                   item.name === 'Files' ? 'Files' :
-                   item.name === 'Chat' ? 'Chat' :
-                   item.name.includes('Knowledge') ? 'Database' : 'Custom',
-        permissions: ['read'],
-        isDefault: index === 0,
-        menuOrder: index,
-        icon: item.icon || 'FileText'
-      }));
+      console.log('🔍 EditFeatureModal: Nav items:', navItems);
+      
+      const existingPages: FeaturePage[] = navItems.map((item: any, index: number) => {
+        // Map component types based on the navigation item name
+        let component = 'Custom';
+        if (item.name === 'Dashboard') component = 'Dashboard';
+        else if (item.name === 'Settings') component = 'Settings';
+        else if (item.name === 'Analytics') component = 'Analytics';
+        else if (item.name === 'Files') component = 'Files';
+        else if (item.name === 'Chat') component = 'Chat';
+        else if (item.name.includes('Knowledge') || item.name.includes('Database')) component = 'Search';
+        
+        // Map icon names to match the available options
+        let iconName = item.icon || 'FileText';
+        if (item.icon === 'home') iconName = 'FileText';
+        else if (item.icon === 'database') iconName = 'Database';
+        else if (item.icon === 'fileText') iconName = 'FileText';
+        else if (item.icon === 'messageCircle') iconName = 'MessageSquare';
+        else if (item.icon === 'barChart3') iconName = 'BarChart3';
+        else if (item.icon === 'settings') iconName = 'Settings';
+        
+        return {
+          id: `${item.name}-${index}`,
+          title: item.name,
+          route: item.href,
+          description: '',
+          component,
+          permissions: ['read'],
+          isDefault: index === 0,
+          menuOrder: index,
+          icon: iconName
+        };
+      });
+      
+      console.log('🔍 EditFeatureModal: Converted pages:', existingPages);
       setPages(existingPages);
     }
   }, [feature]);
