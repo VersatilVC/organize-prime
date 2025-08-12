@@ -71,8 +71,25 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         colorHex: feature.color_hex
       });
       
-      // Load existing pages from navigation_config
-      const existingPages = feature.navigation_config?.pages || [];
+      // Load existing pages from navigation_config  
+      // Convert from navigation_config.items to FeaturePage format
+      const navItems = feature.navigation_config?.items || [];
+      const existingPages: FeaturePage[] = navItems.map((item: any, index: number) => ({
+        id: `${item.name}-${index}`,
+        title: item.name,
+        route: item.href,
+        description: '',
+        component: item.name === 'Dashboard' ? 'Dashboard' : 
+                   item.name === 'Settings' ? 'Settings' :
+                   item.name === 'Analytics' ? 'Analytics' :
+                   item.name === 'Files' ? 'Files' :
+                   item.name === 'Chat' ? 'Chat' :
+                   item.name.includes('Knowledge') ? 'Database' : 'Custom',
+        permissions: ['read'],
+        isDefault: index === 0,
+        menuOrder: index,
+        icon: item.icon || 'FileText'
+      }));
       setPages(existingPages);
     }
   }, [feature]);
