@@ -74,9 +74,15 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
       // Load existing pages from navigation_config
       const existingPages = feature.navigation_config?.pages || [];
       setPages(existingPages);
-      setCurrentStep(1);
     }
   }, [feature]);
+
+  // Reset step only when modal opens
+  useEffect(() => {
+    if (open) {
+      setCurrentStep(1);
+    }
+  }, [open]);
 
   const generateSlug = (name: string) => {
     return name
@@ -136,9 +142,12 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent form submission
+    console.log('Next step clicked, current step:', currentStep, 'isValid:', isValid);
     if (currentStep === 1 && isValid) {
       setCurrentStep(2);
+      console.log('Moving to step 2');
     }
   };
 
