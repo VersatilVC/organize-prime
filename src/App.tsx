@@ -37,6 +37,7 @@ const NotificationManagement = lazy(() => import("./pages/NotificationManagement
 
 // Import FeatureRouter directly since it's not a default export
 import { FeatureRouter } from "./components/FeatureRouter";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 // Initialize cache cleanup on app start
 initializeCacheCleanup();
@@ -82,7 +83,9 @@ const App = () => (
                  path="/dashboard" 
                  element={
                    <ProtectedRoute>
-                     <PlaceholderPage title="Dashboard under construction" description="This page is not available yet." />
+                     <AppLayout>
+                       <PlaceholderPage title="Dashboard under construction" description="This page is not available yet." />
+                     </AppLayout>
                    </ProtectedRoute>
                  } 
                />
