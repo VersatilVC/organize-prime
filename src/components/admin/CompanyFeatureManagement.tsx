@@ -40,7 +40,7 @@ const featureMetadata: Record<string, { displayName: string; description: string
 };
 
 export function CompanyFeatureManagement() {
-  const { configs: systemConfigs } = useSystemFeatureConfigs();
+  const { configs: systemConfigs, isLoading: systemConfigsLoading } = useSystemFeatureConfigs();
   const { 
     configs: orgConfigs, 
     updateConfig, 
@@ -48,7 +48,8 @@ export function CompanyFeatureManagement() {
     updateUserAccess,
     isUpdating, 
     isUpdatingOrder,
-    isUpdatingUserAccess 
+    isUpdatingUserAccess,
+    isLoading: orgConfigsLoading
   } = useOrganizationFeatureConfigs();
   const { users } = useOrganizationUsers();
   
@@ -57,10 +58,18 @@ export function CompanyFeatureManagement() {
 
   // Merge system configs with organization configs
   React.useEffect(() => {
-    if (systemConfigs.length === 0) return;
+    console.log('CompanyFeatureManagement: systemConfigs:', systemConfigs);
+    console.log('CompanyFeatureManagement: orgConfigs:', orgConfigs);
     
-    const availableFeatures = systemConfigs
-      .filter(config => config.is_enabled_globally)
+    if (systemConfigs.length === 0) {
+      console.log('CompanyFeatureManagement: No system configs yet, skipping merge');
+      return;
+    }
+    
+    const globallyEnabledConfigs = systemConfigs.filter(config => config.is_enabled_globally);
+    console.log('CompanyFeatureManagement: globally enabled configs:', globallyEnabledConfigs);
+    
+    const availableFeatures = globallyEnabledConfigs
       .map(systemConfig => {
         const orgConfig = orgConfigs.find(config => config.feature_slug === systemConfig.feature_slug);
         return {
@@ -75,11 +84,15 @@ export function CompanyFeatureManagement() {
       })
       .sort((a, b) => (a.org_menu_order || 0) - (b.org_menu_order || 0));
     
+    console.log('CompanyFeatureManagement: processed availableFeatures:', availableFeatures);
+    
     // Only update if the features have actually changed
     setFeatures(prev => {
       if (JSON.stringify(prev) === JSON.stringify(availableFeatures)) {
+        console.log('CompanyFeatureManagement: Features unchanged, skipping update');
         return prev;
       }
+      console.log('CompanyFeatureManagement: Features changed, updating state');
       return availableFeatures;
     });
   }, [systemConfigs, orgConfigs]);
@@ -155,6 +168,23 @@ export function CompanyFeatureManagement() {
   const handleUserFeatureToggle = (userId: string, featureSlug: string, isEnabled: boolean) => {
     updateUserAccess({ userId, featureSlug, isEnabled });
   };
+
+  if (systemConfigsLoading || orgConfigsLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading Feature Configuration...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading features...</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
