@@ -80,6 +80,15 @@ export function useSystemFeatures() {
 
   const updateFeatureMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<SystemFeature> }) => {
+      // Get feature slug for cascade update
+      const { data: featureData, error: fetchError } = await supabase
+        .from('system_feature_configs')
+        .select('feature_slug')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('system_feature_configs')
         .update({
@@ -89,6 +98,17 @@ export function useSystemFeatures() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // If disabling globally, cascade disable for all organizations
+      if (updates.is_active === false && featureData?.feature_slug) {
+        const { error: cascadeError } = await supabase
+          .from('organization_feature_configs')
+          .update({ is_enabled: false })
+          .eq('feature_slug', featureData.feature_slug);
+        
+        if (cascadeError) console.warn('Cascade disable failed:', cascadeError);
+      }
+
       return { id, ...updates };
     },
     onSuccess: () => {

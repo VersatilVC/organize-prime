@@ -7,27 +7,21 @@ import { SystemFeature } from '@/types/features';
 export interface OrganizationFeatureWithSystem {
   id: string;
   organization_id: string;
-  feature_id: string;
+  feature_slug: string;
   is_enabled: boolean;
-  feature_settings: any;
-  setup_status: string;
-  setup_error: string | null;
-  enabled_by: string | null;
-  enabled_at: string;
+  is_user_accessible: boolean;
+  org_menu_order: number;
   created_at: string;
   updated_at: string;
   // System feature data
   system_feature: {
     id: string;
-    name: string;
-    slug: string;
-    display_name: string;
-    description: string | null;
-    category: string;
-    icon_name: string;
-    color_hex: string;
-    navigation_config: any;
-    is_active: boolean;
+    feature_slug: string;
+    is_enabled_globally: boolean;
+    is_marketplace_visible: boolean;
+    system_menu_order: number;
+    created_at: string;
+    updated_at: string;
   };
 }
 
@@ -56,48 +50,66 @@ export function useOrganizationFeatures(organizationId?: string) {
       const { data, error } = await supabase
         .from('organization_feature_configs')
         .select(`
-          *,
-          system_feature_configs!inner(
-            feature_slug,
-            is_enabled_globally,
-            is_marketplace_visible
-          )
+          id,
+          organization_id,
+          feature_slug,
+          is_enabled,
+          is_user_accessible,
+          org_menu_order,
+          created_at,
+          updated_at
         `)
         .eq('organization_id', orgId)
         .eq('is_enabled', true)
-        .eq('system_feature_configs.is_enabled_globally', true);
+        .eq('is_user_accessible', true);
 
       if (error) {
         console.error('Error fetching organization features:', error);
         throw new Error('Failed to fetch organization features');
       }
 
-      // Transform the data to match expected interface
-      return (data || []).map(item => ({
-        id: item.id,
-        organization_id: item.organization_id,
-        feature_id: item.feature_slug, // Use feature_slug as feature_id
-        is_enabled: item.is_enabled,
-        feature_settings: {},
-        setup_status: 'completed',
-        setup_error: null,
-        enabled_by: item.created_by,
-        enabled_at: item.created_at,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        system_feature: {
-          id: item.feature_slug,
-          name: item.feature_slug,
-          slug: item.feature_slug,
-          display_name: getFeatureDisplayName(item.feature_slug),
-          description: getFeatureDescription(item.feature_slug),
-          category: 'business',
-          icon_name: getFeatureIcon(item.feature_slug),
-          color_hex: getFeatureColor(item.feature_slug),
-          navigation_config: getFeatureNavigation(item.feature_slug),
-          is_active: true
-        }
-      }));
+      if (!data || data.length === 0) return [];
+
+      // Get feature slugs to check if they're globally enabled
+      const featureSlugs = data.map(item => item.feature_slug);
+      const { data: systemFeatures, error: systemError } = await supabase
+        .from('system_feature_configs')
+        .select('*')
+        .in('feature_slug', featureSlugs)
+        .eq('is_enabled_globally', true);
+
+      if (systemError) {
+        console.error('Error fetching system features:', systemError);
+        throw new Error('Failed to fetch system features');
+      }
+
+      // Only include organization features where the system feature is globally enabled
+      const enabledSystemFeatures = new Set(systemFeatures?.map(sf => sf.feature_slug) || []);
+      
+      return data
+        .filter(item => enabledSystemFeatures.has(item.feature_slug))
+        .map(item => {
+          const systemFeature = systemFeatures?.find(sf => sf.feature_slug === item.feature_slug);
+          return {
+            id: item.id,
+            organization_id: item.organization_id,
+            feature_slug: item.feature_slug,
+            is_enabled: item.is_enabled,
+            is_user_accessible: item.is_user_accessible,
+            org_menu_order: item.org_menu_order,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            system_feature: {
+              id: systemFeature?.id || item.feature_slug,
+              feature_slug: systemFeature?.feature_slug || item.feature_slug,
+              is_enabled_globally: systemFeature?.is_enabled_globally || false,
+              is_marketplace_visible: systemFeature?.is_marketplace_visible || false,
+              system_menu_order: systemFeature?.system_menu_order || 0,
+              created_at: systemFeature?.created_at || item.created_at,
+              updated_at: systemFeature?.updated_at || item.updated_at,
+            }
+          };
+        });
     },
     enabled: !!orgId,
     retry: (failureCount, error) => {
@@ -116,13 +128,13 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
   const { data: features = [] } = useOrganizationFeatures(organizationId);
 
   return features.map(feature => {
-    const systemFeature = feature.system_feature;
-    const navigationConfig = systemFeature.navigation_config || {};
+    const featureSlug = feature.feature_slug;
+    const navigationConfig = getFeatureNavigation(featureSlug);
     
     // Default navigation items for all features
     const defaultItems = [
-      { name: 'Dashboard', href: `/features/${systemFeature.slug}`, icon: 'home' },
-      { name: 'Settings', href: `/features/${systemFeature.slug}/settings`, icon: 'settings' }
+      { name: 'Dashboard', href: `/features/${featureSlug}`, icon: 'home' },
+      { name: 'Settings', href: `/features/${featureSlug}/settings`, icon: 'settings' }
     ];
 
     // Use custom navigation items if they exist
@@ -130,16 +142,16 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
     if (navigationConfig.items && Array.isArray(navigationConfig.items) && navigationConfig.items.length > 0) {
       navigationItems = navigationConfig.items.map((navItem: any) => ({
         name: navItem.name || navItem.label,
-        href: navItem.href || `/features/${systemFeature.slug}/${navItem.slug || navItem.name.toLowerCase()}`,
+        href: navItem.href || `/features/${featureSlug}/${navItem.slug || navItem.name.toLowerCase()}`,
         icon: navItem.icon || 'package'
       }));
     }
 
     return {
-      key: `feature-${systemFeature.slug}`,
-      title: systemFeature.display_name,
-      icon: systemFeature.icon_name || 'package',
-      color: systemFeature.color_hex || '#6366f1',
+      key: `feature-${featureSlug}`,
+      title: getFeatureDisplayName(featureSlug),
+      icon: getFeatureIcon(featureSlug),
+      color: getFeatureColor(featureSlug),
       items: navigationItems
     };
   });

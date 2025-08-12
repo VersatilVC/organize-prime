@@ -14,7 +14,7 @@ export function FeatureToggleSection() {
 
   const isFeatureEnabled = (featureSlug: string) => {
     // Check if feature is enabled in organization_feature_configs
-    const config = organizationFeatures.find(f => f.feature_id === featureSlug);
+    const config = organizationFeatures.find(f => f.feature_slug === featureSlug);
     return config?.is_enabled ?? false;
   };
 
