@@ -43,7 +43,7 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
     case 'management':
       const managementItems = [
         { name: 'Users', href: '/users', icon: Icons.users },
-        { name: 'Feedback', href: '/feedback', icon: Icons.messageSquare },
+        { name: 'Send Feedback', href: '/feedback', icon: Icons.messageSquare },
       ];
       
       if (role === 'admin') {
