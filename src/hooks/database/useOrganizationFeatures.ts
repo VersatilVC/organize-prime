@@ -180,11 +180,20 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
       
       // Use pages from navigation_config if available
       const pages = Array.isArray(navConfig?.pages) ? navConfig.pages : [];
-      const navigationItems = pages.map((page: any) => ({
-        name: page.title || page.name,
-        href: (page.route || page.href || '').startsWith('/') ? (page.route || page.href) : `/${page.route || page.href || ''}`,
-        icon: page.icon || 'package',
-      }));
+      const navigationItems = pages.map((page: any) => {
+        let href = (page.route || page.href || '').startsWith('/') ? (page.route || page.href) : `/${page.route || page.href || ''}`;
+        
+        // Transform /apps/knowledge-base/* routes to /features/knowledge-base/* for sidebar navigation
+        if (href.startsWith('/apps/knowledge-base/')) {
+          href = href.replace('/apps/knowledge-base/', '/features/knowledge-base/');
+        }
+        
+        return {
+          name: page.title || page.name,
+          href,
+          icon: page.icon || 'package',
+        };
+      });
       
       if (navigationItems.length === 0) return null;
       const section = {
