@@ -5,6 +5,7 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
   'Dashboard', // KB Dashboard/Manage Knowledgebases page is implemented
   'Chat'       // KB Chat page is implemented
+  // Analytics, Files, Settings are NOT implemented - will show placeholders
 ]);
 
 // Registry with implemented components

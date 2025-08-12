@@ -38,7 +38,6 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
     case 'main':
       return [
         { name: 'Dashboard', href: '/dashboard', icon: Icons.home },
-        { name: 'Organizations', href: '/organizations', icon: Icons.building },
       ];
     
     case 'management':
@@ -173,7 +172,7 @@ const useSidebarSectionState = (sections: SidebarSection[]) => {
       // Auto-expand section if current route is within it
       const isCurrentSectionActive = section.items.some(item => 
         location.pathname === item.href || 
-        (item.href !== '/' && location.pathname.startsWith(item.href + '/'))
+        (item.href !== '/' && item.href !== '/dashboard' && location.pathname.startsWith(item.href + '/'))
       );
       
       if (isCurrentSectionActive) {
@@ -242,8 +241,8 @@ const NavigationItem = React.memo(({
       }
     }
     
-    // Default parent-child logic for other routes
-    if (currentPath.startsWith(item.href + '/') && item.href !== '/') {
+    // Default parent-child logic for other routes (exclude dashboard from auto-expansion)
+    if (currentPath.startsWith(item.href + '/') && item.href !== '/' && item.href !== '/dashboard') {
       const childPath = currentPath.replace(item.href + '/', '');
       // Only active if there's exactly one more segment (direct child)
       return !childPath.includes('/');

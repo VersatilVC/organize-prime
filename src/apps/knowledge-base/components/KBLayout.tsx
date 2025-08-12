@@ -10,52 +10,33 @@ interface KBLayoutProps {
 }
 
 export function KBLayout({ children }: KBLayoutProps) {
-  const { pathname } = useLocation();
+  const location = useLocation();
   const { routes } = useFeatureRoutes('knowledge-base');
-  const { activeRoute } = useRouteHierarchy(routes);
 
-  // Use the centralized navigation system for route matching
-  const currentPage = React.useMemo(() => {
-    console.log('🔍 KBLayout: Finding current page for pathname:', pathname);
-    console.log('🔍 KBLayout: Available routes:', routes);
+  // Simple route matching for KB pages
+  const currentRoute = React.useMemo(() => {
+    if (!routes.length) return null;
     
-    // Find the best matching route for current pathname
-    const matchingRoute = routes.find(route => {
-      // Check exact match first
-      if (route.path === pathname) return true;
-      
-      // Check if current path ends with the route's path (for normalized routes)
-      const routeSuffix = route.path.replace('/features/knowledge-base', '');
-      return pathname.endsWith(routeSuffix) || pathname.includes(routeSuffix);
-    });
+    const path = location.pathname;
+    if (path.includes('/chat')) {
+      return routes.find(r => r.title === 'AI Chat') || null;
+    }
+    if (path.includes('/manage-knowledgebases') || path === '/features/knowledge-base') {
+      return routes.find(r => r.title === 'Manage Knowledgebases') || null;
+    }
     
-    console.log('🔍 KBLayout: Matching route:', matchingRoute);
-    return matchingRoute;
-  }, [pathname, routes]);
+    return routes.find(r => r.isDefault) || routes[0] || null;
+  }, [routes, location.pathname]);
 
-  // Get default page for navigation
   const defaultPage = React.useMemo(() => {
     return routes.find(route => route.isDefault) || routes[0];
   }, [routes]);
 
-  const currentPageTitle = currentPage?.title || 'Knowledge Base';
-
-  // SEO: set document title
   React.useEffect(() => {
-    document.title = `Knowledge Base - ${currentPageTitle}`;
-  }, [currentPageTitle]);
-
-  const getDefaultRoute = () => {
-    if (defaultPage) {
-      // Ensure the route is in the correct format for breadcrumb links
-      let routePath = defaultPage.path;
-      if (routePath.startsWith('/apps/knowledge-base/')) {
-        routePath = routePath.replace('/apps/knowledge-base/', '/features/knowledge-base/');
-      }
-      return routePath;
+    if (currentRoute) {
+      document.title = `${currentRoute.title} - Knowledge Base`;
     }
-    return '/features/knowledge-base/manage-knowledgebases';
-  };
+  }, [currentRoute]);
 
   return (
     <KBProvider>
@@ -64,14 +45,20 @@ export function KBLayout({ children }: KBLayoutProps) {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to={getDefaultRoute()}>Knowledge Base</Link>
-                </BreadcrumbLink>
+                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{currentPageTitle}</BreadcrumbPage>
+                <BreadcrumbLink href="/features/knowledge-base">Knowledge Base</BreadcrumbLink>
               </BreadcrumbItem>
+              {currentRoute && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{currentRoute.title}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              )}
             </BreadcrumbList>
           </Breadcrumb>
         </div>
