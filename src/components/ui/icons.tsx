@@ -52,6 +52,7 @@ import {
   Loader2,
   // New icons for marketplace
   Book,
+  BookOpen,
   CheckSquare,
   DollarSign,
   Target,
@@ -129,6 +130,7 @@ export const Icons = {
   loader: Loader2,
   // New icons for marketplace
   book: Book,
+  bookOpen: BookOpen,
   checkSquare: CheckSquare,
   dollarSign: DollarSign,
   target: Target,

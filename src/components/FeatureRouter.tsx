@@ -31,7 +31,7 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
   const { data: organizationFeatures = [], isLoading, error } = useOrganizationFeatures();
 
   console.log('🔐 FeatureAccessCheck: Checking access for slug:', slug, {
-    organizationFeatures: organizationFeatures.map(f => ({ slug: f.feature_slug, enabled: f.is_enabled })),
+    organizationFeatures: organizationFeatures.map(f => ({ slug: f.system_feature.slug, enabled: f.is_enabled })),
     isLoading
   });
 
@@ -61,7 +61,7 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
     );
   }
 
-  const feature = organizationFeatures.find(f => f.feature_slug === slug);
+  const feature = organizationFeatures.find(f => f.system_feature.slug === slug);
 
   if (!feature) {
     console.log('🚫 FeatureAccessCheck: Feature not found or not enabled:', slug);

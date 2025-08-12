@@ -13,8 +13,8 @@ export function FeatureToggleSection() {
   const toggleFeature = useToggleOrganizationFeature();
 
   const isFeatureEnabled = (featureSlug: string) => {
-    // Check if feature is enabled in organization_feature_configs
-    const config = organizationFeatures.find(f => f.feature_slug === featureSlug);
+    // Check if feature is enabled in organization features
+    const config = organizationFeatures.find(f => f.system_feature.slug === featureSlug);
     return config?.is_enabled ?? false;
   };
 
