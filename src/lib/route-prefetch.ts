@@ -11,6 +11,7 @@ const routeLoaders: Array<{ test: (path: string) => boolean; load: () => Promise
   { test: (p) => p.startsWith('/feedback'), load: () => import('@/pages/Feedback') },
   { test: (p) => p.startsWith('/notifications'), load: () => import('@/pages/Notifications') },
   { test: (p) => p.startsWith('/settings/company'), load: () => import('@/pages/CompanySettings') },
+  { test: (p) => p.startsWith('/knowledge-base'), load: () => import('@/apps/knowledge-base/KBApp') },
   { test: (p) => p.startsWith('/settings/system'), load: () => import('@/pages/SystemSettings') },
   { test: (p) => p.startsWith('/settings/profile'), load: () => import('@/pages/ProfileSettings') },
   { test: (p) => p.startsWith('/apps/'), load: () => import('@/apps/shared/components/AppRouter') },
