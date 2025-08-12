@@ -14,17 +14,35 @@ export function KBLayout({ children }: KBLayoutProps) {
 
   // Find current page from routes for dynamic breadcrumbs
   const currentPage = React.useMemo(() => {
+    console.log('🔍 KBLayout: Finding current page for pathname:', pathname);
+    console.log('🔍 KBLayout: Available routes:', routes);
+    
     // Handle exact matches first
     const exactMatch = routes.find(route => route.path === pathname);
-    if (exactMatch) return exactMatch;
+    if (exactMatch) {
+      console.log('🔍 KBLayout: Found exact match:', exactMatch);
+      return exactMatch;
+    }
     
-    // Handle route matching with different path formats
-    const normalizedPath = pathname.replace('/features/knowledge-base', '').replace('/apps/knowledge-base', '');
+    // Try to match by converting current path to expected route format
+    for (const route of routes) {
+      // Extract the route suffix (everything after knowledge-base)
+      let routeSuffix = '';
+      if (route.path.includes('/features/knowledge-base/')) {
+        routeSuffix = route.path.split('/features/knowledge-base/')[1];
+      } else if (route.path.includes('/apps/knowledge-base/')) {
+        routeSuffix = route.path.split('/apps/knowledge-base/')[1];
+      }
+      
+      // Check if current path ends with this suffix
+      if (routeSuffix && pathname.endsWith('/' + routeSuffix)) {
+        console.log('🔍 KBLayout: Found suffix match:', route);
+        return route;
+      }
+    }
     
-    return routes.find(route => {
-      const routePath = route.path.replace('/features/knowledge-base', '').replace('/apps/knowledge-base', '');
-      return routePath === normalizedPath;
-    });
+    console.log('🔍 KBLayout: No matching route found');
+    return null;
   }, [pathname, routes]);
 
   // Get default page for navigation
@@ -41,9 +59,14 @@ export function KBLayout({ children }: KBLayoutProps) {
 
   const getDefaultRoute = () => {
     if (defaultPage) {
-      return defaultPage.path.replace('/apps/knowledge-base/', '/features/knowledge-base/');
+      // Ensure the route is in the correct format for breadcrumb links
+      let routePath = defaultPage.path;
+      if (routePath.startsWith('/apps/knowledge-base/')) {
+        routePath = routePath.replace('/apps/knowledge-base/', '/features/knowledge-base/');
+      }
+      return routePath;
     }
-    return '/features/knowledge-base/knowledgebase-management';
+    return '/features/knowledge-base/manage-knowledgebases';
   };
 
   return (
