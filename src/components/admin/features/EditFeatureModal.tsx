@@ -73,6 +73,8 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
       
       // Load existing pages from navigation_config.pages (database structure)
       const existingPages = feature.navigation_config?.pages || [];
+      console.log('🔍 EditFeatureModal: Feature data:', feature);
+      console.log('🔍 EditFeatureModal: Navigation config:', feature.navigation_config);
       console.log('🔍 EditFeatureModal: Existing pages from database:', existingPages);
       
       // Convert to FeaturePage format if needed (in case of different structure)

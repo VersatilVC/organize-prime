@@ -10,6 +10,7 @@ export function useSystemFeatures() {
   const { data: features = [], isLoading, error } = useQuery({
     queryKey: ['system-features'],
     queryFn: async (): Promise<SystemFeature[]> => {
+      console.log('🔍 useSystemFeatures: Fetching system features from database');
       const { data, error } = await supabase
         .from('system_feature_configs')
         .select('*')
@@ -43,6 +44,8 @@ export function useSystemFeatures() {
         updated_at: item.updated_at,
       }));
     },
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Disable cache to always get latest
   });
 
   const createFeatureMutation = useMutation({
@@ -76,7 +79,11 @@ export function useSystemFeatures() {
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related caches to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-features'] });
+      queryClient.invalidateQueries({ queryKey: ['system-feature-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['available-system-features'] });
       toast({
         title: 'Success',
         description: 'Feature created successfully',
@@ -142,8 +149,11 @@ export function useSystemFeatures() {
       return { id, ...updates };
     },
     onSuccess: () => {
+      // Invalidate all related caches to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
       queryClient.invalidateQueries({ queryKey: ['organization-features'] });
+      queryClient.invalidateQueries({ queryKey: ['system-feature-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['available-system-features'] });
       toast({
         title: 'Success',
         description: 'Feature updated successfully',
@@ -169,7 +179,11 @@ export function useSystemFeatures() {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all related caches to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-features'] });
+      queryClient.invalidateQueries({ queryKey: ['system-feature-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['available-system-features'] });
       toast({
         title: 'Success',
         description: 'Feature deleted successfully',

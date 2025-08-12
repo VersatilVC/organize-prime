@@ -93,18 +93,18 @@ export function useOrganizationFeatures(organizationId?: string) {
 
       console.log('🔍 useOrganizationFeatures: Filtered features (system + org enabled):', filteredFeatures);
 
-      // Step 4: Get system features with navigation config
+      // Step 4: Get system features with navigation config from system_feature_configs (single source of truth)
       const { data: systemFeatures, error: featuresError } = await supabase
-        .from('system_features')
-        .select('slug, display_name, description, icon_name, color_hex, navigation_config')
-        .in('slug', filteredFeatures.map(f => f.feature_slug));
+        .from('system_feature_configs')
+        .select('feature_slug, display_name, description, icon_name, color_hex, navigation_config')
+        .in('feature_slug', filteredFeatures.map(f => f.feature_slug));
 
       if (featuresError) {
         console.error('❌ useOrganizationFeatures: Error fetching system features:', featuresError);
         throw new Error('Failed to fetch system features');
       }
 
-      const systemFeaturesMap = new Map(systemFeatures?.map(f => [f.slug, f]) || []);
+      const systemFeaturesMap = new Map(systemFeatures?.map(f => [f.feature_slug, f]) || []);
       console.log('🔍 useOrganizationFeatures: System features with navigation:', systemFeaturesMap);
       console.log('🔍 useOrganizationFeatures: Raw systemFeatures:', systemFeatures);
 
@@ -112,9 +112,15 @@ export function useOrganizationFeatures(organizationId?: string) {
         const slug = item.feature_slug as string;
         const systemFeature = systemFeaturesMap.get(slug);
         
+        // Safely parse navigation_config if it's a JSON string
+        const navigationConfig = typeof systemFeature?.navigation_config === 'string' 
+          ? JSON.parse(systemFeature.navigation_config)
+          : systemFeature?.navigation_config || { pages: [] };
+        
         console.log(`🔍 Processing feature ${slug}:`, {
           systemFeature,
-          navigation_config: systemFeature?.navigation_config
+          navigation_config: navigationConfig,
+          pages: navigationConfig?.pages
         });
         
         return {
@@ -138,7 +144,7 @@ export function useOrganizationFeatures(organizationId?: string) {
             category: 'business',
             icon_name: systemFeature?.icon_name || getFeatureIcon(slug),
             color_hex: systemFeature?.color_hex || getFeatureColor(slug),
-            navigation_config: systemFeature?.navigation_config || { pages: [] },
+            navigation_config: navigationConfig,
             is_active: true,
           },
         };

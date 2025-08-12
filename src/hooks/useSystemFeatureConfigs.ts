@@ -75,7 +75,8 @@ export function useSystemFeatureConfigs() {
   const { data: configs, isLoading, error } = useQuery({
     queryKey,
     queryFn: fetchSystemFeatureConfigs,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Disable cache to always get latest
   });
 
   const updateMutation = useMutation({
@@ -84,9 +85,10 @@ export function useSystemFeatureConfigs() {
     onSuccess: () => {
       toast({ title: 'Feature configuration updated successfully' });
       queryClient.invalidateQueries({ queryKey });
-      // Invalidate organization features to update sidebar immediately
+      // Invalidate all related caches to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['organization-features'] });
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
+      queryClient.invalidateQueries({ queryKey: ['available-system-features'] });
     },
     onError: (error) => {
       toast({
@@ -102,9 +104,10 @@ export function useSystemFeatureConfigs() {
     onSuccess: () => {
       toast({ title: 'Menu order updated successfully' });
       queryClient.invalidateQueries({ queryKey });
-      // Invalidate organization features to update sidebar immediately
+      // Invalidate all related caches to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['organization-features'] });
       queryClient.invalidateQueries({ queryKey: ['system-features'] });
+      queryClient.invalidateQueries({ queryKey: ['available-system-features'] });
     },
     onError: (error) => {
       toast({
