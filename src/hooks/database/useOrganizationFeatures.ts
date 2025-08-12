@@ -74,21 +74,7 @@ export function useOrganizationFeatures(organizationId?: string) {
       // Step 2: Get organization feature configs that are enabled at both levels
       const { data: orgConfigs, error: orgError } = await supabase
         .from('organization_feature_configs')
-        .select(`
-          *,
-          system_features!inner(
-            id,
-            name,
-            slug,
-            display_name,
-            description,
-            category,
-            icon_name,
-            color_hex,
-            navigation_config,
-            is_active
-          )
-        `)
+        .select('id, organization_id, feature_slug, is_enabled, is_user_accessible, org_menu_order, created_at, updated_at')
         .eq('organization_id', orgId)
         .eq('is_enabled', true)
         .eq('is_user_accessible', true);
@@ -107,21 +93,35 @@ export function useOrganizationFeatures(organizationId?: string) {
 
       console.log('🔍 useOrganizationFeatures: Filtered features (system + org enabled):', filteredFeatures);
 
-      // Step 4: Transform to expected format
-      const finalFeatures = filteredFeatures.map((item: any) => ({
-        id: item.id,
-        organization_id: item.organization_id,
-        feature_id: item.system_features.id,
-        is_enabled: item.is_enabled,
-        feature_settings: item.feature_settings || {},
-        setup_status: 'completed',
-        setup_error: null,
-        enabled_by: item.enabled_by,
-        enabled_at: item.enabled_at || item.created_at,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        system_feature: item.system_features
-      }));
+      const finalFeatures = filteredFeatures.map((item: any) => {
+        const slug = item.feature_slug as string;
+        const navigation_config = getFeatureNavigation(slug);
+        return {
+          id: item.id,
+          organization_id: item.organization_id,
+          feature_id: slug,
+          is_enabled: item.is_enabled,
+          feature_settings: {},
+          setup_status: 'completed',
+          setup_error: null,
+          enabled_by: null,
+          enabled_at: item.created_at,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          system_feature: {
+            id: slug,
+            name: slug,
+            slug,
+            display_name: getFeatureDisplayName(slug),
+            description: getFeatureDescription(slug),
+            category: 'business',
+            icon_name: getFeatureIcon(slug),
+            color_hex: getFeatureColor(slug),
+            navigation_config,
+            is_active: true,
+          },
+        };
+      });
 
       console.log('🔍 useOrganizationFeatures: Final transformed features:', finalFeatures);
       return finalFeatures;
@@ -145,46 +145,29 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
   console.log('🔍 useFeatureNavigationSections: Processing features for navigation:', features);
 
   const sections = features
-    .filter(feature => {
-      // Check if feature has a slug in system_feature
-      const slug = feature.system_feature?.slug;
-      if (!slug) {
-        console.error('❌ useFeatureNavigationSections: Feature missing slug in system_feature:', feature);
-        return false;
-      }
-      
-      const navigationConfig = feature.system_feature?.navigation_config;
-      if (!navigationConfig?.items) {
-        console.warn('⚠️ useFeatureNavigationSections: Feature missing navigation config:', slug);
-        return false;
-      }
-      
-      return true;
-    })
     .map(feature => {
-      const systemFeature = feature.system_feature;
-      const slug = systemFeature.slug;
-      console.log('🔍 useFeatureNavigationSections: Processing feature:', slug);
-      
-      // Use navigation items from system_feature.navigation_config
-      const navigationItems = systemFeature.navigation_config.items.map((item: any) => ({
-        name: item.name,
-        href: item.href.startsWith('/') ? item.href : `/${item.href}`,
+      const slug = feature.system_feature?.slug;
+      if (!slug) return null;
+      const navConfig = feature.system_feature?.navigation_config || getFeatureNavigation(slug);
+      const items = Array.isArray(navConfig?.items) ? navConfig.items : [];
+      const navigationItems = items.map((item: any) => ({
+        name: item.name || item.label,
+        href: (item.href || item.path || '').startsWith('/') ? (item.href || item.path) : `/${item.href || item.path || ''}`,
         icon: item.icon || 'package',
-        badge: undefined
       }));
-
+      if (navigationItems.length === 0) return null;
       const section = {
         key: `feature-${slug}`,
-        title: systemFeature.display_name || getFeatureDisplayName(slug),
-        icon: systemFeature.icon_name || getFeatureIcon(slug),
-        color: systemFeature.color_hex || getFeatureColor(slug),
+        title: feature.system_feature.display_name || getFeatureDisplayName(slug),
+        icon: feature.system_feature.icon_name || getFeatureIcon(slug),
+        color: feature.system_feature.color_hex || getFeatureColor(slug),
         items: navigationItems
-      };
+      } as FeatureNavigationSection;
 
       console.log('🔍 useFeatureNavigationSections: Created section:', section);
       return section;
-    });
+    })
+    .filter(Boolean) as FeatureNavigationSection[];
 
   console.log('🔍 useFeatureNavigationSections: Final navigation sections:', sections);
   return sections;
@@ -339,9 +322,11 @@ function getFeatureNavigation(slug: string): any {
   const navigations: Record<string, any> = {
     'knowledge-base': {
       items: [
-        { name: 'Dashboard', href: '/features/knowledge-base', icon: 'home' },
-        { name: 'Documents', href: '/features/knowledge-base/documents', icon: 'fileText' },
+        { name: 'Dashboard', href: '/features/knowledge-base/dashboard', icon: 'home' },
+        { name: 'Knowledge Bases', href: '/features/knowledge-base/databases', icon: 'database' },
+        { name: 'Files', href: '/features/knowledge-base/files', icon: 'fileText' },
         { name: 'Chat', href: '/features/knowledge-base/chat', icon: 'messageCircle' },
+        { name: 'Analytics', href: '/features/knowledge-base/analytics', icon: 'barChart3' },
         { name: 'Settings', href: '/features/knowledge-base/settings', icon: 'settings' }
       ]
     },
