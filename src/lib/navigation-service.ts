@@ -35,23 +35,51 @@ export class NavigationService {
    * Normalize route to standard format: /features/{feature-slug}/{page-slug}
    */
   normalizeRoute(route: string, featureSlug?: string): string {
-    // Remove any existing prefix variations
-    let normalized = route
-      .replace(/^\/apps\/[^\/]+/, '')
-      .replace(/^\/features\/[^\/]+/, '')
-      .replace(/^\/[^\/]+/, '');
+    // Normalize input
+    const raw = (route || '').trim();
 
-    // Ensure it starts with /
-    if (!normalized.startsWith('/')) {
-      normalized = '/' + normalized;
+    // Strip query/hash and normalize slashes
+    let path = raw.split('#')[0].split('?')[0]
+      .replace(/\\+/g, '/')
+      .replace(/\/{2,}/g, '/');
+
+    // Remove leading slash for processing
+    if (path.startsWith('/')) path = path.slice(1);
+
+    // If already a feature path, keep tail and optionally override slug
+    const featureMatch = path.match(/^features\/([^/]+)\/?(.*)$/);
+    if (featureMatch) {
+      const existingSlug = featureMatch[1];
+      const rest = featureMatch[2] || '';
+      const finalSlug = featureSlug || existingSlug;
+      const tail = rest.replace(/^\/+|\/+$/g, '');
+      return `/features/${finalSlug}${tail ? '/' + tail : ''}`;
     }
 
-    // Add feature prefix if provided
+    // Strip apps/<id>/ prefix if present
+    const appsMatch = path.match(/^apps\/[^/]+\/?(.*)$/);
+    if (appsMatch) {
+      path = appsMatch[1] || '';
+    }
+
+    // If path begins with the feature slug, remove the duplicate prefix
     if (featureSlug) {
-      return `/features/${featureSlug}${normalized}`;
+      const segs = path.split('/').filter(Boolean);
+      if (segs[0] === featureSlug) {
+        segs.shift();
+        path = segs.join('/');
+      }
     }
 
-    return normalized;
+    // Trim any extra slashes
+    path = path.replace(/^\/+|\/+$/g, '');
+
+    if (featureSlug) {
+      return `/features/${featureSlug}${path ? '/' + path : ''}`;
+    }
+
+    // Fallback: ensure leading slash
+    return `/${path}`;
   }
 
   /**

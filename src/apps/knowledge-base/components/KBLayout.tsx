@@ -10,15 +10,16 @@ interface KBLayoutProps {
 
 export function KBLayout({ children }: KBLayoutProps) {
   const { routes } = useFeatureRoutes('knowledge-base');
-  const { activeRoute } = useRouteHierarchy(routes);
+  const { activeRoute, breadcrumbs } = useRouteHierarchy(routes);
 
   React.useEffect(() => {
-    if (activeRoute?.title) {
-      document.title = `${activeRoute.title} - Knowledge Base`;
+    const pageLabel = activeRoute?.title ?? breadcrumbs[breadcrumbs.length - 1]?.label;
+    if (pageLabel) {
+      document.title = `${pageLabel} - Knowledge Base`;
     } else {
       document.title = 'Knowledge Base';
     }
-  }, [activeRoute]);
+  }, [activeRoute, breadcrumbs]);
 
   return (
     <KBProvider>

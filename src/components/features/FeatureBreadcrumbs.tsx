@@ -16,8 +16,10 @@ export function FeatureBreadcrumbs({
   routes,
   featureRootPath
 }: FeatureBreadcrumbsProps) {
-  const { activeRoute } = useRouteHierarchy(routes);
+  const { activeRoute, breadcrumbs } = useRouteHierarchy(routes);
   const rootPath = featureRootPath ?? `/features/${featureSlug}`;
+  const pageLabel = activeRoute?.title ?? breadcrumbs[breadcrumbs.length - 1]?.label;
+  const showPage = !!pageLabel && pageLabel !== featureLabel;
 
   return (
     <Breadcrumb>
@@ -25,11 +27,11 @@ export function FeatureBreadcrumbs({
         <BreadcrumbItem>
           <BreadcrumbLink href={rootPath}>{featureLabel}</BreadcrumbLink>
         </BreadcrumbItem>
-        {activeRoute?.title && (
+        {showPage && (
           <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{activeRoute.title}</BreadcrumbPage>
+              <BreadcrumbPage>{pageLabel}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}
