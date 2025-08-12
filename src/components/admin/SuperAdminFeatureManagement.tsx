@@ -111,6 +111,8 @@ export function SuperAdminFeatureManagement() {
     onSuccess: () => {
       toast({ title: 'Feature configuration updated successfully' });
       queryClient.invalidateQueries({ queryKey: ['org-feature-configs', selectedOrgId] });
+      queryClient.invalidateQueries({ queryKey: ['organization-feature-configs', selectedOrgId] });
+      queryClient.invalidateQueries({ queryKey: ['organization-features', selectedOrgId] });
     },
     onError: (error) => {
       toast({

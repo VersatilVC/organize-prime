@@ -138,6 +138,7 @@ export function useOrganizationFeatureConfigs() {
     onSuccess: () => {
       toast({ title: 'Feature configuration updated successfully' });
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['organization-features', currentOrganization?.id] });
     },
     onError: (error) => {
       toast({
@@ -153,6 +154,7 @@ export function useOrganizationFeatureConfigs() {
     onSuccess: () => {
       toast({ title: 'Menu order updated successfully' });
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['organization-features', currentOrganization?.id] });
     },
     onError: (error) => {
       toast({
@@ -174,6 +176,8 @@ export function useOrganizationFeatureConfigs() {
       toast({ title: 'User feature access updated successfully' });
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['user-feature-access'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-feature-configs', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['organization-features', currentOrganization?.id] });
     },
     onError: (error) => {
       toast({
