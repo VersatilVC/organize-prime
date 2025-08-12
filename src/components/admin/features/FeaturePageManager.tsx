@@ -58,7 +58,8 @@ export function FeaturePageManager({ pages, onChange, featureSlug, disabled = fa
 
   const generateRoute = (title: string) => {
     if (!title) return '';
-    const baseRoute = `/${featureSlug}/${title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-')}`;
+    // Use consistent route pattern that matches the app structure
+    const baseRoute = `/apps/${featureSlug}/${title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-')}`;
     return baseRoute;
   };
 
