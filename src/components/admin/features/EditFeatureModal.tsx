@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
+import { useFeatureValidation } from '@/hooks/database/useFeatureValidation';
+import { FeaturePageManager } from './FeaturePageManager';
 import { Icons } from '@/components/ui/icons';
 import { 
   Package, 
@@ -16,6 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import type { SystemFeature } from '@/types/features';
+import type { FeaturePage } from '@/types/feature-pages';
 
 interface EditFeatureModalProps {
   open: boolean;
@@ -44,6 +47,9 @@ const iconOptions = [
 export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureModalProps) {
   const { toast } = useToast();
   const { updateFeature, isUpdating } = useSystemFeatures();
+  const { validateFeatureData } = useFeatureValidation();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [pages, setPages] = useState<FeaturePage[]>([]);
   const [formData, setFormData] = useState({
     displayName: '',
     slug: '',
@@ -64,6 +70,11 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         iconName: feature.icon_name,
         colorHex: feature.color_hex
       });
+      
+      // Load existing pages from navigation_config
+      const existingPages = feature.navigation_config?.pages || [];
+      setPages(existingPages);
+      setCurrentStep(1);
     }
   }, [feature]);
 
@@ -87,6 +98,23 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
     e.preventDefault();
     if (!feature) return;
 
+    // Validate feature data including pages
+    const validation = await validateFeatureData({
+      ...formData,
+      pages
+    }, feature.id);
+
+    if (!validation.isValid) {
+      validation.errors.forEach(error => {
+        toast({
+          title: 'Validation Error',
+          description: error,
+          variant: 'destructive',
+        });
+      });
+      return;
+    }
+
     try {
       await updateFeature({
         id: feature.id,
@@ -96,6 +124,9 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
           category: formData.category,
           iconName: formData.iconName,
           colorHex: formData.colorHex,
+          navigation_config: {
+            pages: pages
+          }
         }
       });
       
@@ -105,191 +136,245 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
     }
   };
 
+  const handleNextStep = () => {
+    if (currentStep === 1 && isValid) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep === 2) {
+      setCurrentStep(1);
+    }
+  };
+
   const isValid = formData.displayName && formData.slug && formData.category;
 
   if (!feature) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Edit Feature
+            Edit Feature - Step {currentStep} of 2
           </DialogTitle>
           <DialogDescription>
-            Update the feature configuration and settings
+            {currentStep === 1 
+              ? 'Update the feature configuration and settings'
+              : 'Manage the pages and routes for your feature'
+            }
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name *</Label>
-              <Input
-                id="displayName"
-                value={formData.displayName}
-                onChange={(e) => handleDisplayNameChange(e.target.value)}
-                placeholder="e.g., Document Management"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug *</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                placeholder="e.g., document-management"
-                required
-                disabled // Prevent slug changes for existing features
-              />
-              <p className="text-xs text-muted-foreground">
-                Slug cannot be changed for existing features
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe what this feature does..."
-              rows={3}
-            />
-          </div>
-
-          {/* Category Selection */}
-          <div className="space-y-2">
-            <Label>Category *</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      {category.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Icon Selection */}
-          <div className="space-y-2">
-            <Label>Icon</Label>
-            <div className="grid grid-cols-5 gap-2">
-              {iconOptions.map((icon) => {
-                const IconComponent = Icons[icon as keyof typeof Icons] || Package;
-                return (
-                  <Button
-                    key={icon}
-                    type="button"
-                    variant={formData.iconName === icon ? "default" : "outline"}
-                    size="sm"
-                    className="h-10"
-                    onClick={() => setFormData(prev => ({ ...prev, iconName: icon }))}
-                  >
-                    <IconComponent className="h-4 w-4" />
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Color Selection */}
-          <div className="space-y-2">
-            <Label>Theme Color</Label>
-            <div className="flex items-center gap-2">
-              <div className="grid grid-cols-5 gap-2">
-                {predefinedColors.map((color) => (
-                  <Button
-                    key={color}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-10 h-10 p-0 relative"
-                    style={{ backgroundColor: color }}
-                    onClick={() => setFormData(prev => ({ ...prev, colorHex: color }))}
-                  >
-                    {formData.colorHex === color && (
-                      <Check className="h-4 w-4 text-white" />
-                    )}
-                  </Button>
-                ))}
-              </div>
-              <Input
-                type="color"
-                value={formData.colorHex}
-                onChange={(e) => setFormData(prev => ({ ...prev, colorHex: e.target.value }))}
-                className="w-16 h-10"
-              />
-            </div>
-          </div>
-
-          {/* Preview */}
-          {formData.displayName && (
-            <div className="space-y-2">
-              <Label>Preview</Label>
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
-                    style={{ backgroundColor: formData.colorHex }}
-                  >
-                    {(() => {
-                      const IconComponent = Icons[formData.iconName as keyof typeof Icons] || Package;
-                      return <IconComponent className="h-5 w-5" />;
-                    })()}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{formData.displayName}</h3>
-                    {formData.category && (
-                      <Badge variant="outline" className="text-xs mt-1">
-                        {categories.find(c => c.value === formData.category)?.label}
-                      </Badge>
-                    )}
-                  </div>
+          {currentStep === 1 && (
+            <>
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name *</Label>
+                  <Input
+                    id="displayName"
+                    value={formData.displayName}
+                    onChange={(e) => handleDisplayNameChange(e.target.value)}
+                    placeholder="e.g., Document Management"
+                    required
+                  />
                 </div>
-                {formData.description && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {formData.description}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="slug">Slug *</Label>
+                  <Input
+                    id="slug"
+                    value={formData.slug}
+                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                    placeholder="e.g., document-management"
+                    required
+                    disabled // Prevent slug changes for existing features
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Slug cannot be changed for existing features
                   </p>
-                )}
-              </Card>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe what this feature does..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Category Selection */}
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          {category.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Icon Selection */}
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {iconOptions.map((icon) => {
+                    const IconComponent = Icons[icon as keyof typeof Icons] || Package;
+                    return (
+                      <Button
+                        key={icon}
+                        type="button"
+                        variant={formData.iconName === icon ? "default" : "outline"}
+                        size="sm"
+                        className="h-10"
+                        onClick={() => setFormData(prev => ({ ...prev, iconName: icon }))}
+                      >
+                        <IconComponent className="h-4 w-4" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Color Selection */}
+              <div className="space-y-2">
+                <Label>Theme Color</Label>
+                <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-5 gap-2">
+                    {predefinedColors.map((color) => (
+                      <Button
+                        key={color}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-10 h-10 p-0 relative"
+                        style={{ backgroundColor: color }}
+                        onClick={() => setFormData(prev => ({ ...prev, colorHex: color }))}
+                      >
+                        {formData.colorHex === color && (
+                          <Check className="h-4 w-4 text-white" />
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    type="color"
+                    value={formData.colorHex}
+                    onChange={(e) => setFormData(prev => ({ ...prev, colorHex: e.target.value }))}
+                    className="w-16 h-10"
+                  />
+                </div>
+              </div>
+
+              {/* Preview */}
+              {formData.displayName && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <Card className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                        style={{ backgroundColor: formData.colorHex }}
+                      >
+                        {(() => {
+                          const IconComponent = Icons[formData.iconName as keyof typeof Icons] || Package;
+                          return <IconComponent className="h-5 w-5" />;
+                        })()}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{formData.displayName}</h3>
+                        {formData.category && (
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {categories.find(c => c.value === formData.category)?.label}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {formData.description && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {formData.description}
+                      </p>
+                    )}
+                  </Card>
+                </div>
+              )}
+            </>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <FeaturePageManager
+                pages={pages}
+                onChange={setPages}
+                featureSlug={formData.slug}
+              />
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={!isValid || isUpdating}
-            >
-              {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Update Feature
-            </Button>
+          <div className="flex justify-between gap-2">
+            <div>
+              {currentStep === 2 && (
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={handlePrevStep}
+                >
+                  Previous
+                </Button>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              
+              {currentStep === 1 ? (
+                <Button 
+                  type="button" 
+                  onClick={handleNextStep}
+                  disabled={!isValid}
+                >
+                  Next: Manage Pages
+                </Button>
+              ) : (
+                <Button 
+                  type="submit" 
+                  disabled={isUpdating}
+                >
+                  {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Update Feature
+                </Button>
+              )}
+            </div>
           </div>
         </form>
       </DialogContent>

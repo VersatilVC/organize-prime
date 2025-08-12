@@ -67,7 +67,7 @@ export function useSystemFeatures() {
           is_marketplace_visible: true,
           system_menu_order: featureData.sort_order ?? 0,
           navigation_config: featureData.navigation_config || {},
-          feature_pages: [],
+          feature_pages: featureData.navigation_config?.pages || [],
         })
         .select()
         .single();
@@ -117,6 +117,10 @@ export function useSystemFeatures() {
       if (updates.category !== undefined) updateData.category = updates.category;
       if (updates.iconName !== undefined) updateData.icon_name = updates.iconName;
       if (updates.colorHex !== undefined) updateData.color_hex = updates.colorHex;
+      if (updates.navigation_config !== undefined) {
+        updateData.navigation_config = updates.navigation_config;
+        updateData.feature_pages = updates.navigation_config.pages || [];
+      }
 
       const { error } = await supabase
         .from('system_feature_configs')
