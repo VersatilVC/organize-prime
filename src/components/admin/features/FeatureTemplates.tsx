@@ -13,7 +13,8 @@ import { Loader2, Plus, Star, Download, Upload, Package, FileText, BarChart3 } f
 import { Icons } from '@/components/ui/icons';
 import { useFeatureTemplates } from '@/hooks/database/useFeatureTemplates';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
-import type { FeatureTemplate, SystemFeature } from '@/types/features';
+import type { FeatureTemplate } from '@/types/feature-templates';
+import type { SystemFeature } from '@/types/features';
 
 export function FeatureTemplates() {
   const { templates, isLoading, createFromTemplate, saveAsTemplate, exportFeatures, importFeatures, isCreating, isSaving, isExporting, isImporting } = useFeatureTemplates();

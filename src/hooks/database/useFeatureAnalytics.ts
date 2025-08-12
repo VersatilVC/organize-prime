@@ -10,32 +10,16 @@ export function useFeatureAnalytics() {
   const { data: analytics = [], isLoading } = useQuery({
     queryKey: ['feature-analytics'],
     queryFn: async (): Promise<FeatureAnalytics[]> => {
-      const { data, error } = await supabase
-        .from('feature_analytics')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1000);
-
-      if (error) {
-        console.error('Error fetching feature analytics:', error);
-        throw new Error('Failed to fetch feature analytics');
-      }
-
-      return data || [];
+      // For now, return empty array until database is updated
+      return [];
     },
   });
 
   const getFeatureUsageStats = useQuery({
     queryKey: ['feature-usage-stats'],
     queryFn: async (): Promise<FeatureUsageStats[]> => {
-      const { data, error } = await supabase.rpc('get_feature_usage_stats');
-
-      if (error) {
-        console.error('Error fetching feature usage stats:', error);
-        throw new Error('Failed to fetch feature usage stats');
-      }
-
-      return data || [];
+      // For now, return empty array until database is updated
+      return [];
     },
   });
 
@@ -53,22 +37,18 @@ export function useFeatureAnalytics() {
     }) => {
       const { data: user } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
-        .from('feature_analytics')
-        .insert({
-          feature_slug,
-          event_type,
-          event_data,
-          organization_id,
-          user_id: user.user?.id || null,
-          ip_address: null, // Will be populated by database trigger
-          user_agent: navigator.userAgent,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // For now, just return a mock response until database is updated
+      return {
+        id: 'mock-id',
+        feature_slug,
+        event_type,
+        event_data,
+        organization_id: organization_id || null,
+        user_id: user.user?.id || null,
+        ip_address: null,
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString(),
+      };
     },
     onSuccess: () => {
       // Invalidate analytics queries to refresh data

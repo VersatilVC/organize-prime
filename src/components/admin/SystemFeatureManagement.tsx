@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Loader2, Plus, Edit, Trash2, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -13,6 +14,8 @@ import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
 import { AddFeatureModal } from './features/AddFeatureModal';
 import { EditFeatureModal } from './features/EditFeatureModal';
 import { FeatureBulkActions } from './features/FeatureBulkActions';
+import { FeatureTemplates } from './features/FeatureTemplates';
+import { FeatureAnalyticsDashboard } from './features/FeatureAnalyticsDashboard';
 import type { SystemFeature } from '@/types/features';
 
 export function SystemFeatureManagement() {
@@ -115,21 +118,32 @@ export function SystemFeatureManagement() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>System Feature Management</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Control global availability of features across all organizations
-            </p>
-          </div>
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Feature
-          </Button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">System Feature Management</h1>
+          <p className="text-muted-foreground">
+            Control global availability of features across all organizations
+          </p>
         </div>
-      </CardHeader>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Feature
+        </Button>
+      </div>
+
+      <Tabs defaultValue="features" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="features">Features</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="features">
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Features</CardTitle>
+            </CardHeader>
       <CardContent className="space-y-6">
         {/* Bulk Actions */}
         <FeatureBulkActions
@@ -266,18 +280,29 @@ export function SystemFeatureManagement() {
             </div>
           )}
         </div>
-      </CardContent>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      <AddFeatureModal 
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-      />
+      <TabsContent value="templates">
+        <FeatureTemplates />
+      </TabsContent>
 
-      <EditFeatureModal 
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        feature={editingFeature}
-      />
-    </Card>
+      <TabsContent value="analytics">
+        <FeatureAnalyticsDashboard />
+      </TabsContent>
+    </Tabs>
+
+    <AddFeatureModal 
+      open={isAddModalOpen}
+      onOpenChange={setIsAddModalOpen}
+    />
+
+    <EditFeatureModal 
+      open={isEditModalOpen}
+      onOpenChange={setIsEditModalOpen}
+      feature={editingFeature}
+    />
+  </div>
   );
 }

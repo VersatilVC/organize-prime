@@ -16,7 +16,10 @@ export function FeatureAnalyticsDashboard() {
   const { features } = useSystemFeatures();
   
   const [selectedFeature, setSelectedFeature] = useState<string>('all');
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });

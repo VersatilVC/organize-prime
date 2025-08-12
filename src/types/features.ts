@@ -38,3 +38,13 @@ export interface FeatureWebhook {
   created_at: string;
   updated_at: string;
 }
+
+// Re-export from feature-templates for convenience
+export type { 
+  FeatureTemplate,
+  FeatureDependency,
+  FeatureAnalytics,
+  FeatureUsageStats,
+  FeatureExport,
+  FeatureImportResult
+} from './feature-templates';
