@@ -11,8 +11,8 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 
 // Only implemented components - everything else gets placeholder
 export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
-  // Add component names here when they're ready for production
-  // Example: 'KBDashboard', 'KBSettings'
+  'Settings', // KB Settings page
+  'KBSettings', // Alternative name
 ]);
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -23,6 +23,8 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   KBChat,
   KBAnalytics,
   KBSettings,
+  // Map Settings to KBSettings for route compatibility
+  Settings: KBSettings,
 };
 
 export function getComponent(componentName: string): React.ComponentType<any> {

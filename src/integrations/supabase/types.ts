@@ -799,6 +799,99 @@ export type Database = {
           },
         ]
       }
+      kb_analytics: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          kb_config_id: string | null
+          organization_id: string
+          processing_time_ms: number | null
+          tokens_consumed: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          kb_config_id?: string | null
+          organization_id: string
+          processing_time_ms?: number | null
+          tokens_consumed?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          kb_config_id?: string | null
+          organization_id?: string
+          processing_time_ms?: number | null
+          tokens_consumed?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      kb_configurations: {
+        Row: {
+          chunk_overlap: number
+          chunk_size: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          embedding_model: string
+          file_count: number
+          id: string
+          is_default: boolean
+          is_premium: boolean
+          name: string
+          organization_id: string
+          status: string
+          total_vectors: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          chunk_overlap?: number
+          chunk_size?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          embedding_model?: string
+          file_count?: number
+          id?: string
+          is_default?: boolean
+          is_premium?: boolean
+          name: string
+          organization_id: string
+          status?: string
+          total_vectors?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          chunk_overlap?: number
+          chunk_size?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          embedding_model?: string
+          file_count?: number
+          id?: string
+          is_default?: boolean
+          is_premium?: boolean
+          name?: string
+          organization_id?: string
+          status?: string
+          total_vectors?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       kb_conversations: {
         Row: {
           created_at: string | null

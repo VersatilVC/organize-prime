@@ -60,10 +60,7 @@ function FeatureDebugComponent() {
   );
 }
 
-const App = () => {
-  console.log('🔍 App: App component rendering, current URL:', window.location.pathname);
-  
-  return (
+const App = () => (
   <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: cacheConfig.static.gcTime }}>
     <TooltipProvider>
       <Toaster />
@@ -228,7 +225,6 @@ const App = () => {
       </AuthProvider>
     </TooltipProvider>
   </PersistQueryClientProvider>
-  );
-};
+);
 
 export default App;

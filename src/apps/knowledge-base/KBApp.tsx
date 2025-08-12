@@ -48,12 +48,20 @@ export default function KBApp() {
     const defaultPageRoute = routes.find(r => r.isDefault);
     console.log('🔍 KBApp: Default page route:', defaultPageRoute);
     if (defaultPageRoute) {
-      // Remove the /knowledge-base/ prefix to get the local route
-      const normalizedRoute = defaultPageRoute.path.replace('/knowledge-base/', '');
+      // Handle both /apps/ and /features/ prefixes and normalize
+      let normalizedRoute = defaultPageRoute.path;
+      if (normalizedRoute.startsWith('/apps/knowledge-base/')) {
+        normalizedRoute = normalizedRoute.replace('/apps/knowledge-base/', '');
+      } else if (normalizedRoute.startsWith('/features/knowledge-base/')) {
+        normalizedRoute = normalizedRoute.replace('/features/knowledge-base/', '');
+      } else if (normalizedRoute.startsWith('/knowledge-base/')) {
+        normalizedRoute = normalizedRoute.replace('/knowledge-base/', '');
+      }
       console.log('🔍 KBApp: Normalized default route:', normalizedRoute);
       return normalizedRoute;
     }
-    const fallbackRoute = routes.length > 0 ? routes[0].path.replace('/knowledge-base/', '') : 'dashboard';
+    const fallbackRoute = routes.length > 0 ? 
+      routes[0].path.replace(/^\/(apps|features)\/knowledge-base\//, '') : 'dashboard';
     console.log('🔍 KBApp: Using fallback route:', fallbackRoute);
     return fallbackRoute;
   }, [routes]);
@@ -77,8 +85,15 @@ export default function KBApp() {
           <Routes>
             <Route path="" element={<Navigate to={defaultRoute} replace />} />
             {routes.map((route) => {
-              // Remove the /knowledge-base/ prefix to get the local route path
-              const routePath = route.path.replace('/knowledge-base/', '');
+              // Handle both /apps/ and /features/ prefixes and normalize to local route path
+              let routePath = route.path;
+              if (routePath.startsWith('/apps/knowledge-base/')) {
+                routePath = routePath.replace('/apps/knowledge-base/', '');
+              } else if (routePath.startsWith('/features/knowledge-base/')) {
+                routePath = routePath.replace('/features/knowledge-base/', '');
+              } else if (routePath.startsWith('/knowledge-base/')) {
+                routePath = routePath.replace('/knowledge-base/', '');
+              }
               console.log('🔍 KBApp: Creating route:', { originalPath: route.path, routePath, title: route.title });
               return (
                 <Route
