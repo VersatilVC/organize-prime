@@ -50,6 +50,16 @@ function KnowledgeBaseRedirect() {
   return <Navigate to={newPath} replace />;
 }
 
+// Debug component for feature routing
+function FeatureDebugComponent() {
+  console.log('🔍 App: Debug - Features route matched but no slug captured. URL:', window.location.pathname);
+  return (
+    <ProtectedRoute>
+      <div>Feature routing debug - check console</div>
+    </ProtectedRoute>
+  );
+}
+
 const App = () => (
   <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: cacheConfig.static.gcTime }}>
     <TooltipProvider>
@@ -108,6 +118,11 @@ const App = () => (
                       <FeatureRouter />
                     </ProtectedRoute>
                   } 
+                />
+                {/* Debug route to verify feature routing */}
+                <Route 
+                  path="/features/*" 
+                  element={<FeatureDebugComponent />} 
                 />
                 {/* Legacy Knowledge Base redirect */}
                 <Route 
