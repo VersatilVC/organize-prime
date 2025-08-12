@@ -22,6 +22,7 @@ import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedFor
 import FeatureCategoryManagement from '@/components/settings/FeatureCategoryManagement';
 import { SystemFeatureManagement } from '@/components/admin/SystemFeatureManagement';
 import { FeatureManagement } from '@/components/admin/FeatureManagement';
+import { SuperAdminFeatureManagement } from '@/components/admin/SuperAdminFeatureManagement';
 
 interface SystemSettings {
   app_name: string;
@@ -416,9 +417,10 @@ export default function SystemSettings() {
         </div>
 
         <Tabs defaultValue="application" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="application">Application</TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="organizations">Organizations</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
           </TabsList>
@@ -725,11 +727,13 @@ export default function SystemSettings() {
             <SystemFeatureManagement />
           </TabsContent>
 
+          <TabsContent value="organizations">
+            <SuperAdminFeatureManagement />
+          </TabsContent>
+
           <TabsContent value="categories">
             <FeatureCategoryManagement />
           </TabsContent>
-
-
 
           <TabsContent value="statistics">
             <Card>

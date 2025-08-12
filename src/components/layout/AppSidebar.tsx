@@ -152,30 +152,18 @@ const createAppSections = (appInstallations: any[], configs: any[]): SidebarSect
 
 // Create dynamic sections for enabled features
 const createFeatureSections = (featureNavigationSections: any[]): SidebarSection[] => {
-  console.log('🔍 createFeatureSections: Input sections:', featureNavigationSections);
-  
-  const sections = featureNavigationSections.map(featureSection => {
-    console.log('🔍 createFeatureSections: Processing feature section:', featureSection);
-    
-    const section = {
-      key: featureSection.key,
-      title: featureSection.title,
-      items: featureSection.items.map((item: any) => ({
-        name: item.name,
-        href: item.href,
-        icon: Icons[item.icon as keyof typeof Icons] || Icons.package,
-      })),
-      isVisible: () => true,
-      isApp: false,
-      appIcon: featureSection.icon,
-    };
-    
-    console.log('🔍 createFeatureSections: Created section:', section);
-    return section;
-  });
-  
-  console.log('🔍 createFeatureSections: Final sections:', sections);
-  return sections;
+  return featureNavigationSections.map(featureSection => ({
+    key: featureSection.key,
+    title: featureSection.title,
+    items: featureSection.items.map((item: any) => ({
+      name: item.name,
+      href: item.href,
+      icon: Icons[item.icon as keyof typeof Icons] || Icons.package,
+    })),
+    isVisible: () => true,
+    isApp: false,
+    appIcon: featureSection.icon,
+  }));
 };
 
 const baseSidebarSections: SidebarSection[] = [
@@ -207,26 +195,14 @@ const baseSidebarSections: SidebarSection[] = [
 
 // Combine base sections with dynamic app and feature sections
 const getAllSidebarSections = (appInstallations: any[], configs: any[], featureNavigationSections: any[]): SidebarSection[] => {
-  console.log('🔍 getAllSidebarSections: Inputs:', {
-    appInstallations,
-    configs,
-    featureNavigationSections
-  });
-  
   const appSections = createAppSections(appInstallations, configs);
   const featureSections = createFeatureSections(featureNavigationSections);
-  
-  console.log('🔍 getAllSidebarSections: Created sections:', {
-    appSections,
-    featureSections
-  });
   
   // Insert feature sections first, then app sections after 'main' section but before management sections
   const sections = [...baseSidebarSections];
   const mainIndex = sections.findIndex(s => s.key === 'main');
   sections.splice(mainIndex + 1, 0, ...featureSections, ...appSections);
   
-  console.log('🔍 getAllSidebarSections: Final combined sections:', sections);
   return sections;
 };
 

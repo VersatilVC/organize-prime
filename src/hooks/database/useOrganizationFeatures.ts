@@ -153,6 +153,9 @@ export function useOrganizationFeatures(organizationId?: string) {
         });
 
       console.log('🔍 useOrganizationFeatures: Final features to return:', finalFeatures);
+      console.log('🔍 useOrganizationFeatures: Organization features before filtering:', validOrgFeatures);
+      console.log('🔍 useOrganizationFeatures: System features found:', systemFeatures);
+      console.log('🔍 useOrganizationFeatures: Enabled system features set:', enabledSystemFeatures);
       return finalFeatures;
     },
     enabled: !!orgId,
