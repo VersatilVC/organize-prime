@@ -80,8 +80,10 @@ export function FeaturePlaceholderPage({
                   Back to Dashboard
                 </Link>
               </Button>
-              <Button variant="ghost" onClick={() => window.history.back()}>
-                Go Back
+              <Button variant="default" asChild>
+                <Link to="/feedback">
+                  Send Feedback
+                </Link>
               </Button>
             </div>
           </div>

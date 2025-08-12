@@ -38,37 +38,10 @@ export function KBLayout({ children }: KBLayoutProps) {
   return (
     <AppLayout appId="knowledge-base" appName="Knowledge Base" permissions={[]}>
       <KBProvider>
-        <header className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <button className="md:hidden p-2 rounded hover:bg-muted" aria-label="Toggle KB navigation" onClick={() => setShowNav((v) => !v)}>
-              <Menu className="h-5 w-5" />
-            </button>
-            <BookOpen className="h-5 w-5" />
-            <div>
-              <h1 className="text-base font-semibold">Knowledge Base</h1>
-              <p className="text-sm text-muted-foreground">{currentOrganization?.name ?? 'Organization'}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <KBPermissionGuard can="can_create_kb">
-              <Button asChild size="sm">
-                <Link to="/features/knowledge-base/databases">Create KB</Link>
-              </Button>
-            </KBPermissionGuard>
-            <KBPermissionGuard can="can_upload">
-              <Button asChild size="sm" variant="secondary">
-                <Link to="/features/knowledge-base/files">Upload Files</Link>
-              </Button>
-            </KBPermissionGuard>
-            <KBPermissionGuard can="can_chat">
-              <Button asChild size="sm" variant="outline">
-                <Link to="/features/knowledge-base/chat">New Chat</Link>
-              </Button>
-            </KBPermissionGuard>
-          </div>
-        </header>
-
         <nav className={`gap-1 p-2 border-b overflow-x-auto ${showNav ? 'flex' : 'hidden md:flex'}`}>
+          <button className="md:hidden p-2 rounded hover:bg-muted" aria-label="Toggle KB navigation" onClick={() => setShowNav((v) => !v)}>
+            <Menu className="h-5 w-5" />
+          </button>
           {nav.map(item => (
             <KBPermissionGuard key={item.to} adminOnly={item.adminOnly}>
               <Link

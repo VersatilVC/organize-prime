@@ -41,8 +41,8 @@ export function KBPlaceholderPage({ component, title, description }: KBPlacehold
         title={`${title} - Coming Soon`}
         description={description || defaultDescription}
         action={{
-          label: "Back to Dashboard",
-          onClick: () => window.history.back()
+          label: "Send Feedback",
+          onClick: () => window.location.href = '/feedback'
         }}
       />
     </div>
