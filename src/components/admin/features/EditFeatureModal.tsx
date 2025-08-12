@@ -71,7 +71,7 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         colorHex: feature.color_hex
       });
       
-      // Load existing pages from navigation_config.pages (new format)
+      // Load existing pages from navigation_config.pages (database structure)
       const existingPages = feature.navigation_config?.pages || [];
       console.log('🔍 EditFeatureModal: Existing pages from database:', existingPages);
       

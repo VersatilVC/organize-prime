@@ -1,89 +1,69 @@
 import React from 'react';
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { KBLayout } from './components/KBLayout';
-import KBDashboard from './pages/KBDashboard';
-import KBDatabases from './pages/KBDatabases';
-import KBFiles from './pages/KBFiles';
-import KBChat from './pages/KBChat';
-import KBAnalytics from './pages/KBAnalytics';
-import KBSettings from './pages/KBSettings';
-import { KBPlaceholderPage } from './components/KBPlaceholderPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { KB_ROUTES } from './config/routes';
 import { KBAuthorizeRoute } from './components/shared/KBAuthorizeRoute';
-import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
+import { useFeatureRoutes } from '@/hooks/useFeatureRoutes';
+import { getComponent } from '@/apps/shared/utils/componentRegistry';
+import { useFeatureSync } from '@/hooks/useFeatureSync';
 
-const COMPONENT_MAP: Record<string, React.ReactNode> = {
-  KBDashboard: <KBDashboard />,
-  KBDatabases: <KBDatabases />,
-  KBFiles: <KBFiles />,
-  KBChat: <KBChat />,
-  KBAnalytics: <KBAnalytics />,
-  KBSettings: <KBSettings />,
-};
-
-function DynamicKBPage() {
-  const { '*': routePath } = useParams();
+// Dynamic route component that renders based on database configuration
+function DynamicRoute({ route }: { route: any }) {
+  const Component = getComponent(route.component);
+  const isAdminRoute = route.permissions?.includes('admin');
   
-  // Extract the component and title from the route
-  // For example: "knowledgebase-management" should map to Settings component
-  const componentName = routePath?.includes('management') ? 'Settings' : 'Custom';
-  const title = routePath?.split('-').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ') || 'Page';
+  const element = React.createElement(Component);
+  
+  const wrapped = (
+    <KBAuthorizeRoute permissions={route.permissions || []}>
+      {element}
+    </KBAuthorizeRoute>
+  );
 
-  return (
-    <KBPlaceholderPage
-      component={componentName}
-      title={title}
-      description="This page is being developed. Please check back later or contact your administrator."
-    />
+  return isAdminRoute ? (
+    <ProtectedRoute requiredRole="admin">{wrapped}</ProtectedRoute>
+  ) : (
+    wrapped
   );
 }
 
 export default function KBApp() {
-  const { data: features } = useOrganizationFeatures();
-  const kbFeature = features?.find(f => f.system_feature.slug === 'knowledge-base');
-  const navigationConfig = kbFeature?.system_feature.navigation_config;
+  const { routes, isLoading } = useFeatureRoutes('knowledge-base');
+  
+  // Auto-sync feature pages if they don't exist
+  useFeatureSync();
+  
+  // Find default route for redirect
+  const defaultRoute = routes.find(r => r.isDefault)?.path.replace('/apps/knowledge-base/', '') || 'dashboard';
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <KBLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        </KBLayout>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <KBLayout>
         <ErrorBoundary>
-        <Routes>
-          <Route path="" element={<Navigate to="dashboard" replace />} />
-          {KB_ROUTES.map((r) => {
-            const element = COMPONENT_MAP[r.component];
-            const isAdminRoute = (r.roles as readonly string[]).includes('admin') && !(r.roles as readonly string[]).includes('user');
-            const wrapped = (
-              <KBAuthorizeRoute permissions={r.permissions as any}>
-                {element}
-              </KBAuthorizeRoute>
-            );
-            return (
+          <Routes>
+            <Route path="" element={<Navigate to={defaultRoute} replace />} />
+            {routes.map((route) => (
               <Route
-                key={r.path}
-                path={r.path.replace('/apps/knowledge-base/', '')}
-                element={isAdminRoute ? (
-                  <ProtectedRoute requiredRole="admin">{wrapped}</ProtectedRoute>
-                ) : (
-                  wrapped
-                )}
+                key={route.path}
+                path={route.path.replace('/apps/knowledge-base/', '')}
+                element={<DynamicRoute route={route} />}
               />
-            );
-          })}
-          {/* Catch-all route for dynamic pages */}
-          <Route 
-            path="*" 
-            element={
-              <KBAuthorizeRoute permissions={['can_upload'] as any}>
-                <DynamicKBPage />
-              </KBAuthorizeRoute>
-            } 
-          />
-        </Routes>
+            ))}
+          </Routes>
         </ErrorBoundary>
       </KBLayout>
     </AppLayout>
