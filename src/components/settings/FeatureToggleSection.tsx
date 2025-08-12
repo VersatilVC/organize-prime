@@ -12,12 +12,14 @@ export function FeatureToggleSection() {
   const { data: organizationFeatures = [], isLoading: orgFeaturesLoading } = useOrganizationFeatures();
   const toggleFeature = useToggleOrganizationFeature();
 
-  const isFeatureEnabled = (featureId: string) => {
-    return organizationFeatures.some(f => f.feature_id === featureId && f.is_enabled);
+  const isFeatureEnabled = (featureSlug: string) => {
+    // Check if feature is enabled in organization_feature_configs
+    const config = organizationFeatures.find(f => f.feature_id === featureSlug);
+    return config?.is_enabled ?? false;
   };
 
-  const handleToggleFeature = (featureId: string, isEnabled: boolean) => {
-    toggleFeature.mutate({ featureId, isEnabled });
+  const handleToggleFeature = (featureSlug: string, isEnabled: boolean) => {
+    toggleFeature.mutate({ featureId: featureSlug, isEnabled });
   };
 
   if (featuresLoading || orgFeaturesLoading) {
@@ -47,7 +49,7 @@ export function FeatureToggleSection() {
       <CardContent>
         <div className="space-y-6">
           {availableFeatures.map((feature) => {
-            const isEnabled = isFeatureEnabled(feature.id);
+            const isEnabled = isFeatureEnabled(feature.slug);
             const IconComponent = Icons[feature.icon_name as keyof typeof Icons] || Icons.package;
             
             return (
@@ -80,7 +82,7 @@ export function FeatureToggleSection() {
                 </div>
                 <Switch
                   checked={isEnabled}
-                  onCheckedChange={(checked) => handleToggleFeature(feature.id, checked)}
+                  onCheckedChange={(checked) => handleToggleFeature(feature.slug, checked)}
                   disabled={toggleFeature.isPending}
                 />
               </div>

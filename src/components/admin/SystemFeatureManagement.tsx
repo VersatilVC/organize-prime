@@ -1,89 +1,48 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { GripVertical, Eye, EyeOff, Globe, Building2 } from 'lucide-react';
-import { useSystemFeatureConfigs, SystemFeatureConfig } from '@/hooks/useSystemFeatureConfigs';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-
-interface FeatureListItem extends SystemFeatureConfig {
-  displayName: string;
-  description: string;
-}
-
-const featureMetadata: Record<string, { displayName: string; description: string }> = {
-  'knowledge-base': {
-    displayName: 'Knowledge Base',
-    description: 'AI-powered document search and knowledge management'
-  },
-  'content-creation': {
-    displayName: 'Content Creation',
-    description: 'AI-assisted content generation and editing tools'
-  },
-  'market-intel': {
-    displayName: 'Market Intelligence',
-    description: 'Market research and competitive analysis tools'
-  }
-};
+import { Loader2 } from 'lucide-react';
+import { Icons } from '@/components/ui/icons';
+import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
+import { useSystemFeatureConfigs } from '@/hooks/useSystemFeatureConfigs';
 
 export function SystemFeatureManagement() {
-  const { configs, isLoading, updateConfig, updateMenuOrder, isUpdating, isUpdatingOrder } = useSystemFeatureConfigs();
-  const [features, setFeatures] = useState<FeatureListItem[]>([]);
+  const { features: systemFeatures, isLoading: featuresLoading } = useSystemFeatures();
+  const { configs, isLoading: configsLoading, updateConfig } = useSystemFeatureConfigs();
 
-  // Update local state when configs change
-  React.useEffect(() => {
-    const enrichedFeatures = configs.map(config => ({
-      ...config,
-      displayName: featureMetadata[config.feature_slug]?.displayName || config.feature_slug,
-      description: featureMetadata[config.feature_slug]?.description || 'No description available'
-    }));
-    setFeatures(enrichedFeatures);
-  }, [configs]);
-
-  const handleToggleGlobalEnable = (feature: FeatureListItem) => {
-    updateConfig({
-      id: feature.id,
-      updates: { is_enabled_globally: !feature.is_enabled_globally }
-    });
+  const isFeatureGloballyEnabled = (featureSlug: string) => {
+    const config = configs.find(c => c.feature_slug === featureSlug);
+    return config?.is_enabled_globally ?? false;
   };
 
-  const handleToggleMarketplaceVisible = (feature: FeatureListItem) => {
-    updateConfig({
-      id: feature.id,
-      updates: { is_marketplace_visible: !feature.is_marketplace_visible }
-    });
+  const handleToggleGlobalFeature = (featureSlug: string, isEnabled: boolean) => {
+    const config = configs.find(c => c.feature_slug === featureSlug);
+    if (config) {
+      updateConfig({
+        id: config.id,
+        updates: {
+          is_enabled_globally: isEnabled,
+          // When disabling globally, also hide from marketplace
+          is_marketplace_visible: isEnabled ? config.is_marketplace_visible : false,
+        }
+      });
+    }
   };
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const items = Array.from(features);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Update local state immediately for better UX
-    setFeatures(items);
-
-    // Update menu order in database
-    const updates = items.map((item, index) => ({
-      id: item.id,
-      system_menu_order: index
-    }));
-
-    updateMenuOrder(updates);
-  };
-
-  if (isLoading) {
+  if (featuresLoading || configsLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Feature Management</CardTitle>
-          <CardDescription>Loading feature configurations...</CardDescription>
+          <CardTitle>System Feature Management</CardTitle>
         </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading features...</span>
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -92,119 +51,63 @@ export function SystemFeatureManagement() {
     <Card>
       <CardHeader>
         <CardTitle>System Feature Management</CardTitle>
-        <CardDescription>
-          Control which features are available globally and manage their marketplace visibility.
-          Drag and drop to reorder features in the navigation menu.
-        </CardDescription>
+        <p className="text-sm text-muted-foreground">
+          Control global availability of features across all organizations
+        </p>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="features">
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-                {features.map((feature, index) => (
-                  <Draggable key={feature.id} draggableId={feature.id} index={index}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={cn(
-                          "border rounded-lg p-4 bg-card transition-all",
-                          snapshot.isDragging && "shadow-lg"
-                        )}
-                      >
-                        <div className="flex items-center space-x-4">
-                          {/* Drag Handle */}
-                          <div
-                            {...provided.dragHandleProps}
-                            className="flex items-center justify-center w-8 h-8 rounded hover:bg-muted cursor-grab active:cursor-grabbing"
-                          >
-                            <GripVertical className="h-4 w-4 text-muted-foreground" />
-                          </div>
-
-                          {/* Feature Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-medium truncate">{feature.displayName}</h3>
-                              <Badge variant="outline" className="text-xs">
-                                Order: {feature.system_menu_order}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {feature.description}
-                            </p>
-                          </div>
-
-                          {/* Controls */}
-                          <div className="flex items-center space-x-6">
-                            {/* Global Enable/Disable */}
-                            <div className="flex items-center space-x-2">
-                              <Globe className="h-4 w-4 text-muted-foreground" />
-                              <Label htmlFor={`global-${feature.id}`} className="text-sm">
-                                Globally Enabled
-                              </Label>
-                              <Switch
-                                id={`global-${feature.id}`}
-                                checked={feature.is_enabled_globally}
-                                onCheckedChange={() => handleToggleGlobalEnable(feature)}
-                                disabled={isUpdating}
-                              />
-                            </div>
-
-                            <Separator orientation="vertical" className="h-8" />
-
-                            {/* Marketplace Visibility */}
-                            <div className="flex items-center space-x-2">
-                              {feature.is_marketplace_visible ? (
-                                <Eye className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <EyeOff className="h-4 w-4 text-muted-foreground" />
-                              )}
-                              <Label htmlFor={`marketplace-${feature.id}`} className="text-sm">
-                                Marketplace Visible
-                              </Label>
-                              <Switch
-                                id={`marketplace-${feature.id}`}
-                                checked={feature.is_marketplace_visible}
-                                onCheckedChange={() => handleToggleMarketplaceVisible(feature)}
-                                disabled={isUpdating || !feature.is_enabled_globally}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Status Indicators */}
-                        <div className="flex items-center space-x-2 mt-3 ml-12">
-                          <Badge 
-                            variant={feature.is_enabled_globally ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {feature.is_enabled_globally ? "Enabled" : "Disabled"}
-                          </Badge>
-                          {feature.is_enabled_globally && (
-                            <Badge 
-                              variant={feature.is_marketplace_visible ? "default" : "outline"}
-                              className="text-xs"
-                            >
-                              {feature.is_marketplace_visible ? "Public" : "Private"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+      <CardContent>
+        <div className="space-y-6">
+          {systemFeatures.map((feature) => {
+            const isGloballyEnabled = isFeatureGloballyEnabled(feature.slug);
+            const IconComponent = Icons[feature.icon_name as keyof typeof Icons] || Icons.package;
+            
+            return (
+              <div key={feature.id} className="flex items-center justify-between">
+                <div className="flex items-start space-x-4">
+                  <div 
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${feature.color_hex}20` }}
+                  >
+                    <IconComponent 
+                      className="w-5 h-5" 
+                      style={{ color: feature.color_hex }}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-base font-medium">
+                        {feature.display_name}
+                      </Label>
+                      <Badge variant="outline" className="text-xs">
+                        {feature.category}
+                      </Badge>
+                      {!isGloballyEnabled && (
+                        <Badge variant="secondary" className="text-xs">
+                          Disabled Globally
+                        </Badge>
+                      )}
+                    </div>
+                    {feature.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {feature.description}
+                      </p>
                     )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
+                  </div>
+                </div>
+                <Switch
+                  checked={isGloballyEnabled}
+                  onCheckedChange={(checked) => handleToggleGlobalFeature(feature.slug, checked)}
+                />
               </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-
-        {isUpdatingOrder && (
-          <div className="flex items-center justify-center py-4">
-            <p className="text-sm text-muted-foreground">Updating menu order...</p>
-          </div>
-        )}
+            );
+          })}
+          
+          {systemFeatures.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No features available</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

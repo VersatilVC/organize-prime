@@ -52,41 +52,52 @@ export function useOrganizationFeatures(organizationId?: string) {
     queryFn: async (): Promise<OrganizationFeatureWithSystem[]> => {
       if (!orgId) return [];
 
-      // Mock data since tables don't exist yet
-      return [
-        {
-          id: '1',
-          organization_id: orgId,
-          feature_id: '1',
-          is_enabled: true,
-          feature_settings: {},
-          setup_status: 'completed',
-          setup_error: null,
-          enabled_by: null,
-          enabled_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          system_feature: {
-            id: '1',
-            name: 'knowledge-base',
-            slug: 'knowledge-base',
-            display_name: 'Knowledge Base',
-            description: 'AI-powered document search and knowledge management',
-            category: 'business',
-            icon_name: 'bookOpen',
-            color_hex: '#3b82f6',
-            navigation_config: {
-              items: [
-                { name: 'Dashboard', href: '/features/knowledge-base', icon: 'home' },
-                { name: 'Documents', href: '/features/knowledge-base/documents', icon: 'fileText' },
-                { name: 'Search', href: '/features/knowledge-base/search', icon: 'search' },
-                { name: 'Settings', href: '/features/knowledge-base/settings', icon: 'settings' }
-              ]
-            },
-            is_active: true
-          }
+      // Get organization features with their system feature details
+      const { data, error } = await supabase
+        .from('organization_feature_configs')
+        .select(`
+          *,
+          system_feature_configs!inner(
+            feature_slug,
+            is_enabled_globally,
+            is_marketplace_visible
+          )
+        `)
+        .eq('organization_id', orgId)
+        .eq('is_enabled', true)
+        .eq('system_feature_configs.is_enabled_globally', true);
+
+      if (error) {
+        console.error('Error fetching organization features:', error);
+        throw new Error('Failed to fetch organization features');
+      }
+
+      // Transform the data to match expected interface
+      return (data || []).map(item => ({
+        id: item.id,
+        organization_id: item.organization_id,
+        feature_id: item.feature_slug, // Use feature_slug as feature_id
+        is_enabled: item.is_enabled,
+        feature_settings: {},
+        setup_status: 'completed',
+        setup_error: null,
+        enabled_by: item.created_by,
+        enabled_at: item.created_at,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        system_feature: {
+          id: item.feature_slug,
+          name: item.feature_slug,
+          slug: item.feature_slug,
+          display_name: getFeatureDisplayName(item.feature_slug),
+          description: getFeatureDescription(item.feature_slug),
+          category: 'business',
+          icon_name: getFeatureIcon(item.feature_slug),
+          color_hex: getFeatureColor(item.feature_slug),
+          navigation_config: getFeatureNavigation(item.feature_slug),
+          is_active: true
         }
-      ];
+      }));
     },
     enabled: !!orgId,
     retry: (failureCount, error) => {
@@ -143,18 +154,35 @@ export function useToggleOrganizationFeature() {
     mutationFn: async ({ featureId, isEnabled }: { featureId: string; isEnabled: boolean }) => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      // Mock implementation - simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In real implementation, this would update the database
-      console.log(`${isEnabled ? 'Enabling' : 'Disabling'} feature ${featureId} for organization ${currentOrganization.id}`);
+      if (isEnabled) {
+        // Enable feature for organization
+        const { error } = await supabase
+          .from('organization_feature_configs')
+          .upsert({
+            organization_id: currentOrganization.id,
+            feature_slug: featureId,
+            is_enabled: true,
+            is_user_accessible: true,
+          });
+
+        if (error) throw error;
+      } else {
+        // Disable feature for organization
+        const { error } = await supabase
+          .from('organization_feature_configs')
+          .update({ is_enabled: false })
+          .eq('organization_id', currentOrganization.id)
+          .eq('feature_slug', featureId);
+
+        if (error) throw error;
+      }
     },
     onSuccess: (_, variables) => {
       toast({
         title: `Feature ${variables.isEnabled ? 'enabled' : 'disabled'} successfully`,
       });
       queryClient.invalidateQueries({ queryKey: ['organization-features'] });
-      queryClient.invalidateQueries({ queryKey: ['system-features'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-feature-configs'] });
     },
     onError: (error: any) => {
       console.error('Failed to toggle feature:', error);
@@ -182,52 +210,91 @@ export function useAvailableSystemFeatures() {
   return useQuery({
     queryKey: ['available-system-features'],
     queryFn: async (): Promise<SystemFeature[]> => {
-      // Mock data since table doesn't exist yet
-      return [
-        {
-          id: '1',
-          name: 'knowledge-base',
-          display_name: 'Knowledge Base',
-          slug: 'knowledge-base',
-          description: 'AI-powered document search and knowledge management',
-          category: 'business',
-          icon_name: 'bookOpen',
-          color_hex: '#3b82f6',
-          is_active: true,
-          is_system_feature: true,
-          sort_order: 0,
-          navigation_config: {},
-          required_tables: [],
-          webhook_endpoints: {},
-          setup_sql: null,
-          cleanup_sql: null,
-          created_by: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'content-creation',
-          display_name: 'Content Creation',
-          slug: 'content-creation',
-          description: 'AI-powered content generation and editing tools',
-          category: 'productivity',
-          icon_name: 'edit',
-          color_hex: '#10b981',
-          is_active: true,
-          is_system_feature: true,
-          sort_order: 1,
-          navigation_config: {},
-          required_tables: [],
-          webhook_endpoints: {},
-          setup_sql: null,
-          cleanup_sql: null,
-          created_by: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      ];
+      // Get globally enabled features that are visible in marketplace
+      const { data, error } = await supabase
+        .from('system_feature_configs')
+        .select('*')
+        .eq('is_enabled_globally', true)
+        .eq('is_marketplace_visible', true)
+        .order('system_menu_order');
+
+      if (error) {
+        console.error('Error fetching system features:', error);
+        throw new Error('Failed to fetch system features');
+      }
+
+      // Transform to SystemFeature interface
+      return (data || []).map(item => ({
+        id: item.id,
+        name: item.feature_slug,
+        display_name: getFeatureDisplayName(item.feature_slug),
+        slug: item.feature_slug,
+        description: getFeatureDescription(item.feature_slug),
+        category: 'business',
+        icon_name: getFeatureIcon(item.feature_slug),
+        color_hex: getFeatureColor(item.feature_slug),
+        is_active: item.is_enabled_globally,
+        is_system_feature: true,
+        sort_order: item.system_menu_order,
+        navigation_config: {},
+        required_tables: [],
+        webhook_endpoints: {},
+        setup_sql: null,
+        cleanup_sql: null,
+        created_by: null,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      }));
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+}
+
+// Helper functions to get feature metadata
+function getFeatureDisplayName(slug: string): string {
+  const names: Record<string, string> = {
+    'knowledge-base': 'Knowledge Base',
+    'content-creation': 'Content Creation',
+  };
+  return names[slug] || slug.split('-').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+}
+
+function getFeatureDescription(slug: string): string {
+  const descriptions: Record<string, string> = {
+    'knowledge-base': 'AI-powered document search and knowledge management',
+    'content-creation': 'AI-powered content generation and editing tools',
+  };
+  return descriptions[slug] || 'Advanced business feature';
+}
+
+function getFeatureIcon(slug: string): string {
+  const icons: Record<string, string> = {
+    'knowledge-base': 'bookOpen',
+    'content-creation': 'edit',
+  };
+  return icons[slug] || 'package';
+}
+
+function getFeatureColor(slug: string): string {
+  const colors: Record<string, string> = {
+    'knowledge-base': '#3b82f6',
+    'content-creation': '#10b981',
+  };
+  return colors[slug] || '#6366f1';
+}
+
+function getFeatureNavigation(slug: string): any {
+  const navigations: Record<string, any> = {
+    'knowledge-base': {
+      items: [
+        { name: 'Dashboard', href: '/features/knowledge-base', icon: 'home' },
+        { name: 'Documents', href: '/features/knowledge-base/documents', icon: 'fileText' },
+        { name: 'Search', href: '/features/knowledge-base/search', icon: 'search' },
+        { name: 'Settings', href: '/features/knowledge-base/settings', icon: 'settings' }
+      ]
+    }
+  };
+  return navigations[slug] || {};
 }
