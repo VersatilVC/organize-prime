@@ -44,9 +44,6 @@ export function FeaturePageManager({ pages, onChange, featureSlug, disabled = fa
   const { toast } = useToast();
   const { validateFeatureRoutes } = useFeatureValidation();
   
-  // Debug: Log the pages received
-  console.log('🔍 FeaturePageManager: Received pages:', pages);
-  console.log('🔍 FeaturePageManager: Feature slug:', featureSlug);
   const [isAddingPage, setIsAddingPage] = useState(false);
   const [editingPage, setEditingPage] = useState<FeaturePage | null>(null);
   const [formData, setFormData] = useState<FeaturePageFormData>({

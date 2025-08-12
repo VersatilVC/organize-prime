@@ -71,49 +71,24 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         colorHex: feature.color_hex
       });
       
-      // Debug: Log the feature data to understand the structure
-      console.log('🔍 EditFeatureModal: Feature data:', feature);
-      console.log('🔍 EditFeatureModal: Navigation config:', feature.navigation_config);
+      // Load existing pages from navigation_config.pages (new format)
+      const existingPages = feature.navigation_config?.pages || [];
+      console.log('🔍 EditFeatureModal: Existing pages from database:', existingPages);
       
-      // Load existing pages from navigation_config  
-      // Convert from navigation_config.items to FeaturePage format
-      const navItems = feature.navigation_config?.items || [];
-      console.log('🔍 EditFeatureModal: Nav items:', navItems);
+      // Convert to FeaturePage format if needed (in case of different structure)
+      const formattedPages: FeaturePage[] = existingPages.map((page: any, index: number) => ({
+        id: page.id || `page-${index}`,
+        title: page.title || page.name || 'Untitled Page',
+        route: page.route || page.href || '',
+        description: page.description || '',
+        component: page.component || 'Custom',
+        permissions: page.permissions || ['read'],
+        isDefault: page.isDefault || index === 0,
+        menuOrder: page.menuOrder || index,
+        icon: page.icon || 'FileText'
+      }));
       
-      const existingPages: FeaturePage[] = navItems.map((item: any, index: number) => {
-        // Map component types based on the navigation item name
-        let component = 'Custom';
-        if (item.name === 'Dashboard') component = 'Dashboard';
-        else if (item.name === 'Settings') component = 'Settings';
-        else if (item.name === 'Analytics') component = 'Analytics';
-        else if (item.name === 'Files') component = 'Files';
-        else if (item.name === 'Chat') component = 'Chat';
-        else if (item.name.includes('Knowledge') || item.name.includes('Database')) component = 'Search';
-        
-        // Map icon names to match the available options
-        let iconName = item.icon || 'FileText';
-        if (item.icon === 'home') iconName = 'FileText';
-        else if (item.icon === 'database') iconName = 'Database';
-        else if (item.icon === 'fileText') iconName = 'FileText';
-        else if (item.icon === 'messageCircle') iconName = 'MessageSquare';
-        else if (item.icon === 'barChart3') iconName = 'BarChart3';
-        else if (item.icon === 'settings') iconName = 'Settings';
-        
-        return {
-          id: `${item.name}-${index}`,
-          title: item.name,
-          route: item.href,
-          description: '',
-          component,
-          permissions: ['read'],
-          isDefault: index === 0,
-          menuOrder: index,
-          icon: iconName
-        };
-      });
-      
-      console.log('🔍 EditFeatureModal: Converted pages:', existingPages);
-      setPages(existingPages);
+      setPages(formattedPages);
     }
   }, [feature]);
 

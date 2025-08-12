@@ -93,9 +93,23 @@ export function useOrganizationFeatures(organizationId?: string) {
 
       console.log('🔍 useOrganizationFeatures: Filtered features (system + org enabled):', filteredFeatures);
 
+      // Step 4: Get actual system features to get navigation_config from database
+      const { data: systemFeatures, error: featuresError } = await supabase
+        .from('system_features')
+        .select('slug, display_name, description, icon_name, color_hex, navigation_config')
+        .in('slug', filteredFeatures.map(f => f.feature_slug));
+
+      if (featuresError) {
+        console.error('❌ useOrganizationFeatures: Error fetching system features:', featuresError);
+        throw new Error('Failed to fetch system features');
+      }
+
+      const systemFeaturesMap = new Map(systemFeatures?.map(f => [f.slug, f]) || []);
+
       const finalFeatures = filteredFeatures.map((item: any) => {
         const slug = item.feature_slug as string;
-        const navigation_config = getFeatureNavigation(slug);
+        const systemFeature = systemFeaturesMap.get(slug);
+        
         return {
           id: item.id,
           organization_id: item.organization_id,
@@ -112,12 +126,12 @@ export function useOrganizationFeatures(organizationId?: string) {
             id: slug,
             name: slug,
             slug,
-            display_name: getFeatureDisplayName(slug),
-            description: getFeatureDescription(slug),
+            display_name: systemFeature?.display_name || getFeatureDisplayName(slug),
+            description: systemFeature?.description || getFeatureDescription(slug),
             category: 'business',
-            icon_name: getFeatureIcon(slug),
-            color_hex: getFeatureColor(slug),
-            navigation_config,
+            icon_name: systemFeature?.icon_name || getFeatureIcon(slug),
+            color_hex: systemFeature?.color_hex || getFeatureColor(slug),
+            navigation_config: systemFeature?.navigation_config || { pages: [] },
             is_active: true,
           },
         };
@@ -148,13 +162,16 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
     .map(feature => {
       const slug = feature.system_feature?.slug;
       if (!slug) return null;
-      const navConfig = feature.system_feature?.navigation_config || getFeatureNavigation(slug);
-      const items = Array.isArray(navConfig?.items) ? navConfig.items : [];
-      const navigationItems = items.map((item: any) => ({
-        name: item.name || item.label,
-        href: (item.href || item.path || '').startsWith('/') ? (item.href || item.path) : `/${item.href || item.path || ''}`,
-        icon: item.icon || 'package',
+      const navConfig = feature.system_feature?.navigation_config;
+      
+      // Use pages from navigation_config if available
+      const pages = Array.isArray(navConfig?.pages) ? navConfig.pages : [];
+      const navigationItems = pages.map((page: any) => ({
+        name: page.title || page.name,
+        href: (page.route || page.href || '').startsWith('/') ? (page.route || page.href) : `/${page.route || page.href || ''}`,
+        icon: page.icon || 'package',
       }));
+      
       if (navigationItems.length === 0) return null;
       const section = {
         key: `feature-${slug}`,
@@ -315,29 +332,4 @@ function getFeatureColor(slug: string): string {
     'content-creation': '#10b981',
   };
   return colors[slug] || '#6366f1';
-}
-
-function getFeatureNavigation(slug: string): any {
-  if (!slug) return { items: [] };
-  const navigations: Record<string, any> = {
-    'knowledge-base': {
-      items: [
-        { name: 'Dashboard', href: '/features/knowledge-base/dashboard', icon: 'home' },
-        { name: 'Knowledge Bases', href: '/features/knowledge-base/databases', icon: 'database' },
-        { name: 'Files', href: '/features/knowledge-base/files', icon: 'fileText' },
-        { name: 'Chat', href: '/features/knowledge-base/chat', icon: 'messageCircle' },
-        { name: 'Analytics', href: '/features/knowledge-base/analytics', icon: 'barChart3' },
-        { name: 'Settings', href: '/features/knowledge-base/settings', icon: 'settings' }
-      ]
-    },
-    'content-creation': {
-      items: [
-        { name: 'Dashboard', href: '/features/content-creation', icon: 'home' },
-        { name: 'Projects', href: '/features/content-creation/projects', icon: 'folderOpen' },
-        { name: 'Templates', href: '/features/content-creation/templates', icon: 'layout' },
-        { name: 'Settings', href: '/features/content-creation/settings', icon: 'settings' }
-      ]
-    }
-  };
-  return navigations[slug] || { items: [] };
 }
