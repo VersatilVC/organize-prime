@@ -37,28 +37,6 @@ export function KBLayout({ children }: KBLayoutProps) {
 
   return (
     <KBProvider>
-        <nav className={`gap-1 p-2 border-b overflow-x-auto ${showNav ? 'flex' : 'hidden md:flex'}`}>
-          <button className="md:hidden p-2 rounded hover:bg-muted" aria-label="Toggle KB navigation" onClick={() => setShowNav((v) => !v)}>
-            <Menu className="h-5 w-5" />
-          </button>
-          {nav.map(item => (
-            <KBPermissionGuard key={item.to} adminOnly={item.adminOnly}>
-              <Link
-                to={item.to}
-                className={`px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted ${pathname.startsWith(item.to) ? 'bg-muted font-medium' : ''}`}
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
-                {item.label === 'Files' && (stats?.overview.processing_files ?? 0) > 0 && (
-                  <Badge variant="secondary" className="ml-1">{stats?.overview.processing_files}</Badge>
-                )}
-                {item.label === 'Chat' && (stats?.overview.conversations ?? 0) > 0 && (
-                  <Badge variant="outline" className="ml-1">{stats?.overview.conversations}</Badge>
-                )}
-              </Link>
-            </KBPermissionGuard>
-          ))}
-        </nav>
 
         <div className="p-4">
           <Breadcrumb>
@@ -70,7 +48,7 @@ export function KBLayout({ children }: KBLayoutProps) {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{nav.find(n => pathname.startsWith(n.to))?.label ?? 'Dashboard'}</BreadcrumbPage>
+                <BreadcrumbPage>{nav.find(n => pathname.startsWith(n.to))?.label ?? 'Knowledgebase Management'}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
