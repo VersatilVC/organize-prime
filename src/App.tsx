@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
@@ -42,6 +42,13 @@ initializeCacheCleanup();
 
 // Create optimized query client with smart caching
 const queryClient = createOptimizedQueryClient();
+
+// Redirect component for legacy knowledge base URLs
+function KnowledgeBaseRedirect() {
+  const currentPath = window.location.pathname;
+  const newPath = currentPath.replace('/knowledge-base', '/features/knowledge-base');
+  return <Navigate to={newPath} replace />;
+}
 
 const App = () => (
   <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: cacheConfig.static.gcTime }}>
@@ -99,6 +106,15 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <FeatureRouter />
+                    </ProtectedRoute>
+                  } 
+                />
+                {/* Legacy Knowledge Base redirect */}
+                <Route 
+                  path="/knowledge-base/*" 
+                  element={
+                    <ProtectedRoute>
+                      <KnowledgeBaseRedirect />
                     </ProtectedRoute>
                   } 
                 />
