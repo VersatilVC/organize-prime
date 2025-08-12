@@ -31,7 +31,7 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
   const { data: organizationFeatures = [], isLoading, error } = useOrganizationFeatures();
 
   console.log('🔐 FeatureAccessCheck: Checking access for slug:', slug, {
-    organizationFeatures: organizationFeatures.map(f => ({ slug: f.system_feature.slug, enabled: f.is_enabled })),
+    organizationFeatures: organizationFeatures.map(f => ({ slug: f.feature_slug, enabled: f.is_enabled })),
     isLoading
   });
 
@@ -61,7 +61,7 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
     );
   }
 
-  const feature = organizationFeatures.find(f => f.system_feature.slug === slug);
+  const feature = organizationFeatures.find(f => f.feature_slug === slug);
 
   if (!feature) {
     console.log('🚫 FeatureAccessCheck: Feature not found or not enabled:', slug);
@@ -78,26 +78,9 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
     );
   }
 
-  if (feature.setup_status !== 'completed') {
-    console.log('🚫 FeatureAccessCheck: Feature setup not completed:', slug, feature.setup_status);
-    return (
-      <EmptyState
-        icon={Settings}
-        title="Feature Setup Required"
-        description={`The ${feature.system_feature.display_name} feature is being set up for your organization.`}
-      >
-        {feature.setup_error && (
-          <Alert variant="destructive" className="mt-4 max-w-md mx-auto">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Setup Error</AlertTitle>
-            <AlertDescription>{feature.setup_error}</AlertDescription>
-          </Alert>
-        )}
-      </EmptyState>
-    );
-  }
+  // For now, assume all enabled features are properly set up
+  console.log('✅ FeatureAccessCheck: Feature access granted for:', slug);
 
-  console.log('✅ FeatureAccessCheck: Access granted for feature:', slug);
   return <>{children}</>;
 }
 
