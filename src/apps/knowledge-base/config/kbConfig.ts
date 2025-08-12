@@ -8,14 +8,7 @@ export const kbConfig = {
     version: '1.0.0',
     icon: 'BookOpen',
   },
-  navigation: [
-    createNavigationItem({ id: 'dashboard', label: 'Dashboard', path: '/apps/knowledge-base/dashboard', icon: 'home', order: 0 }),
-    createNavigationItem({ id: 'databases', label: 'Knowledge Bases', path: '/apps/knowledge-base/databases', icon: 'database', order: 1 }),
-    createNavigationItem({ id: 'files', label: 'Files', path: '/apps/knowledge-base/files', icon: 'file', order: 2 }),
-    createNavigationItem({ id: 'chat', label: 'Chat', path: '/apps/knowledge-base/chat', icon: 'message-square', order: 3 }),
-    createNavigationItem({ id: 'analytics', label: 'Analytics', path: '/apps/knowledge-base/analytics', icon: 'bar-chart-3', permissions: ['admin'], order: 4 }),
-    createNavigationItem({ id: 'settings', label: 'Settings', path: '/apps/knowledge-base/settings', icon: 'settings', permissions: ['admin'], order: 5 }),
-  ],
+  // Navigation removed - now managed via database
   n8n: {
     webhooks: [
       { id: 'kb-process-file', path: '/webhook/kb-process-file' },
