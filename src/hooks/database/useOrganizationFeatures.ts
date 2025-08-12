@@ -93,22 +93,24 @@ export function useOrganizationFeatures(organizationId?: string) {
 
       console.log('🔍 useOrganizationFeatures: Filtered features (system + org enabled):', filteredFeatures);
 
-      // Step 4: Get actual system features to get navigation_config from database
-      const { data: systemFeatures, error: featuresError } = await supabase
-        .from('system_features')
-        .select('slug, display_name, description, icon_name, color_hex, navigation_config')
-        .in('slug', filteredFeatures.map(f => f.feature_slug));
+      // Step 4: Get navigation config from system_feature_configs (where the actual pages are stored)
+      const { data: systemFeatureConfigs, error: configsError } = await supabase
+        .from('system_feature_configs')
+        .select('*')
+        .in('feature_slug', filteredFeatures.map(f => f.feature_slug));
 
-      if (featuresError) {
-        console.error('❌ useOrganizationFeatures: Error fetching system features:', featuresError);
-        throw new Error('Failed to fetch system features');
+      if (configsError) {
+        console.error('❌ useOrganizationFeatures: Error fetching system feature configs for navigation:', configsError);
+        throw new Error('Failed to fetch system feature configs for navigation');
       }
 
-      const systemFeaturesMap = new Map(systemFeatures?.map(f => [f.slug, f]) || []);
+      const systemConfigsMap = new Map(systemFeatureConfigs?.map(f => [f.feature_slug, f]) || []);
+      console.log('🔍 useOrganizationFeatures: System configs with navigation:', systemConfigsMap);
+      console.log('🔍 useOrganizationFeatures: Raw systemFeatureConfigs:', systemFeatureConfigs);
 
       const finalFeatures = filteredFeatures.map((item: any) => {
         const slug = item.feature_slug as string;
-        const systemFeature = systemFeaturesMap.get(slug);
+        const systemConfig = systemConfigsMap.get(slug);
         
         return {
           id: item.id,
@@ -126,12 +128,12 @@ export function useOrganizationFeatures(organizationId?: string) {
             id: slug,
             name: slug,
             slug,
-            display_name: systemFeature?.display_name || getFeatureDisplayName(slug),
-            description: systemFeature?.description || getFeatureDescription(slug),
+            display_name: (systemConfig as any)?.display_name || getFeatureDisplayName(slug),
+            description: (systemConfig as any)?.description || getFeatureDescription(slug),
             category: 'business',
-            icon_name: systemFeature?.icon_name || getFeatureIcon(slug),
-            color_hex: systemFeature?.color_hex || getFeatureColor(slug),
-            navigation_config: systemFeature?.navigation_config || { pages: [] },
+            icon_name: (systemConfig as any)?.icon_name || getFeatureIcon(slug),
+            color_hex: (systemConfig as any)?.color_hex || getFeatureColor(slug),
+            navigation_config: (systemConfig as any)?.navigation_config || { pages: [] },
             is_active: true,
           },
         };
@@ -149,7 +151,7 @@ export function useOrganizationFeatures(organizationId?: string) {
       return false;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Force refresh to get latest navigation config
   });
 }
 
