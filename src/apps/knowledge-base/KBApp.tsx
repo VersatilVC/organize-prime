@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { KBLayout } from './components/KBLayout';
+import { KBPlaceholderPage } from './components/KBPlaceholderPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { KBAuthorizeRoute } from './components/shared/KBAuthorizeRoute';
@@ -119,6 +120,13 @@ export default function KBApp() {
                 />
               );
             })}
+            <Route path="*" element={
+              <KBPlaceholderPage 
+                component="Custom" 
+                title="Page under construction" 
+                description="This page is not available yet."
+              />
+            } />
           </Routes>
         </ErrorBoundary>
       </KBLayout>

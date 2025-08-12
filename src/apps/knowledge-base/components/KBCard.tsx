@@ -61,16 +61,8 @@ export function KBCard({ config, onDuplicate, onDelete }: KBCardProps) {
         <div className="text-xs text-muted-foreground">ID: {config.id}</div>
         <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="ghost">
-            <Link to={`/features/knowledge-base/files?kbId=${config.id}`}>View Files</Link>
+            <Link to={`/features/knowledge-base/ai-chat?kbId=${config.id}`}>Start Chat</Link>
           </Button>
-          <Button asChild size="sm" variant="ghost">
-            <Link to={`/features/knowledge-base/chat?kbId=${config.id}`}>Start Chat</Link>
-          </Button>
-          <KBPermissionGuard can="can_manage_files">
-            <Button asChild size="sm" variant="outline">
-              <Link to={`/features/knowledge-base/settings?kbId=${config.id}`}>Settings</Link>
-            </Button>
-          </KBPermissionGuard>
         </div>
       </CardFooter>
       <CardFooter className="flex items-center justify-end gap-2 pt-0">

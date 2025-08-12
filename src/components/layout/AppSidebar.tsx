@@ -87,13 +87,26 @@ const createAppSections = (installedApps: any[]) => {
 
 // Create feature sections
 const createFeatureSections = (featureNavigationSections: any[]) => {
-  return featureNavigationSections.map(section => ({
-    title: section.title,
-    key: `feature-${section.title.toLowerCase().replace(/\s+/g, '-')}`,
-    items: section.items,
-    collapsible: true,
-    defaultExpanded: true
-  }));
+  return featureNavigationSections.map(section => {
+    // Guardrail: only expose supported KB links until config is cleaned
+    const filteredItems = Array.isArray(section.items)
+      ? section.items.filter((item: any) => {
+          if (typeof item?.href !== 'string') return false;
+          if (item.href.startsWith('/features/knowledge-base/')) {
+            return item.href.endsWith('/manage-knowledgebases') || item.href.endsWith('/ai-chat');
+          }
+          return true;
+        })
+      : [];
+
+    return {
+      title: section.title,
+      key: `feature-${section.title.toLowerCase().replace(/\s+/g, '-')}`,
+      items: filteredItems,
+      collapsible: true,
+      defaultExpanded: true
+    };
+  });
 };
 
 // Base sidebar sections
@@ -135,9 +148,12 @@ const getAllSidebarSections = (
   organizationFeatureConfigs: any[],
   featureNavigationSections: any[]
 ) => {
+  const roleRank: Record<string, number> = { user: 1, admin: 2, super_admin: 3 };
   const baseSections = baseSidebarSections(role).filter(section => {
     if (section.requiresRole) {
-      return role === section.requiresRole;
+      const required = roleRank[section.requiresRole] ?? 1;
+      const actual = roleRank[role] ?? 1;
+      return actual >= required;
     }
     return section.items.length > 0;
   });
@@ -303,11 +319,12 @@ const SidebarSectionComponent = React.memo(({
 }) => {
   const isCollapsed = collapsedSections[section.key];
   
+  const roleRank: Record<string, number> = { user: 1, admin: 2, super_admin: 3 };
   const filteredItems = section.items.filter(item => {
-    if (item.requiresRole) {
-      return role === item.requiresRole;
-    }
-    return true;
+    if (!item.requiresRole) return true;
+    const required = roleRank[item.requiresRole] ?? 1;
+    const actual = roleRank[role] ?? 1;
+    return actual >= required;
   });
 
   if (filteredItems.length === 0) {
