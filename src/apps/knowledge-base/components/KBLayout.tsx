@@ -18,17 +18,27 @@ export function KBLayout({ children }: KBLayoutProps) {
   const currentPage = React.useMemo(() => {
     console.log('🔍 KBLayout: Finding current page for pathname:', pathname);
     console.log('🔍 KBLayout: Available routes:', routes);
-    console.log('🔍 KBLayout: Active route from hierarchy:', activeRoute);
     
-    return activeRoute;
-  }, [pathname, routes, activeRoute]);
+    // Find the best matching route for current pathname
+    const matchingRoute = routes.find(route => {
+      // Check exact match first
+      if (route.path === pathname) return true;
+      
+      // Check if current path ends with the route's path (for normalized routes)
+      const routeSuffix = route.path.replace('/features/knowledge-base', '');
+      return pathname.endsWith(routeSuffix) || pathname.includes(routeSuffix);
+    });
+    
+    console.log('🔍 KBLayout: Matching route:', matchingRoute);
+    return matchingRoute;
+  }, [pathname, routes]);
 
   // Get default page for navigation
   const defaultPage = React.useMemo(() => {
     return routes.find(route => route.isDefault) || routes[0];
   }, [routes]);
 
-  const currentPageTitle = currentPage?.title || defaultPage?.title || 'Knowledge Base';
+  const currentPageTitle = currentPage?.title || 'Knowledge Base';
 
   // SEO: set document title
   React.useEffect(() => {

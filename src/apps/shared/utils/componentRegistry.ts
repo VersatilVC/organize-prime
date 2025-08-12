@@ -3,10 +3,11 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 
 // Only implemented components - everything else gets placeholder
 export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
-  // No components implemented yet - all will show placeholder
+  'Dashboard', // KB Dashboard/Manage Knowledgebases page is implemented
+  'Chat'       // KB Chat page is implemented
 ]);
 
-// Empty registry - all components will use placeholder
+// Registry with implemented components
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {};
 
 export function getComponent(componentName: string): React.ComponentType<any> {

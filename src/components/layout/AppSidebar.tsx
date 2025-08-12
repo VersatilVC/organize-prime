@@ -56,10 +56,6 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
     case 'system-admin':
       return role === 'super_admin' ? [
         { name: 'System Settings', href: '/settings/system', icon: Icons.settings },
-        { name: 'All Organizations', href: '/admin/organizations', icon: Icons.building },
-        { name: 'System Users', href: '/admin/users', icon: Icons.users },
-        { name: 'Feature Management', href: '/admin/features', icon: Icons.settings },
-        { name: 'Global Notifications', href: '/notifications/manage', icon: Icons.bell }
       ] : [];
     
     case 'support':

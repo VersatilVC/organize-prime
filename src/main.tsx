@@ -4,6 +4,9 @@ import './index.css'
 import './lib/code-splitting'
 import { initializeSecurity } from './lib/security-config'
 
+// Initialize app components registry
+import '@/apps/knowledge-base';
+
 // Initialize security configuration
 try {
   initializeSecurity();
