@@ -27,25 +27,34 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
 
 export function getComponent(componentName: string): React.ComponentType<any> {
   console.log('🔍 ComponentRegistry: Looking for component:', componentName);
+  console.log('🔍 ComponentRegistry: IMPLEMENTED_COMPONENTS:', Array.from(IMPLEMENTED_COMPONENTS));
   
   // Always return placeholder unless explicitly marked as implemented
   if (!IMPLEMENTED_COMPONENTS.has(componentName)) {
     console.log(`🔍 ComponentRegistry: Component "${componentName}" not implemented, using placeholder`);
-    return () => React.createElement(KBPlaceholderPage, {
-      component: componentName,
-      title: componentName,
-      description: `This page is currently under construction.`
-    });
+    const PlaceholderComponent = () => {
+      console.log('🔍 ComponentRegistry: Rendering placeholder for:', componentName);
+      return React.createElement(KBPlaceholderPage, {
+        component: componentName,
+        title: componentName,
+        description: `This page is currently under construction.`
+      });
+    };
+    return PlaceholderComponent;
   }
   
   const Component = COMPONENT_REGISTRY[componentName];
   if (!Component) {
     console.log(`🔍 ComponentRegistry: Component "${componentName}" marked as implemented but not found in registry, using placeholder`);
-    return () => React.createElement(KBPlaceholderPage, {
-      component: componentName,
-      title: componentName,
-      description: `This page is currently under construction.`
-    });
+    const PlaceholderComponent = () => {
+      console.log('🔍 ComponentRegistry: Rendering fallback placeholder for:', componentName);
+      return React.createElement(KBPlaceholderPage, {
+        component: componentName,
+        title: componentName,
+        description: `This page is currently under construction.`
+      });
+    };
+    return PlaceholderComponent;
   }
   
   console.log('🔍 ComponentRegistry: Found implemented component:', componentName);

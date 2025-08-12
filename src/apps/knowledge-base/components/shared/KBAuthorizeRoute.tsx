@@ -12,15 +12,28 @@ interface KBAuthorizeRouteProps {
 export function KBAuthorizeRoute({ permissions = [], children, component }: KBAuthorizeRouteProps) {
   const perms = useKBPermissions();
 
+  console.log('🔍 KBAuthorizeRoute: Checking permissions for component:', component);
+  console.log('🔍 KBAuthorizeRoute: Required permissions:', permissions);
+  console.log('🔍 KBAuthorizeRoute: User permissions:', perms);
+  console.log('🔍 KBAuthorizeRoute: IMPLEMENTED_COMPONENTS:', Array.from(IMPLEMENTED_COMPONENTS));
+
   // Allow access to placeholder pages regardless of permissions
   const isPlaceholderPage = component && !IMPLEMENTED_COMPONENTS.has(component);
+  console.log('🔍 KBAuthorizeRoute: Is placeholder page:', isPlaceholderPage);
+  
   if (isPlaceholderPage) {
+    console.log('🔍 KBAuthorizeRoute: Allowing placeholder page access');
     return <>{children}</>;
   }
 
   const hasAll = permissions.every((p) => perms[p]);
+  console.log('🔍 KBAuthorizeRoute: Has all permissions:', hasAll);
+  
   if (!hasAll) {
+    console.log('🔍 KBAuthorizeRoute: Redirecting due to insufficient permissions');
     return <Navigate to="/" replace />;
   }
+  
+  console.log('🔍 KBAuthorizeRoute: Allowing access');
   return <>{children}</>;
 }

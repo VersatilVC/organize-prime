@@ -11,8 +11,13 @@ import { useFeatureSync } from '@/hooks/useFeatureSync';
 
 // Dynamic route component that renders based on database configuration
 function DynamicRoute({ route }: { route: any }) {
+  console.log('🔍 DynamicRoute: Rendering route:', route);
   const Component = getComponent(route.component);
   const isAdminRoute = route.permissions?.includes('admin');
+  
+  console.log('🔍 DynamicRoute: Got component:', Component.name || 'Anonymous');
+  console.log('🔍 DynamicRoute: Is admin route:', isAdminRoute);
+  console.log('🔍 DynamicRoute: Route permissions:', route.permissions);
   
   const element = React.createElement(Component);
   
@@ -32,17 +37,25 @@ function DynamicRoute({ route }: { route: any }) {
 export default function KBApp() {
   const { routes, isLoading } = useFeatureRoutes('knowledge-base');
   
+  console.log('🔍 KBApp: Routes loaded:', routes);
+  console.log('🔍 KBApp: Is loading:', isLoading);
+  
   // Auto-sync feature pages if they don't exist
   useFeatureSync();
   
   // Find default route for redirect - normalize route paths
   const defaultRoute = React.useMemo(() => {
     const defaultPageRoute = routes.find(r => r.isDefault);
+    console.log('🔍 KBApp: Default page route:', defaultPageRoute);
     if (defaultPageRoute) {
       // Remove the /knowledge-base/ prefix to get the local route
-      return defaultPageRoute.path.replace('/knowledge-base/', '');
+      const normalizedRoute = defaultPageRoute.path.replace('/knowledge-base/', '');
+      console.log('🔍 KBApp: Normalized default route:', normalizedRoute);
+      return normalizedRoute;
     }
-    return routes.length > 0 ? routes[0].path.replace('/knowledge-base/', '') : 'dashboard';
+    const fallbackRoute = routes.length > 0 ? routes[0].path.replace('/knowledge-base/', '') : 'dashboard';
+    console.log('🔍 KBApp: Using fallback route:', fallbackRoute);
+    return fallbackRoute;
   }, [routes]);
 
   if (isLoading) {
