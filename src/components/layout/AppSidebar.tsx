@@ -273,7 +273,23 @@ const NavigationItem = React.memo(({
   // More precise active state detection
   const isItemActive = useMemo(() => {
     if (!item.href) return false;
-    return location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+    
+    // Exact match for current path
+    if (location.pathname === item.href) return true;
+    
+    // For nested paths, only match if this is the most specific route
+    if (location.pathname.startsWith(item.href + '/')) {
+      // Don't highlight parent routes if a more specific child exists
+      // This prevents both "/features/knowledge-base" and "/features/knowledge-base/ai-chat" 
+      // from being active when on the AI Chat page
+      const pathSegments = location.pathname.split('/');
+      const hrefSegments = item.href.split('/');
+      
+      // Only active if this is the direct parent (no intermediate segments)
+      return pathSegments.length === hrefSegments.length + 1;
+    }
+    
+    return false;
   }, [location.pathname, item.href]);
 
   // Get the correct icon component, fallback to package if not found

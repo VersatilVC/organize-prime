@@ -14,9 +14,15 @@ export function KBLayout({ children }: KBLayoutProps) {
 
   // Find current page from routes for dynamic breadcrumbs
   const currentPage = React.useMemo(() => {
-    const normalizedPath = pathname.replace('/features/knowledge-base/', '').replace('/apps/knowledge-base/', '');
+    // Handle exact matches first
+    const exactMatch = routes.find(route => route.path === pathname);
+    if (exactMatch) return exactMatch;
+    
+    // Handle route matching with different path formats
+    const normalizedPath = pathname.replace('/features/knowledge-base', '').replace('/apps/knowledge-base', '');
+    
     return routes.find(route => {
-      const routePath = route.path.replace('/apps/knowledge-base/', '');
+      const routePath = route.path.replace('/features/knowledge-base', '').replace('/apps/knowledge-base', '');
       return routePath === normalizedPath;
     });
   }, [pathname, routes]);
