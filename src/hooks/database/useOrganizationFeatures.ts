@@ -264,6 +264,7 @@ export function useAvailableSystemFeatures() {
 
 // Helper functions to get feature metadata
 function getFeatureDisplayName(slug: string): string {
+  if (!slug) return 'Unknown Feature';
   const names: Record<string, string> = {
     'knowledge-base': 'Knowledge Base',
     'content-creation': 'Content Creation',
@@ -274,6 +275,7 @@ function getFeatureDisplayName(slug: string): string {
 }
 
 function getFeatureDescription(slug: string): string {
+  if (!slug) return 'Feature description not available';
   const descriptions: Record<string, string> = {
     'knowledge-base': 'AI-powered document search and knowledge management',
     'content-creation': 'AI-powered content generation and editing tools',
@@ -282,6 +284,7 @@ function getFeatureDescription(slug: string): string {
 }
 
 function getFeatureIcon(slug: string): string {
+  if (!slug) return 'package';
   const icons: Record<string, string> = {
     'knowledge-base': 'bookOpen',
     'content-creation': 'edit',
@@ -290,6 +293,7 @@ function getFeatureIcon(slug: string): string {
 }
 
 function getFeatureColor(slug: string): string {
+  if (!slug) return '#6366f1';
   const colors: Record<string, string> = {
     'knowledge-base': '#3b82f6',
     'content-creation': '#10b981',
@@ -298,15 +302,24 @@ function getFeatureColor(slug: string): string {
 }
 
 function getFeatureNavigation(slug: string): any {
+  if (!slug) return { items: [] };
   const navigations: Record<string, any> = {
     'knowledge-base': {
       items: [
         { name: 'Dashboard', href: '/features/knowledge-base', icon: 'home' },
         { name: 'Documents', href: '/features/knowledge-base/documents', icon: 'fileText' },
-        { name: 'Search', href: '/features/knowledge-base/search', icon: 'search' },
+        { name: 'Chat', href: '/features/knowledge-base/chat', icon: 'messageCircle' },
         { name: 'Settings', href: '/features/knowledge-base/settings', icon: 'settings' }
+      ]
+    },
+    'content-creation': {
+      items: [
+        { name: 'Dashboard', href: '/features/content-creation', icon: 'home' },
+        { name: 'Projects', href: '/features/content-creation/projects', icon: 'folderOpen' },
+        { name: 'Templates', href: '/features/content-creation/templates', icon: 'layout' },
+        { name: 'Settings', href: '/features/content-creation/settings', icon: 'settings' }
       ]
     }
   };
-  return navigations[slug] || {};
+  return navigations[slug] || { items: [] };
 }
