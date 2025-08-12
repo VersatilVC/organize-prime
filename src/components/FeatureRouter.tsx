@@ -106,25 +106,27 @@ function FeatureRoutes() {
   }
 
   return (
-    <FeatureLayout>
-      <Suspense fallback={
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-48" />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+    <AppLayout>
+      <FeatureLayout>
+        <Suspense fallback={
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-48" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
           </div>
-        </div>
-      }>
-        <Routes>
-          <Route path="" element={<FeatureDashboard />} />
-          <Route path="dashboard" element={<FeatureDashboard />} />
-          <Route path="settings" element={<FeatureSettings />} />
-          <Route path="*" element={<FeatureContent />} />
-        </Routes>
-      </Suspense>
-    </FeatureLayout>
+        }>
+          <Routes>
+            <Route path="" element={<FeatureDashboard />} />
+            <Route path="dashboard" element={<FeatureDashboard />} />
+            <Route path="settings" element={<FeatureSettings />} />
+            <Route path="*" element={<FeatureContent />} />
+          </Routes>
+        </Suspense>
+      </FeatureLayout>
+    </AppLayout>
   );
 }
 
@@ -141,10 +143,8 @@ export function FeatureRouter() {
   console.log('✅ FeatureRouter: Rendering with slug:', slug);
 
   return (
-    <AppLayout>
-      <FeatureAccessCheck slug={slug}>
-        <FeatureRoutes />
-      </FeatureAccessCheck>
-    </AppLayout>
+    <FeatureAccessCheck slug={slug}>
+      <FeatureRoutes />
+    </FeatureAccessCheck>
   );
 }

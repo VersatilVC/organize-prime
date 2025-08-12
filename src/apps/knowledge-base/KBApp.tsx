@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { KBLayout } from './components/KBLayout';
 import KBDashboard from './pages/KBDashboard';
 import KBDatabases from './pages/KBDatabases';
@@ -48,8 +49,9 @@ export default function KBApp() {
   const navigationConfig = kbFeature?.system_feature.navigation_config;
 
   return (
-    <KBLayout>
-      <ErrorBoundary>
+    <AppLayout>
+      <KBLayout>
+        <ErrorBoundary>
         <Routes>
           <Route path="" element={<Navigate to="dashboard" replace />} />
           {KB_ROUTES.map((r) => {
@@ -82,8 +84,9 @@ export default function KBApp() {
             } 
           />
         </Routes>
-      </ErrorBoundary>
-    </KBLayout>
+        </ErrorBoundary>
+      </KBLayout>
+    </AppLayout>
   );
 }
 

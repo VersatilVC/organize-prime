@@ -36,8 +36,7 @@ export function KBLayout({ children }: KBLayoutProps) {
   }, [pathname, nav]);
 
   return (
-    <AppLayout appId="knowledge-base" appName="Knowledge Base" permissions={[]}>
-      <KBProvider>
+    <KBProvider>
         <nav className={`gap-1 p-2 border-b overflow-x-auto ${showNav ? 'flex' : 'hidden md:flex'}`}>
           <button className="md:hidden p-2 rounded hover:bg-muted" aria-label="Toggle KB navigation" onClick={() => setShowNav((v) => !v)}>
             <Menu className="h-5 w-5" />
@@ -80,7 +79,6 @@ export function KBLayout({ children }: KBLayoutProps) {
             {children}
           </main>
         </div>
-      </KBProvider>
-    </AppLayout>
+    </KBProvider>
   );
 }
