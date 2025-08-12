@@ -5,12 +5,16 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { Icons } from '@/components/ui/icons';
-import { useAvailableSystemFeatures, useOrganizationFeatures, useToggleOrganizationFeature } from '@/hooks/database/useOrganizationFeatures';
+import { useOrganizationFeatures, useToggleOrganizationFeature } from '@/hooks/database/useOrganizationFeatures';
+import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
 
 export function FeatureToggleSection() {
-  const { data: availableFeatures = [], isLoading: featuresLoading } = useAvailableSystemFeatures();
+  const { features: systemFeatures = [], isLoading: featuresLoading } = useSystemFeatures();
   const { data: organizationFeatures = [], isLoading: orgFeaturesLoading } = useOrganizationFeatures();
   const toggleFeature = useToggleOrganizationFeature();
+
+  // Only show features that are enabled globally (at system level)
+  const availableFeatures = systemFeatures.filter(feature => feature.is_active);
 
   const isFeatureEnabled = (featureSlug: string) => {
     // Check if feature is enabled in organization features

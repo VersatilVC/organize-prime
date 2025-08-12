@@ -57,22 +57,26 @@ export function useOrganizationFeatures(organizationId?: string) {
 
       console.log('🔍 useOrganizationFeatures: Fetching features for org:', orgId);
 
-      // Get organization features with full system feature details joined
-      const { data, error } = await supabase
-        .from('organization_features')
+      // Step 1: Get globally enabled system features
+      const { data: systemConfigs, error: systemError } = await supabase
+        .from('system_feature_configs')
+        .select('feature_slug')
+        .eq('is_enabled_globally', true);
+
+      if (systemError) {
+        console.error('❌ useOrganizationFeatures: Error fetching system configs:', systemError);
+        throw new Error('Failed to fetch system feature configs');
+      }
+
+      const enabledSystemFeatures = new Set(systemConfigs?.map(s => s.feature_slug) || []);
+      console.log('🔍 useOrganizationFeatures: Globally enabled features:', enabledSystemFeatures);
+
+      // Step 2: Get organization feature configs that are enabled at both levels
+      const { data: orgConfigs, error: orgError } = await supabase
+        .from('organization_feature_configs')
         .select(`
-          id,
-          organization_id,
-          feature_id,
-          is_enabled,
-          feature_settings,
-          setup_status,
-          setup_error,
-          enabled_by,
-          enabled_at,
-          created_at,
-          updated_at,
-          system_features!inner (
+          *,
+          system_features!inner(
             id,
             name,
             slug,
@@ -86,41 +90,40 @@ export function useOrganizationFeatures(organizationId?: string) {
           )
         `)
         .eq('organization_id', orgId)
-        .eq('is_enabled', true);
+        .eq('is_enabled', true)
+        .eq('is_user_accessible', true);
 
-      if (error) {
-        console.error('❌ useOrganizationFeatures: Error fetching organization features:', error);
-        throw new Error('Failed to fetch organization features');
+      if (orgError) {
+        console.error('❌ useOrganizationFeatures: Error fetching org configs:', orgError);
+        throw new Error('Failed to fetch organization feature configs');
       }
 
-      console.log('🔍 useOrganizationFeatures: Raw organization features:', data);
+      console.log('🔍 useOrganizationFeatures: Raw org configs:', orgConfigs);
 
-      if (!data || data.length === 0) {
-        console.log('🔍 useOrganizationFeatures: No organization features found');
-        return [];
-      }
+      // Step 3: Filter to only include features enabled at system level
+      const filteredFeatures = (orgConfigs || []).filter(config => 
+        enabledSystemFeatures.has(config.feature_slug)
+      );
 
-      // Transform the joined data into the expected format
-      const finalFeatures = data.map((item: any) => {
-        const feature = {
-          id: item.id,
-          organization_id: item.organization_id,
-          feature_id: item.feature_id,
-          is_enabled: item.is_enabled,
-          feature_settings: item.feature_settings,
-          setup_status: item.setup_status,
-          setup_error: item.setup_error,
-          enabled_by: item.enabled_by,
-          enabled_at: item.enabled_at,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          system_feature: item.system_features
-        };
-        console.log('🔍 useOrganizationFeatures: Created feature object:', feature);
-        return feature;
-      });
+      console.log('🔍 useOrganizationFeatures: Filtered features (system + org enabled):', filteredFeatures);
 
-      console.log('🔍 useOrganizationFeatures: Final features to return:', finalFeatures);
+      // Step 4: Transform to expected format
+      const finalFeatures = filteredFeatures.map((item: any) => ({
+        id: item.id,
+        organization_id: item.organization_id,
+        feature_id: item.system_features.id,
+        is_enabled: item.is_enabled,
+        feature_settings: item.feature_settings || {},
+        setup_status: 'completed',
+        setup_error: null,
+        enabled_by: item.enabled_by,
+        enabled_at: item.enabled_at || item.created_at,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        system_feature: item.system_features
+      }));
+
+      console.log('🔍 useOrganizationFeatures: Final transformed features:', finalFeatures);
       return finalFeatures;
     },
     enabled: !!orgId,
