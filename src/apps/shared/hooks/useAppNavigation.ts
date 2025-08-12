@@ -185,11 +185,29 @@ export function useNavigationItem(appId: string, itemId: string) {
   }, [navigationItems, itemId]);
 }
 
-// Hook for checking if a navigation item is active
+// Hook for checking if a navigation item is active using centralized logic
 export function useIsNavigationItemActive(path: string) {
   const location = useLocation();
   
   return useMemo(() => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    // Use exact matching as primary check
+    if (location.pathname === path) {
+      return true;
+    }
+    
+    // Only use parent-child matching for paths that are clearly hierarchical
+    // and don't conflict with sibling routes
+    if (path !== '/' && location.pathname.startsWith(path + '/')) {
+      // Additional check: ensure this isn't a false positive due to similar prefixes
+      const pathSegments = path.split('/').filter(s => s);
+      const currentSegments = location.pathname.split('/').filter(s => s);
+      
+      // Must have more segments than the target path for valid hierarchy
+      if (currentSegments.length > pathSegments.length) {
+        return true;
+      }
+    }
+    
+    return false;
   }, [location.pathname, path]);
 }
