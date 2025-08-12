@@ -13,7 +13,7 @@ import { useFeatureSync } from '@/hooks/useFeatureSync';
 function DynamicRoute({ route }: { route: any }) {
   console.log('🔍 DynamicRoute: Rendering route:', route);
   const Component = getComponent(route.component);
-  const isAdminRoute = route.permissions?.includes('admin');
+  const isAdminRoute = route.permissions?.includes('admin') || route.permissions?.includes('super_admin');
   
   console.log('🔍 DynamicRoute: Got component:', Component.name || 'Anonymous');
   console.log('🔍 DynamicRoute: Is admin route:', isAdminRoute);
@@ -21,8 +21,24 @@ function DynamicRoute({ route }: { route: any }) {
   
   const element = React.createElement(Component);
   
+  // Map route permissions to KB permissions
+  const kbPermissions: Array<'can_upload' | 'can_chat' | 'can_create_kb' | 'can_manage_files' | 'can_view_analytics'> = [];
+  
+  if (route.permissions?.includes('admin') || route.permissions?.includes('super_admin')) {
+    kbPermissions.push('can_manage_files', 'can_view_analytics', 'can_create_kb');
+  }
+  if (route.permissions?.includes('write')) {
+    kbPermissions.push('can_upload');
+  }
+  // All users can chat if they have read access
+  if (route.permissions?.includes('read')) {
+    kbPermissions.push('can_chat');
+  }
+  
+  console.log('🔍 DynamicRoute: Mapped KB permissions:', kbPermissions);
+  
   const wrapped = (
-    <KBAuthorizeRoute permissions={route.permissions || []} component={route.component}>
+    <KBAuthorizeRoute permissions={kbPermissions} component={route.component}>
       {element}
     </KBAuthorizeRoute>
   );
