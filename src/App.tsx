@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { createOptimizedQueryClient, cacheConfig } from "@/lib/query-client";
 import { initializeCacheCleanup } from "@/lib/local-storage";
 import { PageLoadingSpinner } from "@/components/LoadingSkeletons";
+import { PlaceholderPage } from "@/components/ui/placeholder-page";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryPersister } from "@/lib/query-persistence";
 import { PagePerformanceTracker } from "@/components/analytics/PagePerformanceTracker";
@@ -75,8 +76,16 @@ const App = () => (
               <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/invite/:token" element={<InviteAcceptance />} />
-              {/* Protected Routes */}
+               <Route path="/invite/:token" element={<InviteAcceptance />} />
+               {/* Protected Routes */}
+               <Route 
+                 path="/dashboard" 
+                 element={
+                   <ProtectedRoute>
+                     <PlaceholderPage title="Dashboard under construction" description="This page is not available yet." />
+                   </ProtectedRoute>
+                 } 
+               />
               <Route 
                 path="/organizations" 
                 element={
