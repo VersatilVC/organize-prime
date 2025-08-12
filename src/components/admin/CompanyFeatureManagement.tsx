@@ -67,8 +67,8 @@ export function CompanyFeatureManagement() {
           feature_slug: systemConfig.feature_slug,
           displayName: featureMetadata[systemConfig.feature_slug]?.displayName || systemConfig.feature_slug,
           description: featureMetadata[systemConfig.feature_slug]?.description || 'No description available',
-          is_enabled: orgConfig?.is_enabled ?? true,
-          is_user_accessible: orgConfig?.is_user_accessible ?? true,
+          is_enabled: orgConfig?.is_enabled ?? false,
+          is_user_accessible: orgConfig?.is_user_accessible ?? false,
           org_menu_order: orgConfig?.org_menu_order ?? systemConfig.system_menu_order,
           id: orgConfig?.id
         };
@@ -85,6 +85,10 @@ export function CompanyFeatureManagement() {
   }, [systemConfigs, orgConfigs]);
 
   const handleToggleFeatureEnabled = (feature: FeatureWithConfig) => {
+    // Optimistic UI update
+    setFeatures(prev => prev.map(f =>
+      f.feature_slug === feature.feature_slug ? { ...f, is_enabled: !feature.is_enabled } : f
+    ));
     updateConfig({
       featureSlug: feature.feature_slug,
       config: { 
@@ -96,6 +100,10 @@ export function CompanyFeatureManagement() {
   };
 
   const handleToggleUserAccessible = (feature: FeatureWithConfig) => {
+    // Optimistic UI update
+    setFeatures(prev => prev.map(f =>
+      f.feature_slug === feature.feature_slug ? { ...f, is_user_accessible: !feature.is_user_accessible } : f
+    ));
     updateConfig({
       featureSlug: feature.feature_slug,
       config: { 
@@ -124,8 +132,8 @@ export function CompanyFeatureManagement() {
         updateConfig({
           featureSlug: item.feature_slug,
           config: {
-            is_enabled: item.is_enabled ?? true,
-            is_user_accessible: item.is_user_accessible ?? true,
+            is_enabled: item.is_enabled ?? false,
+            is_user_accessible: item.is_user_accessible ?? false,
             org_menu_order: index
           }
         });
@@ -213,7 +221,7 @@ export function CompanyFeatureManagement() {
                                     </Label>
                                     <Switch
                                       id={`enabled-${feature.feature_slug}`}
-                                      checked={feature.is_enabled ?? true}
+                                      checked={feature.is_enabled ?? false}
                                       onCheckedChange={() => handleToggleFeatureEnabled(feature)}
                                       disabled={isUpdating}
                                     />
@@ -229,7 +237,7 @@ export function CompanyFeatureManagement() {
                                     </Label>
                                     <Switch
                                       id={`user-access-${feature.feature_slug}`}
-                                      checked={feature.is_user_accessible ?? true}
+                                      checked={feature.is_user_accessible ?? false}
                                       onCheckedChange={() => handleToggleUserAccessible(feature)}
                                       disabled={isUpdating || !feature.is_enabled}
                                     />
