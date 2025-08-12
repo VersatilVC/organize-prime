@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,18 +12,15 @@ import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
 import { Icons } from '@/components/ui/icons';
 import { 
   Package, 
-  Palette, 
-  Hash,
-  FileText,
   Loader2,
   Check
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import type { SystemFeature } from '@/types/features';
 
-interface AddFeatureModalProps {
+interface EditFeatureModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trigger?: React.ReactNode;
+  feature: SystemFeature | null;
 }
 
 const categories = [
@@ -44,9 +41,9 @@ const iconOptions = [
   'Zap', 'Database', 'Globe', 'MessageSquare', 'Calendar'
 ];
 
-export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModalProps) {
+export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureModalProps) {
   const { toast } = useToast();
-  const { createFeature, isCreating } = useSystemFeatures();
+  const { updateFeature, isUpdating } = useSystemFeatures();
   const [formData, setFormData] = useState({
     displayName: '',
     slug: '',
@@ -55,6 +52,20 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
     iconName: 'Package',
     colorHex: '#3b82f6'
   });
+
+  // Update form data when feature changes
+  useEffect(() => {
+    if (feature) {
+      setFormData({
+        displayName: feature.display_name,
+        slug: feature.slug,
+        description: feature.description || '',
+        category: feature.category,
+        iconName: feature.icon_name,
+        colorHex: feature.color_hex
+      });
+    }
+  }, [feature]);
 
   const generateSlug = (name: string) => {
     return name
@@ -74,47 +85,40 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!feature) return;
 
     try {
-      await createFeature({
-        displayName: formData.displayName,
-        slug: formData.slug,
-        description: formData.description,
-        category: formData.category,
-        iconName: formData.iconName,
-        colorHex: formData.colorHex,
-      });
-      
-      // Reset form
-      setFormData({
-        displayName: '',
-        slug: '',
-        description: '',
-        category: '',
-        iconName: 'Package',
-        colorHex: '#3b82f6'
+      await updateFeature({
+        id: feature.id,
+        updates: {
+          displayName: formData.displayName,
+          description: formData.description,
+          category: formData.category,
+          iconName: formData.iconName,
+          colorHex: formData.colorHex,
+        }
       });
       
       onOpenChange(false);
     } catch (error) {
-      // Error handling is done in the hook
-      console.error('Error creating feature:', error);
+      console.error('Error updating feature:', error);
     }
   };
 
   const isValid = formData.displayName && formData.slug && formData.category;
 
+  if (!feature) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Add New Feature
+            Edit Feature
           </DialogTitle>
           <DialogDescription>
-            Create a new system feature that can be enabled across organizations
+            Update the feature configuration and settings
           </DialogDescription>
         </DialogHeader>
 
@@ -140,7 +144,11 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
                 onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                 placeholder="e.g., document-management"
                 required
+                disabled // Prevent slug changes for existing features
               />
+              <p className="text-xs text-muted-foreground">
+                Slug cannot be changed for existing features
+              </p>
             </div>
           </div>
 
@@ -185,18 +193,21 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
           <div className="space-y-2">
             <Label>Icon</Label>
             <div className="grid grid-cols-5 gap-2">
-              {iconOptions.map((icon) => (
-                <Button
-                  key={icon}
-                  type="button"
-                  variant={formData.iconName === icon ? "default" : "outline"}
-                  size="sm"
-                  className="h-10"
-                  onClick={() => setFormData(prev => ({ ...prev, iconName: icon }))}
-                >
-                  <Package className="h-4 w-4" />
-                </Button>
-              ))}
+              {iconOptions.map((icon) => {
+                const IconComponent = Icons[icon as keyof typeof Icons] || Package;
+                return (
+                  <Button
+                    key={icon}
+                    type="button"
+                    variant={formData.iconName === icon ? "default" : "outline"}
+                    size="sm"
+                    className="h-10"
+                    onClick={() => setFormData(prev => ({ ...prev, iconName: icon }))}
+                  >
+                    <IconComponent className="h-4 w-4" />
+                  </Button>
+                );
+              })}
             </div>
           </div>
 
@@ -240,7 +251,10 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
                     className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
                     style={{ backgroundColor: formData.colorHex }}
                   >
-                    <Package className="h-5 w-5" />
+                    {(() => {
+                      const IconComponent = Icons[formData.iconName as keyof typeof Icons] || Package;
+                      return <IconComponent className="h-5 w-5" />;
+                    })()}
                   </div>
                   <div>
                     <h3 className="font-medium">{formData.displayName}</h3>
@@ -271,10 +285,10 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
             </Button>
             <Button 
               type="submit" 
-              disabled={!isValid || isCreating}
+              disabled={!isValid || isUpdating}
             >
-              {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create Feature
+              {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Update Feature
             </Button>
           </div>
         </form>

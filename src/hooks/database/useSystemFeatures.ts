@@ -21,19 +21,19 @@ export function useSystemFeatures() {
       }
 
       // Transform to SystemFeature interface
-      return (data || []).map(item => ({
+      return (data || []).map((item: any) => ({
         id: item.id,
         name: item.feature_slug,
-        display_name: getFeatureDisplayName(item.feature_slug),
+        display_name: item.display_name || getFeatureDisplayName(item.feature_slug),
         slug: item.feature_slug,
-        description: getFeatureDescription(item.feature_slug),
-        category: 'business',
-        icon_name: getFeatureIcon(item.feature_slug),
-        color_hex: getFeatureColor(item.feature_slug),
+        description: item.description || getFeatureDescription(item.feature_slug),
+        category: item.category || 'business',
+        icon_name: item.icon_name || getFeatureIcon(item.feature_slug),
+        color_hex: item.color_hex || getFeatureColor(item.feature_slug),
         is_active: item.is_enabled_globally,
         is_system_feature: true,
         sort_order: item.system_menu_order,
-        navigation_config: {},
+        navigation_config: item.navigation_config || {},
         required_tables: [],
         webhook_endpoints: {},
         setup_sql: null,
@@ -46,14 +46,28 @@ export function useSystemFeatures() {
   });
 
   const createFeatureMutation = useMutation({
-    mutationFn: async (featureData: Partial<SystemFeature>) => {
+    mutationFn: async (featureData: Partial<SystemFeature> & { 
+      displayName: string; 
+      slug: string; 
+      description?: string; 
+      category: string; 
+      iconName: string; 
+      colorHex: string; 
+    }) => {
       const { data, error } = await supabase
         .from('system_feature_configs')
         .insert({
-          feature_slug: featureData.slug || featureData.name || '',
+          feature_slug: featureData.slug,
+          display_name: featureData.displayName,
+          description: featureData.description,
+          category: featureData.category,
+          icon_name: featureData.iconName,
+          color_hex: featureData.colorHex,
           is_enabled_globally: featureData.is_active ?? true,
           is_marketplace_visible: true,
           system_menu_order: featureData.sort_order ?? 0,
+          navigation_config: featureData.navigation_config || {},
+          feature_pages: [],
         })
         .select()
         .single();
@@ -79,7 +93,13 @@ export function useSystemFeatures() {
   });
 
   const updateFeatureMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<SystemFeature> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<SystemFeature> & {
+      displayName?: string;
+      description?: string;
+      category?: string;
+      iconName?: string;
+      colorHex?: string;
+    } }) => {
       // Get feature slug for cascade update
       const { data: featureData, error: fetchError } = await supabase
         .from('system_feature_configs')
@@ -89,12 +109,18 @@ export function useSystemFeatures() {
 
       if (fetchError) throw fetchError;
 
+      const updateData: any = {};
+      if (updates.is_active !== undefined) updateData.is_enabled_globally = updates.is_active;
+      if (updates.sort_order !== undefined) updateData.system_menu_order = updates.sort_order;
+      if (updates.displayName !== undefined) updateData.display_name = updates.displayName;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.category !== undefined) updateData.category = updates.category;
+      if (updates.iconName !== undefined) updateData.icon_name = updates.iconName;
+      if (updates.colorHex !== undefined) updateData.color_hex = updates.colorHex;
+
       const { error } = await supabase
         .from('system_feature_configs')
-        .update({
-          is_enabled_globally: updates.is_active,
-          system_menu_order: updates.sort_order,
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
