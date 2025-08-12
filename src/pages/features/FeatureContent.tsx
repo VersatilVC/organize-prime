@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
+import { PlaceholderPage } from '@/components/ui/placeholder-page';
 
 export default function FeatureContent() {
   const { feature } = useFeatureContext();
@@ -222,42 +223,17 @@ export default function FeatureContent() {
     }
   };
 
-  const renderGenericContent = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Feature Content</CardTitle>
-          <CardDescription>
-            {currentNavItem ? `${currentNavItem.label} for ${feature.displayName}` : `Content for ${feature.displayName}`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <div className="mx-auto mb-4 p-3 rounded-full bg-primary/10 w-fit">
-              {currentNavItem && (
-                React.createElement(Icons[currentNavItem.icon as keyof typeof Icons] || Icons.package, {
-                  className: "h-8 w-8 text-primary"
-                })
-              )}
-            </div>
-            <h3 className="text-lg font-medium mb-2">Coming Soon</h3>
-            <p className="text-muted-foreground mb-4">
-              This feature page is under development
-            </p>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>Current path: /{currentPath}</p>
-              <p>Feature: {feature.slug}</p>
-            </div>
-            <Button variant="outline" asChild className="mt-4">
-              <Link to={`/features/${feature.slug}/dashboard`}>
-                Back to Dashboard
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const renderGenericContent = () => {
+    const componentName = currentPath.split('/').pop() || 'dashboard';
+    const displayName = componentName.charAt(0).toUpperCase() + componentName.slice(1);
+    
+    return (
+      <PlaceholderPage 
+        title={`${displayName} - Coming Soon`}
+        description={`The ${displayName} feature is currently under development.`}
+      />
+    );
+  };
 
   // Route to specific feature content based on feature type
   switch (feature.slug) {
