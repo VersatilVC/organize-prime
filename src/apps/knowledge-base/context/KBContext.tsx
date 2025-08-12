@@ -66,8 +66,15 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
           display_name: c.display_name,
           is_default: c.is_default,
         })));
-      } catch (e) {
-        console.error('Failed to load KB configurations', e);
+      } catch (e: any) {
+        // Handle missing table gracefully for placeholder pages
+        if (e?.code === '42P01') {
+          console.log('KB configurations table not found - using empty state for placeholder pages');
+          if (isMounted) setConfigurations([]);
+        } else {
+          console.error('Failed to load KB configurations', e);
+          if (isMounted) setConfigurations([]);
+        }
       } finally {
         if (isMounted) setIsLoadingConfigs(false);
       }
