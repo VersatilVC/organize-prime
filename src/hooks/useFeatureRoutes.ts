@@ -19,6 +19,7 @@ export function useFeatureRoutes(featureSlug: string) {
     if (!feature) return [];
     
     const pages = feature.system_feature.navigation_config?.pages || [];
+    console.log('🔍 useFeatureRoutes: Processing pages for feature:', featureSlug, pages);
     
     return pages
       .map((page: any) => ({
