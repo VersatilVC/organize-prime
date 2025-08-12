@@ -17,7 +17,7 @@ function DynamicRoute({ route }: { route: any }) {
   const element = React.createElement(Component);
   
   const wrapped = (
-    <KBAuthorizeRoute permissions={route.permissions || []}>
+    <KBAuthorizeRoute permissions={route.permissions || []} component={route.component}>
       {element}
     </KBAuthorizeRoute>
   );
