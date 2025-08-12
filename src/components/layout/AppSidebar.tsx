@@ -396,7 +396,7 @@ export function AppSidebar() {
   const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
   // Feedback count for badges
-  const feedback = dashboardData?.totalFeedback || 0;
+  const feedback = dashboardData?.feedback || 0;
 
   // Loading states
   const roleLoading = !role;
