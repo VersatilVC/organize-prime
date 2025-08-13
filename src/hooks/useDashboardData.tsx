@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useUserRole } from './useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useEffect, useRef } from 'react';
@@ -46,7 +46,7 @@ const getDashboardStats = async (organizationId: string, userId: string, isSuper
 };
 
 export function useDashboardData(): DashboardStats {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { role, loading: roleLoading } = useUserRole();
   const { currentOrganization, loading: orgLoading } = useOrganization();
   const isMountedRef = useRef(true);

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -30,7 +30,7 @@ interface Notification {
 }
 
 export function NotificationBell() {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { currentOrganization } = useOrganizationData();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
