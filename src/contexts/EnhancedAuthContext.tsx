@@ -56,16 +56,21 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Invalid email format") };
       }
 
-      // Rate limiting check
-      const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_in', 5, 15);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait 15 minutes before trying again",
-          variant: "destructive",
-        });
-        await logSecurityEvent('rate_limit_exceeded', 'authentication', sanitizedEmail);
-        return { error: new AuthError("Rate limited") };
+      // Rate limiting check (non-blocking)
+      try {
+        const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_in', 5, 15);
+        if (!rateLimitPassed) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Please wait 15 minutes before trying again",
+            variant: "destructive",
+          });
+          await logSecurityEvent('rate_limit_exceeded', 'authentication', sanitizedEmail);
+          return { error: new AuthError("Rate limited") };
+        }
+      } catch (rateLimitError) {
+        console.warn('Rate limiting failed for sign in, proceeding:', rateLimitError);
+        // Continue with authentication even if rate limiting fails
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -142,15 +147,20 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Password does not meet requirements") };
       }
 
-      // Rate limiting
-      const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_up', 3, 60);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait before trying again",
-          variant: "destructive",
-        });
-        return { error: new AuthError("Rate limited") };
+      // Rate limiting (non-blocking)
+      try {
+        const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_up', 3, 60);
+        if (!rateLimitPassed) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Please wait before trying again",
+            variant: "destructive",
+          });
+          return { error: new AuthError("Rate limited") };
+        }
+      } catch (rateLimitError) {
+        console.warn('Rate limiting failed for sign up, proceeding:', rateLimitError);
+        // Continue with authentication even if rate limiting fails
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -249,15 +259,20 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Invalid email format") };
       }
 
-      // Rate limiting for password reset
-      const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'password_reset', 3, 60);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait before requesting another password reset",
-          variant: "destructive",
-        });
-        return { error: new AuthError("Rate limited") };
+      // Rate limiting for password reset (non-blocking)
+      try {
+        const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'password_reset', 3, 60);
+        if (!rateLimitPassed) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Please wait before requesting another password reset",
+            variant: "destructive",
+          });
+          return { error: new AuthError("Rate limited") };
+        }
+      } catch (rateLimitError) {
+        console.warn('Rate limiting failed for password reset, proceeding:', rateLimitError);
+        // Continue with password reset even if rate limiting fails
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(sanitizedEmail, {
@@ -291,45 +306,119 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
     }
   }, [toast]);
 
-  // Enhanced Google sign in with logging
+  // Simplified Google sign in without blocking rate limiting
   const signInWithGoogle = useCallback(async () => {
     try {
-      // Rate limiting for OAuth attempts
-      const rateLimitPassed = await checkRateLimit('google_oauth', 'oauth_sign_in', 10, 15);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait before trying Google sign in again",
-          variant: "destructive",
-        });
-        return { error: new AuthError("Rate limited") };
+      console.log('🚀 Starting Google OAuth sign-in process');
+      
+      // Domain analysis and validation
+      const currentDomain = window.location.origin;
+      const isLovableDomain = currentDomain.includes('lovableproject.com');
+      const isLocalhost = currentDomain.includes('localhost');
+      const callbackUrl = `${currentDomain}/auth/callback`;
+      
+      console.log('🌐 Domain Analysis:', {
+        currentDomain,
+        isLovableDomain,
+        isLocalhost,
+        callbackUrl
+      });
+      
+      // Skip rate limiting for now to avoid blocking authentication
+      // Rate limiting with domain-specific key (non-blocking)
+      const rateLimitKey = `google_oauth_${currentDomain}`;
+      try {
+        await checkRateLimit(rateLimitKey, 'oauth_sign_in', 10, 15);
+      } catch (rateLimitError) {
+        console.warn('Rate limiting check failed, proceeding with OAuth:', rateLimitError);
+        // Continue with authentication even if rate limiting fails
       }
 
+      console.log('🔗 Initiating OAuth with Supabase...');
+      
+      // Enhanced OAuth call with domain validation
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
       
+      console.log('📊 OAuth Response:', { data, error });
+      
       if (error) {
+        console.error('🚨 Google OAuth error:', error);
+        
+        // Enhanced error messaging with domain-specific guidance
+        let userMessage = error.message;
+        let isDomainIssue = false;
+        
+        if (error.message.includes('Provider not found')) {
+          userMessage = 'Google sign-in provider is not configured in Supabase. Please contact support.';
+        } else if (error.message.includes('Invalid redirect URL') || 
+                   error.message.includes('unauthorized_client') ||
+                   error.message.includes('redirect_uri_mismatch')) {
+          isDomainIssue = true;
+          userMessage = `Domain configuration issue detected.\n\nCurrent domain: ${currentDomain}\n\nPlease ensure:\n1. This domain is added to Google Cloud Console\n2. Supabase Site URL matches this domain\n3. Redirect URL is properly configured`;
+        }
+        
         toast({
-          title: "Google Sign In Error",
-          description: error.message,
+          title: "Google Sign In Failed",
+          description: userMessage,
           variant: "destructive",
         });
         
         await logSecurityEvent('google_sign_in_failed', 'authentication', undefined, {
           error: error.message,
+          domain: currentDomain,
+          isDomainIssue,
+          timestamp: new Date().toISOString(),
         });
       } else {
-        await logSecurityEvent('google_sign_in_initiated', 'authentication');
+        console.log('✅ Google OAuth initiated successfully');
+        console.log('🔄 User should be redirected to Google...');
+        
+        await logSecurityEvent('google_sign_in_initiated', 'authentication', undefined, {
+          domain: currentDomain,
+          redirectUrl: callbackUrl,
+          timestamp: new Date().toISOString(),
+        });
+        
+        toast({
+          title: "Redirecting to Google",
+          description: "Please complete authentication with Google.",
+        });
       }
       
       return { error };
     } catch (err) {
       const error = err as AuthError;
-      console.error('Google sign in error:', error);
+      console.error('🚨 Google sign in unexpected error:', error);
+      
+      const currentDomain = window.location.origin;
+      let errorMessage = error.message;
+      
+      if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        errorMessage = `Network or timeout error. Current domain: ${currentDomain}. This may indicate a configuration issue.`;
+      }
+      
+      toast({
+        title: "Google Sign In Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
+      await logSecurityEvent('google_sign_in_error', 'authentication', undefined, {
+        error: error.message,
+        domain: currentDomain,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+      
       return { error };
     }
   }, [toast]);

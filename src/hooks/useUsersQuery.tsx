@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/auth-migration';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useUserRole } from './useUserRole';
 import { useToast } from './use-toast';

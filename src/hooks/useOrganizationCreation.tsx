@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export function useOrganizationCreation() {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { organizations, loading: orgLoading } = useOrganization();
   const { toast } = useToast();
 

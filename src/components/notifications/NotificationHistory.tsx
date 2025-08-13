@@ -16,7 +16,7 @@ import { Loader2, Eye, Download, Search, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/auth-migration';
 import { debounce } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 

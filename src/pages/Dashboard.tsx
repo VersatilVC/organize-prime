@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -96,7 +96,7 @@ QuickActionButton.displayName = 'QuickActionButton';
 
 export default function Dashboard() {
   usePagePerformance('Dashboard');
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
   const { organizations: orgCount, users, notifications, feedback, loading } = useDashboardData();
