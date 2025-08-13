@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import * as React from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -21,17 +21,17 @@ interface UserDataContextType {
 // Legacy interface for backward compatibility
 interface AuthContextType extends AuthMethodsContextType, UserDataContextType {}
 
-const AuthMethodsContext = createContext<AuthMethodsContextType | undefined>(undefined);
-const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthMethodsContext = React.createContext<AuthMethodsContextType | undefined>(undefined);
+const UserDataContext = React.createContext<UserDataContextType | undefined>(undefined);
+const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
+  React.useEffect(() => {
     let mounted = true; // Prevent state updates after unmount
     
     const initializeAuth = async () => {
@@ -273,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Memoize auth methods to prevent unnecessary re-renders
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = React.useCallback(async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -300,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }, [toast]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = React.useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -317,7 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }, [toast]);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = React.useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -336,7 +336,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }, [toast]);
 
-  const signOut = useCallback(async () => {
+  const signOut = React.useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast({
@@ -347,7 +347,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toast]);
 
-  const resetPassword = useCallback(async (email: string) => {
+  const resetPassword = React.useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -369,7 +369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [toast]);
 
   // Memoize context values to prevent unnecessary re-renders
-  const authMethods = useMemo(() => ({
+  const authMethods = React.useMemo(() => ({
     signUp,
     signIn,
     signInWithGoogle,
@@ -377,14 +377,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword,
   }), [signUp, signIn, signInWithGoogle, signOut, resetPassword]);
 
-  const userData = useMemo(() => ({
+  const userData = React.useMemo(() => ({
     user,
     session,
     loading,
   }), [user, session, loading]);
 
   // Legacy combined value for backward compatibility
-  const legacyValue = useMemo(() => ({
+  const legacyValue = React.useMemo(() => ({
     ...userData,
     ...authMethods,
   }), [userData, authMethods]);
@@ -402,7 +402,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 // Optimized hooks for selective context subscriptions
 export function useAuthMethods() {
-  const context = useContext(AuthMethodsContext);
+  const context = React.useContext(AuthMethodsContext);
   if (context === undefined) {
     throw new Error('useAuthMethods must be used within an AuthProvider');
   }
@@ -410,7 +410,7 @@ export function useAuthMethods() {
 }
 
 export function useUserData() {
-  const context = useContext(UserDataContext);
+  const context = React.useContext(UserDataContext);
   if (context === undefined) {
     throw new Error('useUserData must be used within an AuthProvider');
   }
@@ -419,7 +419,7 @@ export function useUserData() {
 
 // Legacy hook for backward compatibility
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { kbService } from '../services/kbService';
@@ -24,10 +24,10 @@ interface KBContextValue {
   activeConversations: number;
 }
 
-const KBContext = createContext<KBContextValue | undefined>(undefined);
+const KBContext = React.createContext<KBContextValue | undefined>(undefined);
 
 export function useKBContext() {
-  const ctx = useContext(KBContext);
+  const ctx = React.useContext(KBContext);
   if (!ctx) throw new Error('useKBContext must be used within KBProvider');
   return ctx;
 }
@@ -38,21 +38,21 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
   const permissions = useKBPermissions();
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const [configurations, setConfigurations] = useState<KBConfiguration[]>([]);
-  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
-  const [processingFileCount, setProcessingFileCount] = useState(0);
-  const [activeConversations, setActiveConversations] = useState(0);
+  const [configurations, setConfigurations] = React.useState<KBConfiguration[]>([]);
+  const [isLoadingConfigs, setIsLoadingConfigs] = React.useState(false);
+  const [processingFileCount, setProcessingFileCount] = React.useState(0);
+  const [activeConversations, setActiveConversations] = React.useState(0);
 
   const currentKBId = searchParams.get('kbId');
 
-  const setCurrentKBId = useCallback((id: string | null) => {
+  const setCurrentKBId = React.useCallback((id: string | null) => {
     const next = new URLSearchParams(searchParams);
     if (id) next.set('kbId', id); else next.delete('kbId');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
   // Load configurations
-  useEffect(() => {
+  React.useEffect(() => {
     let isMounted = true;
     (async () => {
       if (!orgId) return;
@@ -83,7 +83,7 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
   }, [orgId]);
 
   // Realtime subscriptions for processing status and conversations
-  useEffect(() => {
+  React.useEffect(() => {
     if (!orgId) return;
     const channel = (supabase as any)
       .channel('kb-realtime')
@@ -107,7 +107,7 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
     };
   }, [orgId]);
 
-  const value = useMemo<KBContextValue>(() => ({
+  const value = React.useMemo<KBContextValue>(() => ({
     currentKBId,
     setCurrentKBId,
     configurations,

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import * as React from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { AppContext, AppPermissionError } from '../types/AppTypes';
 import { useAppConfig } from '../hooks/useAppConfig';
@@ -15,10 +15,10 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
 // App context for child components
-const AppContextProvider = createContext<AppContext | null>(null);
+const AppContextProvider = React.createContext<AppContext | null>(null);
 
 export interface AppLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
   appId: string;
   appName?: string;
   permissions?: string[];
@@ -56,7 +56,7 @@ export function AppLayout({
   const { breadcrumbs, isNavigationLoading } = useAppNavigation({ appId });
 
   // Track page view
-  useEffect(() => {
+  React.useEffect(() => {
     if (appId && organizationId && userId && !configLoading) {
       AppAnalyticsService.trackPageView(
         appId,
@@ -69,7 +69,7 @@ export function AppLayout({
   }, [appId, organizationId, userId, location.pathname, configLoading]);
 
   // Track app errors
-  useEffect(() => {
+  React.useEffect(() => {
     if (configError && organizationId && userId) {
       AppAnalyticsService.trackError(
         appId,
@@ -248,7 +248,7 @@ export function AppLayout({
 
 // Hook to access app context
 export function useAppContext(): AppContext {
-  const context = useContext(AppContextProvider);
+  const context = React.useContext(AppContextProvider);
   
   if (!context) {
     throw new Error('useAppContext must be used within an AppLayout component');

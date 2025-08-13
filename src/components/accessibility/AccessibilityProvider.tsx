@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useEffect } from 'react';
+import * as React from 'react';
 
 interface AccessibilityContextType {
   announceToScreenReader: (message: string, priority?: 'polite' | 'assertive') => void;
@@ -6,11 +6,11 @@ interface AccessibilityContextType {
   skipToContent: () => void;
 }
 
-const AccessibilityContext = createContext<AccessibilityContextType | null>(null);
+const AccessibilityContext = React.createContext<AccessibilityContextType | null>(null);
 
 export function AccessibilityProvider({ children }: { children: React.ReactNode }) {
-  const announceRef = useRef<HTMLDivElement>(null);
-  const mainRef = useRef<HTMLElement>(null);
+  const announceRef = React.useRef<HTMLDivElement>(null);
+  const mainRef = React.useRef<HTMLElement>(null);
 
   const announceToScreenReader = (message: string, priority: 'polite' | 'assertive' = 'polite') => {
     if (announceRef.current) {
@@ -40,7 +40,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Set main ref to the main element
     const mainElement = document.querySelector('main');
     if (mainElement) {
@@ -70,7 +70,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
 }
 
 export function useAccessibility() {
-  const context = useContext(AccessibilityContext);
+  const context = React.useContext(AccessibilityContext);
   if (!context) {
     throw new Error('useAccessibility must be used within AccessibilityProvider');
   }
@@ -97,7 +97,7 @@ export function SkipToContent() {
 
 // Focus management hook
 export function useFocusManagement() {
-  const focusHistory = useRef<HTMLElement[]>([]);
+  const focusHistory = React.useRef<HTMLElement[]>([]);
 
   const saveFocus = () => {
     const activeElement = document.activeElement as HTMLElement;
@@ -230,7 +230,7 @@ export function useKeyboardNavigation() {
 
 // ARIA live region hook
 export function useAriaLiveRegion() {
-  const liveRegionRef = useRef<HTMLDivElement>(null);
+  const liveRegionRef = React.useRef<HTMLDivElement>(null);
 
   const announce = (message: string, priority: 'off' | 'polite' | 'assertive' = 'polite') => {
     if (liveRegionRef.current) {

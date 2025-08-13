@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import * as React from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,16 +24,16 @@ interface EnhancedAuthContextType {
   validatePassword: (password: string) => Promise<{ isValid: boolean; feedback: string[] }>;
 }
 
-const EnhancedAuthContext = createContext<EnhancedAuthContextType | undefined>(undefined);
+const EnhancedAuthContext = React.createContext<EnhancedAuthContextType | undefined>(undefined);
 
 export function EnhancedAuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const { toast } = useToast();
 
   // Enhanced sign in with comprehensive security
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = React.useCallback(async (email: string, password: string) => {
     try {
       // Input validation and sanitization
       if (!email || !password) {
@@ -112,7 +112,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   }, [toast]);
 
   // Enhanced sign up with password validation
-  const signUp = useCallback(async (email: string, password: string, fullName?: string) => {
+  const signUp = React.useCallback(async (email: string, password: string, fullName?: string) => {
     try {
       // Input validation
       if (!email || !password) {
@@ -204,7 +204,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   }, [toast]);
 
   // Enhanced sign out with security logging
-  const signOut = useCallback(async () => {
+  const signOut = React.useCallback(async () => {
     try {
       const currentUser = user;
       
@@ -237,7 +237,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   }, [toast, user]);
 
   // Enhanced password reset with validation
-  const resetPassword = useCallback(async (email: string) => {
+  const resetPassword = React.useCallback(async (email: string) => {
     try {
       if (!email) {
         toast({
@@ -307,7 +307,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   }, [toast]);
 
   // Simplified Google sign in without blocking rate limiting
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = React.useCallback(async () => {
     try {
       console.log('🚀 Starting Google OAuth sign-in process');
       
@@ -424,7 +424,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   }, [toast]);
 
   // Password validation helper
-  const validatePassword = useCallback(async (password: string) => {
+  const validatePassword = React.useCallback(async (password: string) => {
     const validation = validatePasswordStrength(password);
     return {
       isValid: validation.isStrong,
@@ -512,7 +512,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   };
 
   // Enhanced auth state management with security validation
-  useEffect(() => {
+  React.useEffect(() => {
     let mounted = true;
 
     const getInitialSession = async () => {
@@ -574,7 +574,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   }, [signOut]);
 
   // Memoize context value
-  const value = useMemo(() => ({
+  const value = React.useMemo(() => ({
     user,
     session,
     loading,
@@ -594,7 +594,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
 }
 
 export function useEnhancedAuth() {
-  const context = useContext(EnhancedAuthContext);
+  const context = React.useContext(EnhancedAuthContext);
   if (context === undefined) {
     throw new Error('useEnhancedAuth must be used within an EnhancedAuthProvider');
   }

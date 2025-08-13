@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import * as React from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,12 +14,12 @@ interface SimpleAuthContextType {
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
 }
 
-const SimpleAuthContext = createContext<SimpleAuthContextType | undefined>(undefined);
+const SimpleAuthContext = React.createContext<SimpleAuthContextType | undefined>(undefined);
 
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   // Basic sign in
   const signIn = async (email: string, password: string) => {
@@ -171,7 +171,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Auth state management
-  useEffect(() => {
+  React.useEffect(() => {
     console.log('🔧 Simple Auth: Setting up auth listener');
     
     // Set up auth state listener
@@ -201,7 +201,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  const value = useMemo(() => ({
+  const value = React.useMemo(() => ({
     user,
     session,
     loading,
@@ -220,7 +220,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 }
 
 export function useSimpleAuth() {
-  const context = useContext(SimpleAuthContext);
+  const context = React.useContext(SimpleAuthContext);
   if (context === undefined) {
     throw new Error('useSimpleAuth must be used within a SimpleAuthProvider');
   }
