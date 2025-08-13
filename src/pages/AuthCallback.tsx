@@ -20,6 +20,15 @@ export default function AuthCallback() {
     
     const handleAuthCallback = async () => {
       try {
+        // Check if user is already authenticated before processing callback
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          console.log('✅ Auth Callback: User already authenticated, redirecting to home');
+          navigate('/', { replace: true });
+          return;
+        }
+
         console.log('🔐 Auth Callback: Processing authentication callback');
         console.log('🔍 URL params:', Object.fromEntries(searchParams.entries()));
         console.log('🌐 Current domain:', window.location.origin);
@@ -112,7 +121,24 @@ ${AuthDiagnostics.getAuthGuideMessage()}`);
         }
 
         if (!verifier) {
-          console.error('🚨 Auth Callback: Missing PKCE code verifier');
+          console.warn('⚠️ Auth Callback: Missing PKCE code verifier - user may already be authenticated');
+          
+          // Check if user is authenticated despite missing verifier
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            console.log('✅ Auth Callback: User is authenticated, clearing state and redirecting');
+            // Clear any remaining OAuth state
+            ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'].forEach(key => {
+              try {
+                localStorage.removeItem(key);
+              } catch (e) {
+                console.warn('Could not clear OAuth key:', key);
+              }
+            });
+            navigate('/', { replace: true });
+            return;
+          }
+          
           setError('Authentication state error. Please try signing in again.');
           setLoading(false);
           clearTimeout(timeoutId);
@@ -205,10 +231,13 @@ ${AuthDiagnostics.getAuthGuideMessage()}`);
         if (data.session) {
           console.log('✅ Auth Callback: Session established successfully');
           
-          // Clear success-related storage items
+          // Clear success-related storage items and OAuth state
           sessionStorage.removeItem('auth_retry_count');
           localStorage.removeItem('pkce_failure_count');
           localStorage.removeItem('oauth_error');
+          localStorage.removeItem('pkce_code_verifier');
+          localStorage.removeItem('oauth_state');
+          localStorage.removeItem('auth_callback_url');
           
           toast({
             title: "Welcome!",

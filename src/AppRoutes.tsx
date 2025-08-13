@@ -5,6 +5,7 @@ import { PageLoadingSpinner } from '@/components/LoadingSkeletons';
 import { PlaceholderPage } from '@/components/ui/placeholder-page';
 import { FeatureRouter } from './components/FeatureRouter';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
 
 // Optimized loading component for routes
 const RouteLoadingSpinner = () => (
@@ -63,9 +64,11 @@ export default function AppRoutes() {
         } />
         
         <Route path="/auth" element={
-          <Suspense fallback={<RouteLoadingSpinner />}>
-            <Auth />
-          </Suspense>
+          <GuestGuard>
+            <Suspense fallback={<RouteLoadingSpinner />}>
+              <Auth />
+            </Suspense>
+          </GuestGuard>
         } />
         
         <Route path="/auth/callback" element={

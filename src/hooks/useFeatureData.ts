@@ -116,16 +116,19 @@ export function useFeatureData(slug?: string): FeatureContext {
   const { currentOrganization } = useOrganization();
 
   const featureData = useMemo(() => {
-    console.log('🔍 useFeatureData Debug:', {
-      slug,
-      installedFeatures: installedFeatures.map(f => f.slug),
-      currentOrganization: currentOrganization?.id,
-      roleLoading,
-      role
-    });
+    // Only log debug info if slug is provided to reduce console noise
+    if (slug) {
+      console.log('🔍 useFeatureData Debug:', {
+        slug,
+        installedFeatures: installedFeatures.map(f => f.slug),
+        currentOrganization: currentOrganization?.id,
+        roleLoading,
+        role
+      });
+    }
 
     if (!slug) {
-      console.log('❌ useFeatureData: No slug provided');
+      // Reduce console noise for empty slug calls
       return null;
     }
     
@@ -155,30 +158,38 @@ export function useFeatureData(slug?: string): FeatureContext {
 
   const hasAccess = useMemo(() => {
     if (!featureData || !role) {
-      console.log('🔍 useFeatureData hasAccess: Missing data', {
-        hasFeatureData: !!featureData,
-        hasRole: !!role,
-        role
-      });
+      // Only log when slug is provided to reduce noise
+      if (slug) {
+        console.log('🔍 useFeatureData hasAccess: Missing data', {
+          hasFeatureData: !!featureData,
+          hasRole: !!role,
+          role
+        });
+      }
       return false;
     }
     const access = featureData.hasAccess && featureData.isInstalled;
-    console.log('🔍 useFeatureData hasAccess:', {
-      featureHasAccess: featureData.hasAccess,
-      featureIsInstalled: featureData.isInstalled,
-      finalAccess: access
-    });
+    if (slug) {
+      console.log('🔍 useFeatureData hasAccess:', {
+        featureHasAccess: featureData.hasAccess,
+        featureIsInstalled: featureData.isInstalled,
+        finalAccess: access
+      });
+    }
     return access;
-  }, [featureData, role]);
+  }, [featureData, role, slug]);
 
-  const result = {
+  const result = useMemo(() => ({
     feature: featureData,
     isLoading: roleLoading || !currentOrganization,
     error: null,
     hasAccess,
     userRole: role
-  };
+  }), [featureData, roleLoading, currentOrganization, hasAccess, role]);
 
-  console.log('🔍 useFeatureData: Final hook result:', result);
+  // Only log final result when slug is provided
+  if (slug) {
+    console.log('🔍 useFeatureData: Final hook result:', result);
+  }
   return result;
 }
