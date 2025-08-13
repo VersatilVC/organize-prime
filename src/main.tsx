@@ -1,54 +1,24 @@
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import './lib/code-splitting'
-import { initializeSecurity } from './lib/security-config'
-import { preloadCriticalChunks } from './hooks/useChunkLoadingOptimization'
-import { preloadCriticalIcons } from './lib/icon-optimizer'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createAdvancedQueryClient } from '@/lib/advanced-query-client';
+import { registerServiceWorker } from '@/lib/service-worker';
+import App from './App.tsx';
+import './index.css';
 
 // Initialize app components registry
 import '@/apps/knowledge-base';
 
-// Preload critical resources
-preloadCriticalChunks();
-preloadCriticalIcons();
+// Register enhanced service worker
+registerServiceWorker();
 
-// Initialize security configuration
-try {
-  initializeSecurity();
-} catch (error) {
-  console.error('Security initialization failed:', error);
-}
+// Create optimized query client with advanced patterns
+const queryClient = createAdvancedQueryClient();
 
-// Silence verbose logs in production (keep warnings and errors)
-if (import.meta.env.PROD) {
-  const noop = () => {};
-  console.log = noop;
-  console.debug = noop;
-  console.info = noop;
-}
-
-// Register service worker for caching
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.debug('SW registered: ', registration);
-      })
-      .catch(registrationError => {
-        console.debug('SW registration failed: ', registrationError);
-      });
-  });
-}
-
-// Global recovery for dynamic import/chunk load errors
-window.addEventListener('unhandledrejection', (event) => {
-  const reason: any = (event as any).reason;
-  const msg = String(reason?.message || reason || '');
-  if (/Loading chunk|ChunkLoadError|dynamic import/i.test(msg)) {
-    console.warn('Chunk load error detected. Reloading to recover...');
-    window.location.reload();
-  }
-});
-
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </StrictMode>,
+);
