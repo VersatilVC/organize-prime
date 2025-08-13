@@ -6,6 +6,16 @@ import { PlaceholderPage } from '@/components/ui/placeholder-page';
 import { FeatureRouter } from './components/FeatureRouter';
 import { AppLayout } from '@/components/layout/AppLayout';
 
+// Optimized loading component for routes
+const RouteLoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+      <p className="text-sm text-muted-foreground">Loading page...</p>
+    </div>
+  </div>
+);
+
 // Lazy load all page components for code splitting
 const Index = lazy(() => import('./pages/Index'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -46,10 +56,29 @@ function FeatureDebugComponent() {
 export default function AppRoutes() {
   return (
     <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/invite/:token" element={<InviteAcceptance />} />
+        <Route path="/" element={
+          <Suspense fallback={<RouteLoadingSpinner />}>
+            <Index />
+          </Suspense>
+        } />
+        
+        <Route path="/auth" element={
+          <Suspense fallback={<RouteLoadingSpinner />}>
+            <Auth />
+          </Suspense>
+        } />
+        
+        <Route path="/auth/callback" element={
+          <Suspense fallback={<RouteLoadingSpinner />}>
+            <AuthCallback />
+          </Suspense>
+        } />
+        
+        <Route path="/invite/:token" element={
+          <Suspense fallback={<RouteLoadingSpinner />}>
+            <InviteAcceptance />
+          </Suspense>
+        } />
         
         {/* Protected Routes */}
         <Route 
@@ -67,7 +96,9 @@ export default function AppRoutes() {
           path="/organizations" 
           element={
             <ProtectedRoute requiredRole="super_admin">
-              <Organizations />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <Organizations />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -76,7 +107,9 @@ export default function AppRoutes() {
           path="/users" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <Users />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <Users />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -86,7 +119,9 @@ export default function AppRoutes() {
           path="/settings/company" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <CompanySettings />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <CompanySettings />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -95,7 +130,9 @@ export default function AppRoutes() {
           path="/billing" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <Billing />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <Billing />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -105,7 +142,9 @@ export default function AppRoutes() {
           path="/features/:slug/*" 
           element={
             <ProtectedRoute>
-              <FeatureRouter />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <FeatureRouter />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -131,7 +170,9 @@ export default function AppRoutes() {
           path="/admin/feedback" 
           element={
             <ProtectedRoute requiredRole="super_admin">
-              <FeedbackManagement />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <FeedbackManagement />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -140,7 +181,9 @@ export default function AppRoutes() {
           path="/feedback/manage" 
           element={
             <ProtectedRoute requiredRole="super_admin">
-              <FeedbackManagement />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <FeedbackManagement />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -150,7 +193,9 @@ export default function AppRoutes() {
           path="/settings/profile" 
           element={
             <ProtectedRoute>
-              <ProfileSettings />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <ProfileSettings />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -159,7 +204,9 @@ export default function AppRoutes() {
           path="/settings/system" 
           element={
             <ProtectedRoute requiredRole="super_admin">
-              <SystemSettings />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <SystemSettings />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -168,7 +215,9 @@ export default function AppRoutes() {
           path="/feedback/my" 
           element={
             <ProtectedRoute>
-              <MyFeedback />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <MyFeedback />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -177,7 +226,9 @@ export default function AppRoutes() {
           path="/feedback/:id" 
           element={
             <ProtectedRoute>
-              <FeedbackDetail />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <FeedbackDetail />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -186,7 +237,9 @@ export default function AppRoutes() {
           path="/feedback" 
           element={
             <ProtectedRoute>
-              <Feedback />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <Feedback />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -195,7 +248,9 @@ export default function AppRoutes() {
           path="/notifications" 
           element={
             <ProtectedRoute>
-              <Notifications />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <Notifications />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
@@ -204,7 +259,9 @@ export default function AppRoutes() {
           path="/settings/notifications" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <NotificationManagement />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <NotificationManagement />
+              </Suspense>
             </ProtectedRoute>
           } 
         />
