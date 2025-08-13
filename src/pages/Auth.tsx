@@ -52,27 +52,37 @@ export default function Auth() {
     try {
       console.log('🎯 Auth Page: Starting Google sign-in');
       
-      // Set a timeout to reset loading state if OAuth doesn't redirect
-      const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Auth Page: Google sign-in timeout, resetting loading state');
-        setLoading(false);
-        toast({
-          title: "Sign In Taking Too Long",
-          description: "If you're still seeing this, please try again or use email/password.",
-          variant: "destructive",
-        });
-      }, 15000); // 15 second timeout for loading state
-      
       const result = await signInWithGoogle();
       
-      // Clear the timeout if we get a result
-      clearTimeout(timeoutId);
+      console.log('🎯 Auth Page: Google sign-in result:', result);
       
       if (result.error) {
         console.error('🚨 Auth Page: Google sign-in returned error:', result.error);
         setLoading(false);
+        
+        // Show specific error message to help with debugging
+        toast({
+          title: "Google Sign In Failed",
+          description: "Google authentication is not properly configured in Supabase. Please contact support or try email/password.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('🎯 Auth Page: No error returned, but checking if redirect happened...');
+        
+        // If no error but we're still here after 3 seconds, something's wrong
+        setTimeout(() => {
+          if (window.location.pathname === '/auth') {
+            console.warn('⚠️ Auth Page: Still on auth page after 3 seconds, redirect may have failed');
+            setLoading(false);
+            
+            toast({
+              title: "Sign In Issue",
+              description: "Google sign-in may not be configured. Please try email/password or contact support.",
+              variant: "destructive",
+            });
+          }
+        }, 3000);
       }
-      // Note: Don't set loading to false on success since we should be redirecting
       
     } catch (error) {
       console.error('🚨 Auth Page: Google sign-in catch block:', error);
@@ -80,7 +90,7 @@ export default function Auth() {
       
       toast({
         title: "Google Sign In Failed",
-        description: "Please try again or use email/password to sign in.",
+        description: "Google authentication is not available. Please use email/password to sign in.",
         variant: "destructive",
       });
     }

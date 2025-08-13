@@ -296,6 +296,10 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
     try {
       console.log('🚀 Starting Google OAuth sign-in process');
       
+      // Check if we're in the right environment
+      console.log('🌐 Current origin:', window.location.origin);
+      console.log('🔗 Callback URL will be:', `${window.location.origin}/auth/callback`);
+      
       // Temporarily increase rate limit for debugging OAuth issues
       const rateLimitPassed = await checkRateLimit('google_oauth', 'oauth_sign_in', 20, 15);
       if (!rateLimitPassed) {
@@ -308,16 +312,10 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Rate limited") };
       }
 
-      // Add loading state and timeout for better UX
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('OAuth timeout - please try again'));
-        }, 30000); // 30 second timeout
-      });
-
       console.log('🔗 Initiating OAuth with redirect to:', `${window.location.origin}/auth/callback`);
       
-      const oauthPromise = supabase.auth.signInWithOAuth({
+      // Try the OAuth call with more detailed error handling
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -327,15 +325,24 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           },
         },
       });
-
-      // Race between OAuth and timeout
-      const { data, error } = await Promise.race([oauthPromise, timeoutPromise]);
+      
+      console.log('📊 OAuth response data:', data);
+      console.log('📊 OAuth response error:', error);
       
       if (error) {
         console.error('🚨 Google OAuth error:', error);
+        
+        // Provide more specific error messages based on error type
+        let userMessage = error.message;
+        if (error.message.includes('Provider not found')) {
+          userMessage = 'Google sign-in is not configured. Please contact support or try email/password.';
+        } else if (error.message.includes('Invalid redirect URL')) {
+          userMessage = 'Authentication configuration error. Please contact support.';
+        }
+        
         toast({
           title: "Google Sign In Error",
-          description: `${error.message}. Please check that Google OAuth is properly configured.`,
+          description: userMessage,
           variant: "destructive",
         });
         
@@ -344,7 +351,9 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           timestamp: new Date().toISOString(),
         });
       } else {
-        console.log('✅ Google OAuth initiated successfully');
+        console.log('✅ Google OAuth call completed without error');
+        console.log('🔄 Should be redirecting to Google now...');
+        
         await logSecurityEvent('google_sign_in_initiated', 'authentication', undefined, {
           redirect_url: `${window.location.origin}/auth/callback`,
           timestamp: new Date().toISOString(),
@@ -362,20 +371,11 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       const error = err as AuthError;
       console.error('🚨 Google sign in unexpected error:', error);
       
-      // Handle timeout specifically
-      if (error.message.includes('timeout')) {
-        toast({
-          title: "Sign In Timeout",
-          description: "The sign-in process took too long. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Google Sign In Error",
-          description: "An unexpected error occurred. Please try again or use email/password.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Google Sign In Error",
+        description: "Google sign-in is not properly configured. Please try email/password or contact support.",
+        variant: "destructive",
+      });
       
       await logSecurityEvent('google_sign_in_error', 'authentication', undefined, {
         error: error.message,
