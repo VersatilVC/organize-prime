@@ -45,8 +45,7 @@ function FeatureDebugComponent() {
 
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<PageLoadingSpinner />}>
-      <Routes>
+    <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -220,8 +219,11 @@ export default function AppRoutes() {
         />
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={
+          <Suspense fallback={<PageLoadingSpinner />}>
+            <NotFound />
+          </Suspense>
+        } />
       </Routes>
-    </Suspense>
   );
 }

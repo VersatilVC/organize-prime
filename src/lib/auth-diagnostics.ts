@@ -77,23 +77,38 @@ export class AuthDiagnostics {
 
   static getAuthGuideMessage() {
     const domain = window.location.origin;
+    const domainWithoutProtocol = domain.replace('https://', '').replace('http://', '');
     
-    return `Google OAuth Configuration Guide:
+    return `🔧 Google OAuth Configuration Guide:
+
+📋 REQUIRED STEPS:
 
 1. Google Cloud Console Setup:
-   - Go to Google Cloud Console > APIs & Services > Credentials
-   - Add "${domain}" to Authorized JavaScript origins
-   - Add "${domain}/auth/callback" to Authorized redirect URIs
-   
+   • Go to: console.cloud.google.com → APIs & Services → Credentials
+   • Edit your OAuth 2.0 Client ID
+   • Under "Authorized JavaScript origins":
+     ✓ Add: ${domain}
+   • Under "Authorized redirect URIs":
+     ✓ Add: ${domain}/auth/callback
+
 2. Supabase Configuration:
-   - Go to Supabase Dashboard > Authentication > Settings
-   - Set Site URL to: ${domain}
-   - Verify redirect URLs include: ${domain}/auth/callback
-   
-3. OAuth Consent Screen:
-   - Add "${domain.replace('https://', '').replace('http://', '')}" to Authorized domains
-   
-Current domain: ${domain}
-Callback URL: ${domain}/auth/callback`;
+   • Go to: supabase.com/dashboard → Authentication → URL Configuration
+   • Site URL: ${domain}
+   • Redirect URLs: ${domain}/auth/callback
+
+3. OAuth Consent Screen (if using external testing):
+   • Go to: console.cloud.google.com → APIs & Services → OAuth consent screen
+   • Under "Authorized domains":
+     ✓ Add: ${domainWithoutProtocol}
+
+🔍 Current Configuration:
+• Domain: ${domain}
+• Callback: ${domain}/auth/callback
+• Protocol: ${domain.startsWith('https://') ? 'HTTPS ✓' : 'HTTP (development only)'}
+
+⚠️ Common Issues:
+- Redirect URI mismatch: URLs must match EXACTLY
+- Domain not authorized: Add domain to both Google and Supabase
+- HTTPS required: Use localhost for development or HTTPS for production`;
   }
 }

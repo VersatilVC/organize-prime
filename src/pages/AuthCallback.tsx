@@ -51,13 +51,20 @@ export default function AuthCallback() {
         if (errorParam) {
           console.error('🚨 Auth Callback: Error in URL params:', errorParam, errorDescription);
           
-          // Enhanced PKCE error handling with specific detection
+          // Enhanced error handling with specific guidance
+          const isConfigError = errorDescription?.includes('unauthorized_client') || 
+                                errorDescription?.includes('redirect_uri_mismatch') ||
+                                errorDescription?.includes('Domain configuration');
+                                
           const isPKCEError = errorDescription?.includes('code verifier') || 
                              errorDescription?.includes('invalid request') ||
                              errorDescription?.includes('code_challenge') ||
                              errorParam === 'invalid_request';
                              
-          if (isPKCEError) {
+          if (isConfigError) {
+            const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
+            setError(`Configuration Error: ${errorDescription}\n\n${AuthDiagnostics.getAuthGuideMessage()}`);
+          } else if (isPKCEError) {
             console.log('🔄 PKCE error detected:', { errorParam, errorDescription });
             
             // Track PKCE failures but don't clear state immediately
@@ -67,18 +74,11 @@ export default function AuthCallback() {
             // Only clear OAuth state after multiple failures
             if (pkceFailures > 2) {
               console.log('🧹 Multiple PKCE failures, clearing OAuth state');
-              const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
-              oauthKeys.forEach(key => {
-                try {
-                  localStorage.removeItem(key);
-                } catch (e) {
-                  console.warn('Could not clear OAuth key:', key);
-                }
-              });
-              localStorage.removeItem('pkce_failure_count');
+              const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
+              AuthDiagnostics.clearOAuthState();
             }
             
-            setError('OAuth authentication state error. Please try signing in again.');
+            setError('OAuth authentication state error. This can happen if the browser closed during sign-in. Please try signing in again.');
           } else {
             setError(`Authentication failed: ${errorDescription || errorParam}`);
           }
@@ -91,7 +91,21 @@ export default function AuthCallback() {
         // Validate required OAuth parameters before exchange
         if (!authCode) {
           console.error('🚨 Auth Callback: Missing authorization code');
-          setError('Missing authorization code. Please try signing in again.');
+          
+          // This is the most common error - provide specific guidance
+          const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
+          const domainConfig = AuthDiagnostics.validateDomainConfiguration();
+          
+          setError(`Missing authorization code. This usually means:
+1. OAuth flow was interrupted or canceled
+2. Domain configuration issue
+3. Google Cloud Console redirect URI mismatch
+
+Current domain: ${domainConfig.domain}
+Expected callback: ${domainConfig.redirectUrl}
+
+${AuthDiagnostics.getAuthGuideMessage()}`);
+          
           setLoading(false);
           clearTimeout(timeoutId);
           return;
