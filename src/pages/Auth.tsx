@@ -48,12 +48,41 @@ export default function Auth() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    
     try {
-      await signInWithGoogle();
+      console.log('🎯 Auth Page: Starting Google sign-in');
+      
+      // Set a timeout to reset loading state if OAuth doesn't redirect
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Auth Page: Google sign-in timeout, resetting loading state');
+        setLoading(false);
+        toast({
+          title: "Sign In Taking Too Long",
+          description: "If you're still seeing this, please try again or use email/password.",
+          variant: "destructive",
+        });
+      }, 15000); // 15 second timeout for loading state
+      
+      const result = await signInWithGoogle();
+      
+      // Clear the timeout if we get a result
+      clearTimeout(timeoutId);
+      
+      if (result.error) {
+        console.error('🚨 Auth Page: Google sign-in returned error:', result.error);
+        setLoading(false);
+      }
+      // Note: Don't set loading to false on success since we should be redirecting
+      
     } catch (error) {
-      console.error('Google sign in error:', error);
-    } finally {
+      console.error('🚨 Auth Page: Google sign-in catch block:', error);
       setLoading(false);
+      
+      toast({
+        title: "Google Sign In Failed",
+        description: "Please try again or use email/password to sign in.",
+        variant: "destructive",
+      });
     }
   };
 

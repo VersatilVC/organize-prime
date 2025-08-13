@@ -291,12 +291,15 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
     }
   }, [toast]);
 
-  // Enhanced Google sign in with logging
+  // Enhanced Google sign in with comprehensive debugging and timeout handling
   const signInWithGoogle = useCallback(async () => {
     try {
-      // Rate limiting for OAuth attempts
-      const rateLimitPassed = await checkRateLimit('google_oauth', 'oauth_sign_in', 10, 15);
+      console.log('🚀 Starting Google OAuth sign-in process');
+      
+      // Temporarily increase rate limit for debugging OAuth issues
+      const rateLimitPassed = await checkRateLimit('google_oauth', 'oauth_sign_in', 20, 15);
       if (!rateLimitPassed) {
+        console.warn('⚠️ Google OAuth rate limited');
         toast({
           title: "Too Many Attempts",
           description: "Please wait before trying Google sign in again",
@@ -305,31 +308,81 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Rate limited") };
       }
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      // Add loading state and timeout for better UX
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('OAuth timeout - please try again'));
+        }, 30000); // 30 second timeout
+      });
+
+      console.log('🔗 Initiating OAuth with redirect to:', `${window.location.origin}/auth/callback`);
+      
+      const oauthPromise = supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
+
+      // Race between OAuth and timeout
+      const { data, error } = await Promise.race([oauthPromise, timeoutPromise]);
       
       if (error) {
+        console.error('🚨 Google OAuth error:', error);
         toast({
           title: "Google Sign In Error",
-          description: error.message,
+          description: `${error.message}. Please check that Google OAuth is properly configured.`,
           variant: "destructive",
         });
         
         await logSecurityEvent('google_sign_in_failed', 'authentication', undefined, {
           error: error.message,
+          timestamp: new Date().toISOString(),
         });
       } else {
-        await logSecurityEvent('google_sign_in_initiated', 'authentication');
+        console.log('✅ Google OAuth initiated successfully');
+        await logSecurityEvent('google_sign_in_initiated', 'authentication', undefined, {
+          redirect_url: `${window.location.origin}/auth/callback`,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Show immediate feedback to user
+        toast({
+          title: "Redirecting to Google",
+          description: "Please complete the sign-in process in the popup window.",
+        });
       }
       
       return { error };
     } catch (err) {
       const error = err as AuthError;
-      console.error('Google sign in error:', error);
+      console.error('🚨 Google sign in unexpected error:', error);
+      
+      // Handle timeout specifically
+      if (error.message.includes('timeout')) {
+        toast({
+          title: "Sign In Timeout",
+          description: "The sign-in process took too long. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Google Sign In Error",
+          description: "An unexpected error occurred. Please try again or use email/password.",
+          variant: "destructive",
+        });
+      }
+      
+      await logSecurityEvent('google_sign_in_error', 'authentication', undefined, {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+      
       return { error };
     }
   }, [toast]);
