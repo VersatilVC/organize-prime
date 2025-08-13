@@ -8,10 +8,38 @@ import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
 import { usePagePerformance } from '@/lib/performance';
 
+// Loading component for auth check
+const AuthLoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <p className="text-sm text-muted-foreground">Checking authentication...</p>
+    </div>
+  </div>
+);
+
 const Index = () => {
   usePagePerformance('Home');
-  const { user } = useSimpleAuth();
+  
+  // Safely try to get auth context, handle if provider not ready
+  let user = null;
+  let loading = true;
+  
+  try {
+    const auth = useSimpleAuth();
+    user = auth.user;
+    loading = auth.loading;
+  } catch (error) {
+    console.warn('Auth context not available yet, showing loading state');
+    return <AuthLoadingSpinner />;
+  }
 
+  // Show loading while auth is being determined
+  if (loading) {
+    return <AuthLoadingSpinner />;
+  }
+
+  // Show landing page for unauthenticated users
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -20,9 +48,9 @@ const Index = () => {
             <div className="flex justify-center mb-4">
               <Icons.building className="h-12 w-12 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Multi-Tenant SaaS Platform</CardTitle>
+            <CardTitle className="text-2xl">OrganizePrime</CardTitle>
             <CardDescription>
-              Manage your organizations, teams, and workflows in one place
+              Enterprise multi-tenant platform for managing organizations, teams, and workflows
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -51,12 +79,18 @@ const Index = () => {
             <Button asChild className="w-full">
               <Link to="/auth">Get Started</Link>
             </Button>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">
+                Secure multi-tenant architecture with role-based access control
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Show dashboard for authenticated users
   return (
     <AppLayout>
       <Dashboard />
