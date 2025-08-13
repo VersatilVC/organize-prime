@@ -2093,6 +2093,14 @@ export type Database = {
         Args: { file_path: string }
         Returns: string
       }
+      get_dashboard_data_batch: {
+        Args: {
+          p_user_id: string
+          p_organization_id: string
+          p_is_super_admin?: boolean
+        }
+        Returns: Json
+      }
       get_dashboard_stats: {
         Args: { p_user_id: string; p_organization_id?: string; p_role?: string }
         Returns: Json
@@ -2116,6 +2124,17 @@ export type Database = {
           weekly_usage: Json
           most_used_pages: Json
         }[]
+      }
+      get_feedback_list_optimized: {
+        Args: {
+          p_organization_id: string
+          p_requesting_user_id: string
+          p_page?: number
+          p_page_size?: number
+          p_status_filter?: string
+          p_priority_filter?: string
+        }
+        Returns: Json
       }
       get_invitation_by_token: {
         Args: { p_token: string }
@@ -2229,6 +2248,18 @@ export type Database = {
           user_id: string
           email: string
         }[]
+      }
+      get_user_list_optimized: {
+        Args: {
+          p_organization_id: string
+          p_requesting_user_id: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_role_filter?: string
+          p_status_filter?: string
+        }
+        Returns: Json
       }
       get_user_organizations: {
         Args: Record<PropertyKey, never>
