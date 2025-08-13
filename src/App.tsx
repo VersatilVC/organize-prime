@@ -12,13 +12,23 @@ import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { FeatureProvider } from '@/contexts/FeatureContext';
 import { ThemeProvider } from 'next-themes';
 import AppRoutes from './AppRoutes';
-import { LazyPageWrapper } from '@/components/LazyPageWrapper';
+import { Suspense } from 'react';
 
 // Setup global error handling
 setupGlobalErrorHandling();
 
 // Create query client
 const queryClient = createAdvancedQueryClient();
+
+// Optimized loading component
+const AppLoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <p className="text-sm text-muted-foreground">Loading OrganizePrime...</p>
+    </div>
+  </div>
+);
 
 function App() {
   return (
@@ -38,12 +48,12 @@ function App() {
                         {/* Skip to content link for accessibility */}
                         <SkipToContent />
                         
-                        {/* Main application wrapped in lazy loading */}
-                        <LazyPageWrapper name="app">
-                          <main id="main-content" className="min-h-screen bg-background" tabIndex={-1}>
+                        {/* Main application with proper loading state */}
+                        <main id="main-content" className="min-h-screen bg-background" tabIndex={-1}>
+                          <Suspense fallback={<AppLoadingSpinner />}>
                             <AppRoutes />
-                          </main>
-                        </LazyPageWrapper>
+                          </Suspense>
+                        </main>
                         
                         {/* Toast notifications */}
                         <Toaster />
