@@ -119,9 +119,22 @@ ${AuthDiagnostics.getAuthGuideMessage()}`);
           return;
         }
 
-        // Handle the OAuth callback with enhanced logging
+        // Enhanced OAuth callback processing with debugging
         console.log('🔄 Auth Callback: Attempting code exchange for session');
-        console.log('🔍 Current URL for exchange:', window.location.href);
+        
+        // Import OAuth debugging for callback monitoring
+        const { OAuthDebugger } = await import('@/lib/oauth-debug');
+        
+        // Log detailed callback processing
+        const callbackDebug = OAuthDebugger.logCallbackProcessing(window.location.href);
+        
+        if (!callbackDebug.stateValid) {
+          console.warn('⚠️ OAuth state mismatch detected');
+        }
+        
+        if (!callbackDebug.hasRequiredParams) {
+          console.error('🚨 Missing required OAuth parameters');
+        }
         
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(
           window.location.href

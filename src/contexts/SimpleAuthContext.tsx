@@ -176,74 +176,99 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Enhanced Google sign in with proper PKCE state management
+  // Enhanced Google sign in with comprehensive OAuth debugging
   const signInWithGoogle = async () => {
     console.log('🔍 Simple Auth: Google sign in attempt');
-    console.log('🌐 Domain:', window.location.origin);
     
     try {
-      // Log existing OAuth state before initiation
-      const existingVerifier = localStorage.getItem('pkce_code_verifier');
-      const existingState = localStorage.getItem('oauth_state');
-      console.log('🔑 Existing PKCE state:', { 
-        hasVerifier: !!existingVerifier, 
-        hasState: !!existingState 
-      });
-
-      // Only clear failed OAuth attempts, not all OAuth state
-      const failedAttemptKeys = ['oauth_error', 'auth_failure_count'];
-      failedAttemptKeys.forEach(key => {
-        try {
-          localStorage.removeItem(key);
-        } catch (e) {
-          console.warn('Could not clear failed attempt key:', key);
-        }
-      });
-
-      // Validate domain before OAuth attempt
-      const currentDomain = window.location.origin;
-      const isLocalhost = currentDomain.includes('localhost');
-      const isLovableProject = currentDomain.includes('lovableproject.com');
+      // Import OAuth debugging utilities
+      const { OAuthDebugger } = await import('@/lib/oauth-debug');
       
-      console.log('🌍 Domain validation:', { currentDomain, isLocalhost, isLovableProject });
-
-      if (!isLocalhost && !isLovableProject && !currentDomain.startsWith('https://')) {
-        const domainError = `Domain configuration issue: ${currentDomain}. Please ensure your domain is properly configured in Google Cloud Console and Supabase.`;
-        console.error('🚨 Domain validation failed:', domainError);
+      // Generate comprehensive diagnostic report
+      const diagnostics = OAuthDebugger.generateDiagnosticReport();
+      
+      // Validate OAuth configuration before proceeding
+      const configValidation = OAuthDebugger.validateOAuthConfig();
+      
+      if (!configValidation.isValid) {
+        const configError = `OAuth configuration invalid: ${JSON.stringify(configValidation.validations)}`;
+        console.error('🚨 OAuth Config Error:', configError);
         
         toast({
-          title: "Domain Configuration Error",
-          description: domainError,
+          title: "OAuth Configuration Error",
+          description: configError,
           variant: "destructive",
         });
         
-        return { error: { message: domainError } as AuthError };
+        return { error: { message: configError } as AuthError };
       }
 
+      // Clear only error tracking, preserve OAuth state for retry
+      const errorKeys = ['oauth_error', 'auth_failure_count'];
+      errorKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('Could not clear error key:', key);
+        }
+      });
+
+      // Get current domain for OAuth configuration
+      const currentDomain = window.location.origin;
+      
+      // Enhanced OAuth request with comprehensive logging
+      const oauthOptions = {
+        redirectTo: `${currentDomain}/auth/callback`,
+        scopes: 'openid email profile',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        },
+        skipBrowserRedirect: false
+      };
+      
+      // Log OAuth request details
+      OAuthDebugger.logOAuthRequest('google', oauthOptions);
+
+      // Execute OAuth request with enhanced error handling
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${currentDomain}/auth/callback`,
-        },
+        options: oauthOptions,
       });
       
       if (error) {
-        console.error('🚨 Google sign in error:', error);
+        console.error('🚨 Google OAuth error:', error);
         
-        // Track failed attempts
+        // Enhanced error tracking and analysis
         const failureCount = parseInt(localStorage.getItem('auth_failure_count') || '0') + 1;
         localStorage.setItem('auth_failure_count', failureCount.toString());
         localStorage.setItem('oauth_error', error.message);
         
-        // Enhanced error messages with specific guidance
+        // Analyze error type for specific guidance
         let errorDescription = error.message;
+        const isConfigError = errorDescription.includes('unauthorized_client') || 
+                             errorDescription.includes('redirect_uri_mismatch') ||
+                             errorDescription.includes('invalid_client');
         
-        if (errorDescription.includes('unauthorized_client') || 
-            errorDescription.includes('redirect_uri_mismatch')) {
-          errorDescription += `\n\nConfiguration needed:\n1. Add ${currentDomain} to Google Cloud Console Authorized origins\n2. Add ${currentDomain}/auth/callback to Authorized redirect URIs\n3. Update Supabase Site URL to ${currentDomain}`;
-        } else if (errorDescription.includes('Domain verification')) {
-          errorDescription += `\n\nDomain verification required:\n1. Verify ${currentDomain} in Google Cloud Console\n2. Add to Authorized domains in OAuth consent screen`;
+        const isDomainError = errorDescription.includes('Domain') || 
+                             errorDescription.includes('domain');
+                             
+        if (isConfigError) {
+          // Import auth diagnostics for configuration guidance
+          const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
+          errorDescription = AuthDiagnostics.getAuthGuideMessage();
+        } else if (isDomainError) {
+          errorDescription += `\n\nDomain Configuration:\n1. Current domain: ${currentDomain}\n2. Required callback: ${currentDomain}/auth/callback\n3. Check Google Cloud Console settings match exactly`;
         }
+        
+        // Log detailed error for debugging
+        console.error('🔍 OAuth Error Details:', {
+          error: error.message,
+          failureCount,
+          currentDomain,
+          isConfigError,
+          isDomainError
+        });
         
         toast({
           title: "Google Sign In Failed",
@@ -253,20 +278,15 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       } else {
         console.log('✅ Google OAuth initiated successfully');
         
-        // Clear failure tracking on successful initiation
+        // Clear error tracking on successful initiation
         localStorage.removeItem('auth_failure_count');
         localStorage.removeItem('oauth_error');
         
-        // Log PKCE state after initiation
+        // Monitor OAuth state creation
         setTimeout(() => {
-          const newVerifier = localStorage.getItem('pkce_code_verifier');
-          const newState = localStorage.getItem('oauth_state');
-          console.log('🔑 New PKCE state created:', { 
-            hasVerifier: !!newVerifier, 
-            hasState: !!newState,
-            verifierLength: newVerifier?.length 
-          });
-        }, 100);
+          const postOAuthState = OAuthDebugger.getOAuthState();
+          console.log('🔑 Post-OAuth State:', postOAuthState);
+        }, 200);
       }
       
       return { error };

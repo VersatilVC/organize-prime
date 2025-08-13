@@ -13,5 +13,17 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // Enhanced OAuth configuration
+    flowType: 'pkce',
+    detectSessionInUrl: true,
+    debug: process.env.NODE_ENV === 'development',
+    // Ensure proper OAuth session handling
+    storageKey: 'sb-auth-token',
+  },
+  // Enhanced global configuration
+  global: {
+    headers: {
+      'X-Client-Info': 'organize-prime-web'
+    }
   }
 });
