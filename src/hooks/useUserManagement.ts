@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { useBaseQuery } from './base/useBaseQuery';
 import { useBaseMutation } from './base/useBaseMutation';

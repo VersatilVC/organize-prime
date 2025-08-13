@@ -132,7 +132,7 @@ export const validatePasswordStrength = (password: string): PasswordStrength => 
 };
 
 /**
- * Rate limiting check - now with graceful failure handling
+ * Rate limiting check
  */
 export const checkRateLimit = async (
   identifier: string,
@@ -149,16 +149,14 @@ export const checkRateLimit = async (
     });
 
     if (error) {
-      console.warn('Rate limit check failed, allowing request:', error.message);
-      // For now, allow the request if rate limiting fails to prevent blocking auth
-      return true;
+      console.error('Rate limit check failed:', error);
+      return false; // Fail safely
     }
 
     return data === true;
   } catch (error) {
-    console.warn('Rate limit check error, allowing request:', error);
-    // For now, allow the request if rate limiting fails to prevent blocking auth
-    return true;
+    console.error('Rate limit check error:', error);
+    return false; // Fail safely
   }
 };
 

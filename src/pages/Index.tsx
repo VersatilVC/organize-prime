@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Dashboard from './Dashboard';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { usePagePerformance } from '@/lib/performance';
 
 const Index = () => {
   usePagePerformance('Home');
-  const { user } = useSimpleAuth();
+  const { user } = useAuth();
 
   if (!user) {
     return (

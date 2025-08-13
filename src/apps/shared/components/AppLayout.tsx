@@ -5,7 +5,7 @@ import { useAppConfig } from '../hooks/useAppConfig';
 import { useAppNavigation } from '../hooks/useAppNavigation';
 import { AppAnalyticsService } from '../services/AppAnalyticsService';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout as BaseAppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { PageLoadingSpinner } from '@/components/LoadingSkeletons';

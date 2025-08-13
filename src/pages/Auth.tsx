@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +16,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   
-  const { user, signIn, signUp, signInWithGoogle, resetPassword } = useSimpleAuth();
+  const { user, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -48,65 +48,12 @@ export default function Auth() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    
     try {
-      console.log('🎯 Auth Page: Starting Google sign-in');
-      console.log('🌐 Auth Page: Current domain:', window.location.origin);
-      
-      const result = await signInWithGoogle();
-      
-      console.log('🎯 Auth Page: Google sign-in result:', result);
-      
-      if (result.error) {
-        console.error('🚨 Auth Page: Google sign-in error:', result.error);
-        setLoading(false);
-        
-        // Enhanced error handling with domain-specific guidance
-        let errorDescription = result.error.message;
-        
-        if (errorDescription.includes('Domain configuration') || 
-            errorDescription.includes('unauthorized_client') ||
-            errorDescription.includes('redirect_uri_mismatch')) {
-          errorDescription += `\n\nTo fix this:\n1. Add ${window.location.origin} to Google Cloud Console\n2. Update Supabase Site URL to match\n3. Verify redirect URLs are configured correctly`;
-        }
-        
-        toast({
-          title: "Google Sign In Failed",
-          description: errorDescription,
-          variant: "destructive",
-        });
-      } else {
-        console.log('🎯 Auth Page: OAuth initiated, monitoring for redirect...');
-        
-        // Monitor for successful redirect - if we're still here after 5 seconds, likely an issue
-        const redirectTimeout = setTimeout(() => {
-          if (window.location.pathname === '/auth') {
-            console.warn('⚠️ Auth Page: Still on auth page after 5 seconds - possible redirect failure');
-            setLoading(false);
-            
-            toast({
-              title: "Redirect Issue",
-              description: `Google sign-in redirect may have failed. Current domain: ${window.location.origin}. Please check domain configuration.`,
-              variant: "destructive",
-            });
-          }
-        }, 5000);
-        
-        // Clear timeout if component unmounts
-        return () => clearTimeout(redirectTimeout);
-      }
-      
+      await signInWithGoogle();
     } catch (error) {
-      console.error('🚨 Auth Page: Google sign-in catch block:', error);
+      console.error('Google sign in error:', error);
+    } finally {
       setLoading(false);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      toast({
-        title: "Google Sign In Error",
-        description: `Authentication error: ${errorMessage}. Please try email/password instead.`,
-        variant: "destructive",
-      });
     }
   };
 

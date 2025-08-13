@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { Bug, Lightbulb, TrendingUp, HelpCircle, Loader2, CheckCircle, AlertTriangle, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 import { FileUpload } from '@/components/ui/file-upload';

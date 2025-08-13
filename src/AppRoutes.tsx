@@ -9,7 +9,6 @@ import { AppLayout } from '@/components/layout/AppLayout';
 // Lazy load all page components for code splitting
 const Index = lazy(() => import('./pages/Index'));
 const Auth = lazy(() => import('./pages/Auth'));
-const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Organizations = lazy(() => import('./pages/Organizations'));
 const Users = lazy(() => import('./pages/Users'));
@@ -49,7 +48,6 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/invite/:token" element={<InviteAcceptance />} />
         
         {/* Protected Routes */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +23,7 @@ import { OptimizedImage } from '@/components/ui/optimized-image';
 import { useAvatarCache } from '@/hooks/useImageCache';
 
 export function AppHeader() {
-  const { user, signOut } = useSimpleAuth();
+  const { user, signOut } = useAuth();
   const { role } = useUserRole();
   const [searchQuery, setSearchQuery] = useState('');
 

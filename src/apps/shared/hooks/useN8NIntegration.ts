@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { N8NWebhookConfig, N8NWebhookError } from '../types/AppTypes';
 import { N8NWebhookService } from '../services/N8NWebhookService';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export interface UseN8NIntegrationOptions {
