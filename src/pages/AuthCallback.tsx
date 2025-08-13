@@ -36,20 +36,61 @@ export default function AuthCallback() {
         
         if (errorParam) {
           console.error('🚨 Auth Callback: Error in URL params:', errorParam, errorDescription);
-          setError(`Authentication failed: ${errorDescription || errorParam}`);
+          
+          // Handle PKCE-specific errors with automatic retry
+          if (errorDescription?.includes('code verifier') || errorDescription?.includes('invalid request')) {
+            console.log('🔄 PKCE error detected, clearing OAuth state and preparing retry');
+            
+            // Clear OAuth state
+            const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url', 'supabase.auth.token'];
+            oauthKeys.forEach(key => {
+              try {
+                localStorage.removeItem(key);
+              } catch (e) {
+                console.warn('Could not clear OAuth key:', key);
+              }
+            });
+            
+            setError('OAuth state error. Please try signing in again.');
+          } else {
+            setError(`Authentication failed: ${errorDescription || errorParam}`);
+          }
+          
           setLoading(false);
           clearTimeout(timeoutId);
           return;
         }
 
-        // Handle the OAuth callback
+        // Handle the OAuth callback with enhanced logging
+        console.log('🔄 Auth Callback: Attempting code exchange for session');
+        console.log('🔍 Current URL for exchange:', window.location.href);
+        
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(
           window.location.href
         );
 
         if (exchangeError) {
           console.error('🚨 Auth Callback: Exchange error:', exchangeError);
-          setError(`Authentication failed: ${exchangeError.message}`);
+          
+          // Handle PKCE-specific exchange errors
+          if (exchangeError.message.includes('code verifier') || exchangeError.message.includes('invalid request')) {
+            console.log('🔄 PKCE exchange error, clearing state');
+            
+            // Clear OAuth state
+            const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
+            oauthKeys.forEach(key => {
+              try {
+                localStorage.removeItem(key);
+              } catch (e) {
+                console.warn('Could not clear OAuth key:', key);
+              }
+            });
+            
+            setError('OAuth authentication failed. Please try signing in again.');
+          } else {
+            setError(`Authentication failed: ${exchangeError.message}`);
+          }
+          
           setLoading(false);
           clearTimeout(timeoutId);
           return;

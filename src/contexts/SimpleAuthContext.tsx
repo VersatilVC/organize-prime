@@ -92,11 +92,28 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Basic sign out
+  // Basic sign out with OAuth state cleanup
   const signOut = async () => {
     console.log('🚪 Simple Auth: Sign out');
     
     try {
+      // Clear OAuth-related localStorage items before sign out
+      const oauthKeys = [
+        'supabase.auth.token',
+        'sb-auth-token',
+        'pkce_code_verifier',
+        'oauth_state',
+        'auth_callback_url'
+      ];
+      
+      oauthKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('Could not clear localStorage key:', key);
+        }
+      });
+
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -154,11 +171,21 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Basic Google sign in
+  // Basic Google sign in with state cleanup
   const signInWithGoogle = async () => {
     console.log('🔍 Simple Auth: Google sign in attempt');
     
     try {
+      // Clear any existing OAuth state before starting new flow
+      const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
+      oauthKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('Could not clear OAuth state:', key);
+        }
+      });
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
