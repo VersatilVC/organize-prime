@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from 'react'; // Fixed React imports
 import { useFeatureData, FeatureContext as FeatureContextType } from '@/hooks/useFeatureData';
 
 const FeatureContext = React.createContext<FeatureContextType | undefined>(undefined);

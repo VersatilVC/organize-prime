@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from 'react'; // Fixed React imports
 import { supabase } from '@/integrations/supabase/client';
 import { useSimpleAuth } from './SimpleAuthContext';
 import { safeStorage } from '@/lib/safe-storage';
