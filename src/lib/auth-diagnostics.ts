@@ -1,4 +1,4 @@
-// OAuth and PKCE diagnostics utility
+// Enhanced OAuth and PKCE diagnostics utility
 export class AuthDiagnostics {
   static logOAuthState() {
     const state = {
@@ -54,7 +54,12 @@ export class AuthDiagnostics {
       'oauth_state', 
       'auth_callback_url',
       'oauth_error',
-      'pkce_failure_count'
+      'pkce_failure_count',
+      // Additional Supabase auth keys
+      'supabase.auth.token',
+      'sb-auth-token',
+      'sb-access-token',
+      'sb-refresh-token'
     ];
     
     keys.forEach(key => {
@@ -73,6 +78,46 @@ export class AuthDiagnostics {
     } catch (e) {
       console.warn('❌ Failed to clear session storage', e);
     }
+  }
+
+  static async debugCurrentOAuthFlow() {
+    console.log('🔍 OAuth Flow Debug Information:');
+    
+    // Current URL analysis
+    const url = new URL(window.location.href);
+    const params = Object.fromEntries(url.searchParams.entries());
+    console.log('🔗 Current URL params:', params);
+    
+    // Check for OAuth error parameters
+    if (params.error) {
+      console.error('🚨 OAuth Error in URL:', {
+        error: params.error,
+        description: params.error_description,
+        state: params.state
+      });
+    }
+    
+    // Check for authorization code
+    if (params.code) {
+      console.log('✅ Authorization code present:', params.code.substring(0, 10) + '...');
+    } else if (window.location.pathname === '/auth/callback') {
+      console.error('🚨 Missing authorization code in callback URL');
+    }
+    
+    // Domain configuration check
+    this.validateDomainConfiguration();
+    
+    // OAuth state check
+    this.logOAuthState();
+    
+    return {
+      url: window.location.href,
+      params,
+      hasError: !!params.error,
+      hasCode: !!params.code,
+      domainConfig: this.validateDomainConfiguration(),
+      oauthState: this.logOAuthState()
+    };
   }
 
   static getAuthGuideMessage() {
@@ -109,6 +154,57 @@ export class AuthDiagnostics {
 ⚠️ Common Issues:
 - Redirect URI mismatch: URLs must match EXACTLY
 - Domain not authorized: Add domain to both Google and Supabase
-- HTTPS required: Use localhost for development or HTTPS for production`;
+- HTTPS required: Use localhost for development or HTTPS for production
+
+🔧 Quick Fix Commands:
+Run in browser console:
+AuthDiagnostics.clearOAuthState(); // Clear problematic state
+AuthDiagnostics.debugCurrentOAuthFlow(); // Full debug info`;
   }
+
+  static async fixCommonIssues() {
+    console.log('🔧 Running automated OAuth fixes...');
+    
+    // 1. Clear potentially corrupted OAuth state
+    this.clearOAuthState();
+    
+    // 2. Check domain configuration
+    const domainConfig = this.validateDomainConfiguration();
+    
+    // 3. Verify current URL structure
+    const urlCheck = this.debugCurrentOAuthFlow();
+    
+    // 4. Generate specific guidance
+    if (!domainConfig.isSecure && !domainConfig.isLocalhost) {
+      console.error('❌ Domain not secure - OAuth will fail');
+      return false;
+    }
+    
+    if (window.location.pathname === '/auth/callback' && !window.location.search.includes('code=')) {
+      console.error('❌ Missing authorization code in callback - likely configuration issue');
+      console.log('🔧 Suggestion: Check Google Cloud Console redirect URI configuration');
+      return false;
+    }
+    
+    console.log('✅ Basic OAuth configuration appears correct');
+    console.log('📋 Next step: Try Google sign-in again');
+    
+    return true;
+  }
+}
+
+// Global debug function for easy console access
+if (typeof window !== 'undefined') {
+  (window as any).debugOAuth = () => {
+    return AuthDiagnostics.debugCurrentOAuthFlow();
+  };
+  
+  (window as any).fixOAuth = () => {
+    return AuthDiagnostics.fixCommonIssues();
+  };
+  
+  (window as any).clearOAuth = () => {
+    AuthDiagnostics.clearOAuthState();
+    console.log('🧹 OAuth state cleared. Try signing in again.');
+  };
 }
