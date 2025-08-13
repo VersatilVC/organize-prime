@@ -56,8 +56,9 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('recharts')) {
               return 'charts';
             }
+            // Move dnd to ui-vendor to ensure React context access
             if (id.includes('@hello-pangea/dnd')) {
-              return 'admin-features';
+              return 'ui-vendor';
             }
           }
           

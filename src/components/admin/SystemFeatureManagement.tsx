@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -20,10 +20,10 @@ import type { SystemFeature } from '@/types/features';
 
 export function SystemFeatureManagement() {
   const { features: systemFeatures, isLoading: featuresLoading, updateFeature, deleteFeature, isDeleting } = useSystemFeatures();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingFeature, setEditingFeature] = useState<SystemFeature | null>(null);
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [editingFeature, setEditingFeature] = React.useState<SystemFeature | null>(null);
+  const [selectedFeatures, setSelectedFeatures] = React.useState<string[]>([]);
 
   const handleToggleGlobalFeature = (feature: typeof systemFeatures[0], isEnabled: boolean) => {
     updateFeature({

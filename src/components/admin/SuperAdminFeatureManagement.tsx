@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -32,7 +32,7 @@ interface OrganizationFeatureConfig {
 export function SuperAdminFeatureManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [selectedOrgId, setSelectedOrgId] = React.useState<string>('');
 
   // Fetch all organizations
   const { data: organizations = [], isLoading: isLoadingOrgs } = useQuery({

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,9 +33,9 @@ import { useFeatureWebhooks } from '@/hooks/database/useFeatureWebhooks';
 
 export function FeatureManagement() {
   const { toast } = useToast();
-  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
-  const [isAddFeatureOpen, setIsAddFeatureOpen] = useState(false);
-  const [isAddWebhookOpen, setIsAddWebhookOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = React.useState<string | null>(null);
+  const [isAddFeatureOpen, setIsAddFeatureOpen] = React.useState(false);
+  const [isAddWebhookOpen, setIsAddWebhookOpen] = React.useState(false);
   
   const { features, isLoading: featuresLoading } = useSystemFeatures();
   const { webhooks, isLoading: webhooksLoading } = useFeatureWebhooks();
