@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Production-ready configuration that works in all environments
 const SUPABASE_URL = "https://cjwgfoingscquolnfkhh.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo";
 
@@ -13,17 +14,22 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    // Enhanced OAuth configuration
+    // Enhanced OAuth configuration with production domain support
     flowType: 'pkce',
     detectSessionInUrl: true,
-    debug: process.env.NODE_ENV === 'development',
+    debug: typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' || 
+      window.location.hostname.includes('127.0.0.1')
+    ),
     // Ensure proper OAuth session handling
     storageKey: 'sb-auth-token',
   },
-  // Enhanced global configuration
+  // Enhanced global configuration with production headers
   global: {
     headers: {
-      'X-Client-Info': 'organize-prime-web'
+      'X-Client-Info': 'organize-prime-web',
+      'X-Environment': typeof window !== 'undefined' ? 
+        (window.location.hostname.includes('lovable') ? 'production' : 'development') : 'server'
     }
   }
 });

@@ -127,10 +127,15 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Simplified Google sign in
+  // Production-ready Google sign in with domain detection
   const signInWithGoogle = async () => {
     console.log('🔍 Simple Auth: Google sign in attempt');
-    console.log('🌐 Domain:', window.location.origin);
+    
+    // Detect current domain for proper redirect configuration
+    const currentDomain = window.location.origin;
+    const isProduction = currentDomain.includes('lovableproject.com') || currentDomain.includes('lovable.app');
+    
+    console.log('🌐 Domain:', currentDomain, 'Production:', isProduction);
     
     try {
       // Clear previous error state
@@ -140,7 +145,12 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${currentDomain}/auth/callback`,
+          // Add production-specific query params if needed
+          queryParams: isProduction ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : {},
         },
       });
       

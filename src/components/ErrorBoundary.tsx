@@ -31,9 +31,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
     
-    // Log to error reporting service in production
-    if (process.env.NODE_ENV === 'production') {
-      // Example: Sentry.captureException(error, { extra: errorInfo });
+    // Enhanced production error reporting
+    try {
+      import('@/lib/production-error-handler').then(({ handleReactError }) => {
+        handleReactError(error, errorInfo);
+      });
+    } catch (reportingError) {
+      console.error('Failed to report error:', reportingError);
     }
   }
 
