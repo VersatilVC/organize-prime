@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useEnhancedAuth } from '@/contexts/EnhancedAuthContext';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRouteProps) {
-  const { user, loading: authLoading } = useEnhancedAuth();
+  const { user, loading: authLoading } = useSimpleAuth();
   const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
 
