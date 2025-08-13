@@ -92,44 +92,49 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Basic sign out with OAuth state cleanup
+  // Enhanced sign out with proper OAuth state cleanup
   const signOut = async () => {
     console.log('🚪 Simple Auth: Sign out');
     
     try {
-      // Clear OAuth-related localStorage items before sign out
-      const oauthKeys = [
-        'supabase.auth.token',
-        'sb-auth-token',
-        'pkce_code_verifier',
-        'oauth_state',
-        'auth_callback_url'
-      ];
-      
-      oauthKeys.forEach(key => {
-        try {
-          localStorage.removeItem(key);
-        } catch (e) {
-          console.warn('Could not clear localStorage key:', key);
-        }
-      });
-
       const { error } = await supabase.auth.signOut();
       
-      if (error) {
+      // Only clear OAuth state AFTER successful sign out
+      if (!error) {
+        console.log('🧹 Clearing OAuth state after successful sign out');
+        
+        const oauthKeys = [
+          'supabase.auth.token',
+          'sb-auth-token', 
+          'pkce_code_verifier',
+          'oauth_state',
+          'auth_callback_url',
+          'oauth_error',
+          'auth_failure_count'
+        ];
+        
+        oauthKeys.forEach(key => {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn('Could not clear localStorage key:', key);
+          }
+        });
+
+        toast({
+          title: "Signed Out",
+          description: "You have been signed out successfully.",
+        });
+      } else {
+        console.error('🚨 Sign out error:', error);
         toast({
           title: "Sign Out Error", 
           description: error.message,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Signed Out",
-          description: "You have been signed out successfully.",
-        });
       }
     } catch (error) {
-      console.error('🚨 Sign out error:', error);
+      console.error('🚨 Sign out unexpected error:', error);
       toast({
         title: "Sign Out Error",
         description: "An error occurred during sign out",
@@ -171,43 +176,114 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Basic Google sign in with state cleanup
+  // Enhanced Google sign in with proper PKCE state management
   const signInWithGoogle = async () => {
     console.log('🔍 Simple Auth: Google sign in attempt');
+    console.log('🌐 Domain:', window.location.origin);
     
     try {
-      // Clear any existing OAuth state before starting new flow
-      const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
-      oauthKeys.forEach(key => {
+      // Log existing OAuth state before initiation
+      const existingVerifier = localStorage.getItem('pkce_code_verifier');
+      const existingState = localStorage.getItem('oauth_state');
+      console.log('🔑 Existing PKCE state:', { 
+        hasVerifier: !!existingVerifier, 
+        hasState: !!existingState 
+      });
+
+      // Only clear failed OAuth attempts, not all OAuth state
+      const failedAttemptKeys = ['oauth_error', 'auth_failure_count'];
+      failedAttemptKeys.forEach(key => {
         try {
           localStorage.removeItem(key);
         } catch (e) {
-          console.warn('Could not clear OAuth state:', key);
+          console.warn('Could not clear failed attempt key:', key);
         }
       });
+
+      // Validate domain before OAuth attempt
+      const currentDomain = window.location.origin;
+      const isLocalhost = currentDomain.includes('localhost');
+      const isLovableProject = currentDomain.includes('lovableproject.com');
+      
+      console.log('🌍 Domain validation:', { currentDomain, isLocalhost, isLovableProject });
+
+      if (!isLocalhost && !isLovableProject && !currentDomain.startsWith('https://')) {
+        const domainError = `Domain configuration issue: ${currentDomain}. Please ensure your domain is properly configured in Google Cloud Console and Supabase.`;
+        console.error('🚨 Domain validation failed:', domainError);
+        
+        toast({
+          title: "Domain Configuration Error",
+          description: domainError,
+          variant: "destructive",
+        });
+        
+        return { error: { message: domainError } as AuthError };
+      }
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${currentDomain}/auth/callback`,
         },
       });
       
       if (error) {
         console.error('🚨 Google sign in error:', error);
+        
+        // Track failed attempts
+        const failureCount = parseInt(localStorage.getItem('auth_failure_count') || '0') + 1;
+        localStorage.setItem('auth_failure_count', failureCount.toString());
+        localStorage.setItem('oauth_error', error.message);
+        
+        // Enhanced error messages with specific guidance
+        let errorDescription = error.message;
+        
+        if (errorDescription.includes('unauthorized_client') || 
+            errorDescription.includes('redirect_uri_mismatch')) {
+          errorDescription += `\n\nConfiguration needed:\n1. Add ${currentDomain} to Google Cloud Console Authorized origins\n2. Add ${currentDomain}/auth/callback to Authorized redirect URIs\n3. Update Supabase Site URL to ${currentDomain}`;
+        } else if (errorDescription.includes('Domain verification')) {
+          errorDescription += `\n\nDomain verification required:\n1. Verify ${currentDomain} in Google Cloud Console\n2. Add to Authorized domains in OAuth consent screen`;
+        }
+        
         toast({
           title: "Google Sign In Failed",
-          description: error.message,
+          description: errorDescription,
           variant: "destructive",
         });
       } else {
-        console.log('✅ Google OAuth initiated');
+        console.log('✅ Google OAuth initiated successfully');
+        
+        // Clear failure tracking on successful initiation
+        localStorage.removeItem('auth_failure_count');
+        localStorage.removeItem('oauth_error');
+        
+        // Log PKCE state after initiation
+        setTimeout(() => {
+          const newVerifier = localStorage.getItem('pkce_code_verifier');
+          const newState = localStorage.getItem('oauth_state');
+          console.log('🔑 New PKCE state created:', { 
+            hasVerifier: !!newVerifier, 
+            hasState: !!newState,
+            verifierLength: newVerifier?.length 
+          });
+        }, 100);
       }
       
       return { error };
     } catch (err) {
       console.error('🚨 Google sign in unexpected error:', err);
+      
+      // Track unexpected errors
+      localStorage.setItem('oauth_error', (err as Error).message);
+      
       const error = err as AuthError;
+      
+      toast({
+        title: "Google Sign In Error",
+        description: `Unexpected error: ${error.message}. Please try again or use email/password sign in.`,
+        variant: "destructive",
+      });
+      
       return { error };
     }
   };

@@ -22,13 +22,27 @@ export default function AuthCallback() {
       try {
         console.log('🔐 Auth Callback: Processing authentication callback');
         console.log('🔍 URL params:', Object.fromEntries(searchParams.entries()));
+        console.log('🌐 Current domain:', window.location.origin);
+
+        // Enhanced PKCE state logging
+        const verifier = localStorage.getItem('pkce_code_verifier');
+        const oauthState = localStorage.getItem('oauth_state');
+        const authCode = searchParams.get('code');
+        
+        console.log('🔑 PKCE Debug Info:', {
+          hasVerifier: !!verifier,
+          verifierLength: verifier?.length,
+          hasOAuthState: !!oauthState,
+          hasAuthCode: !!authCode,
+          authCodeLength: authCode?.length
+        });
 
         // Set a timeout for the auth process
         timeoutId = setTimeout(() => {
           console.error('⏰ Auth Callback: Timeout reached');
           setError('Authentication process timed out. Please try again.');
           setLoading(false);
-        }, 10000); // 10 second timeout
+        }, 15000); // Extended to 15 seconds for better reliability
 
         // Check for error in URL params
         const errorParam = searchParams.get('error');
@@ -37,25 +51,55 @@ export default function AuthCallback() {
         if (errorParam) {
           console.error('🚨 Auth Callback: Error in URL params:', errorParam, errorDescription);
           
-          // Handle PKCE-specific errors with automatic retry
-          if (errorDescription?.includes('code verifier') || errorDescription?.includes('invalid request')) {
-            console.log('🔄 PKCE error detected, clearing OAuth state and preparing retry');
+          // Enhanced PKCE error handling with specific detection
+          const isPKCEError = errorDescription?.includes('code verifier') || 
+                             errorDescription?.includes('invalid request') ||
+                             errorDescription?.includes('code_challenge') ||
+                             errorParam === 'invalid_request';
+                             
+          if (isPKCEError) {
+            console.log('🔄 PKCE error detected:', { errorParam, errorDescription });
             
-            // Clear OAuth state
-            const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url', 'supabase.auth.token'];
-            oauthKeys.forEach(key => {
-              try {
-                localStorage.removeItem(key);
-              } catch (e) {
-                console.warn('Could not clear OAuth key:', key);
-              }
-            });
+            // Track PKCE failures but don't clear state immediately
+            const pkceFailures = parseInt(localStorage.getItem('pkce_failure_count') || '0') + 1;
+            localStorage.setItem('pkce_failure_count', pkceFailures.toString());
             
-            setError('OAuth state error. Please try signing in again.');
+            // Only clear OAuth state after multiple failures
+            if (pkceFailures > 2) {
+              console.log('🧹 Multiple PKCE failures, clearing OAuth state');
+              const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
+              oauthKeys.forEach(key => {
+                try {
+                  localStorage.removeItem(key);
+                } catch (e) {
+                  console.warn('Could not clear OAuth key:', key);
+                }
+              });
+              localStorage.removeItem('pkce_failure_count');
+            }
+            
+            setError('OAuth authentication state error. Please try signing in again.');
           } else {
             setError(`Authentication failed: ${errorDescription || errorParam}`);
           }
           
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+
+        // Validate required OAuth parameters before exchange
+        if (!authCode) {
+          console.error('🚨 Auth Callback: Missing authorization code');
+          setError('Missing authorization code. Please try signing in again.');
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+
+        if (!verifier) {
+          console.error('🚨 Auth Callback: Missing PKCE code verifier');
+          setError('Authentication state error. Please try signing in again.');
           setLoading(false);
           clearTimeout(timeoutId);
           return;
@@ -72,21 +116,56 @@ export default function AuthCallback() {
         if (exchangeError) {
           console.error('🚨 Auth Callback: Exchange error:', exchangeError);
           
-          // Handle PKCE-specific exchange errors
-          if (exchangeError.message.includes('code verifier') || exchangeError.message.includes('invalid request')) {
-            console.log('🔄 PKCE exchange error, clearing state');
+          // Enhanced PKCE exchange error handling
+          const isPKCEExchangeError = exchangeError.message.includes('code verifier') || 
+                                     exchangeError.message.includes('invalid request') ||
+                                     exchangeError.message.includes('code_challenge') ||
+                                     exchangeError.message.includes('invalid_grant');
+                                     
+          if (isPKCEExchangeError) {
+            console.log('🔄 PKCE exchange error detected:', exchangeError.message);
             
-            // Clear OAuth state
-            const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
-            oauthKeys.forEach(key => {
-              try {
-                localStorage.removeItem(key);
-              } catch (e) {
-                console.warn('Could not clear OAuth key:', key);
-              }
-            });
+            // Implement retry logic for transient PKCE errors
+            const retryCount = parseInt(sessionStorage.getItem('auth_retry_count') || '0');
             
-            setError('OAuth authentication failed. Please try signing in again.');
+            if (retryCount < 2) {
+              console.log(`🔄 Attempting OAuth retry ${retryCount + 1}/2`);
+              sessionStorage.setItem('auth_retry_count', (retryCount + 1).toString());
+              
+              // Clear current OAuth state and redirect back to auth
+              const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
+              oauthKeys.forEach(key => {
+                try {
+                  localStorage.removeItem(key);
+                } catch (e) {
+                  console.warn('Could not clear OAuth key:', key);
+                }
+              });
+              
+              setTimeout(() => {
+                navigate('/auth', { replace: true });
+              }, 2000);
+              
+              setError('Authentication failed. Retrying automatically...');
+              setLoading(false);
+              clearTimeout(timeoutId);
+              return;
+            } else {
+              console.log('🚨 Max retry attempts reached');
+              sessionStorage.removeItem('auth_retry_count');
+              
+              // Clear OAuth state after failed retries
+              const oauthKeys = ['pkce_code_verifier', 'oauth_state', 'auth_callback_url'];
+              oauthKeys.forEach(key => {
+                try {
+                  localStorage.removeItem(key);
+                } catch (e) {
+                  console.warn('Could not clear OAuth key:', key);
+                }
+              });
+            }
+            
+            setError('OAuth authentication failed after multiple attempts. Please try signing in again.');
           } else {
             setError(`Authentication failed: ${exchangeError.message}`);
           }
@@ -98,6 +177,11 @@ export default function AuthCallback() {
 
         if (data.session) {
           console.log('✅ Auth Callback: Session established successfully');
+          
+          // Clear success-related storage items
+          sessionStorage.removeItem('auth_retry_count');
+          localStorage.removeItem('pkce_failure_count');
+          localStorage.removeItem('oauth_error');
           
           toast({
             title: "Welcome!",

@@ -53,6 +53,15 @@ export default function Auth() {
       console.log('🎯 Auth Page: Starting Google sign-in');
       console.log('🌐 Auth Page: Current domain:', window.location.origin);
       
+      // Import diagnostics for enhanced debugging
+      const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
+      
+      // Log current OAuth state
+      AuthDiagnostics.logOAuthState();
+      
+      // Validate domain configuration
+      const domainConfig = AuthDiagnostics.validateDomainConfiguration();
+      
       const result = await signInWithGoogle();
       
       console.log('🎯 Auth Page: Google sign-in result:', result);
@@ -61,13 +70,21 @@ export default function Auth() {
         console.error('🚨 Auth Page: Google sign-in error:', result.error);
         setLoading(false);
         
-        // Enhanced error handling with domain-specific guidance
+        // Enhanced error handling with specific guidance
         let errorDescription = result.error.message;
         
         if (errorDescription.includes('Domain configuration') || 
             errorDescription.includes('unauthorized_client') ||
             errorDescription.includes('redirect_uri_mismatch')) {
-          errorDescription += `\n\nTo fix this:\n1. Add ${window.location.origin} to Google Cloud Console\n2. Update Supabase Site URL to match\n3. Verify redirect URLs are configured correctly`;
+          errorDescription = AuthDiagnostics.getAuthGuideMessage();
+        } else if (errorDescription.includes('code verifier') || 
+                   errorDescription.includes('invalid request')) {
+          errorDescription = `OAuth state error detected. This is usually caused by:
+1. Browser closing during OAuth flow
+2. Multiple sign-in attempts
+3. Domain configuration issues
+
+${AuthDiagnostics.getAuthGuideMessage()}`;
         }
         
         toast({
@@ -76,21 +93,21 @@ export default function Auth() {
           variant: "destructive",
         });
       } else {
-        console.log('🎯 Auth Page: OAuth initiated, monitoring for redirect...');
+        console.log('🎯 Auth Page: OAuth initiated successfully');
         
-        // Monitor for successful redirect - if we're still here after 5 seconds, likely an issue
+        // Monitor for redirect with enhanced timeout
         const redirectTimeout = setTimeout(() => {
           if (window.location.pathname === '/auth') {
-            console.warn('⚠️ Auth Page: Still on auth page after 5 seconds - possible redirect failure');
+            console.warn('⚠️ Auth Page: OAuth redirect timeout');
             setLoading(false);
             
             toast({
-              title: "Redirect Issue",
-              description: `Google sign-in redirect may have failed. Current domain: ${window.location.origin}. Please check domain configuration.`,
+              title: "OAuth Redirect Timeout",
+              description: `The OAuth redirect is taking longer than expected. Please check your configuration:\n\n${AuthDiagnostics.getAuthGuideMessage()}`,
               variant: "destructive",
             });
           }
-        }, 5000);
+        }, 8000); // Increased timeout
         
         // Clear timeout if component unmounts
         return () => clearTimeout(redirectTimeout);
@@ -103,8 +120,8 @@ export default function Auth() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       toast({
-        title: "Google Sign In Error",
-        description: `Authentication error: ${errorMessage}. Please try email/password instead.`,
+        title: "Google Sign In Error", 
+        description: `Authentication error: ${errorMessage}. Please try email/password sign in instead.`,
         variant: "destructive",
       });
     }
