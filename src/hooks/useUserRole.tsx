@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuth } from '@/contexts/EnhancedAuthContext';
 
 export type UserRole = 'super_admin' | 'admin' | 'user';
 
@@ -15,7 +15,7 @@ interface Membership {
 }
 
 export function useUserRole() {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const [role, setRole] = useState<UserRole>('user');
   const [organizations, setOrganizations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
