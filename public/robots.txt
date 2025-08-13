@@ -1,14 +1,22 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Important pages for SEO
+Sitemap: https://organizeprime.com/sitemap.xml
+
+# Block development and admin pages
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dev/
+Disallow: /_next/
+Disallow: /tmp/
+
+# Allow search engines to index main content
+Allow: /
+Allow: /auth
+Allow: /features
+Allow: /knowledge-base
+Allow: /dashboard
+
+# Crawl-delay to be respectful
+Crawl-delay: 1
