@@ -1,4 +1,4 @@
-const CACHE_NAME = 'organize-prime-v1';
+const CACHE_NAME = 'organize-prime-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -6,8 +6,12 @@ const STATIC_ASSETS = [
   '/placeholder.svg'
 ];
 
-const API_CACHE_NAME = 'api-cache-v1';
+const API_CACHE_NAME = 'api-cache-v2';
+const CHUNK_CACHE_NAME = 'chunks-cache-v2';
+const IMAGE_CACHE_NAME = 'images-cache-v2';
 const API_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CHUNK_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const IMAGE_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -25,7 +29,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME && cacheName !== API_CACHE_NAME) {
+          if (![CACHE_NAME, API_CACHE_NAME, CHUNK_CACHE_NAME, IMAGE_CACHE_NAME].includes(cacheName)) {
             return caches.delete(cacheName);
           }
         })
@@ -52,31 +56,62 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache static assets (stale-while-revalidate)
-  if (
-    request.destination === 'document' ||
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'image' ||
-    request.destination === 'font'
-  ) {
+  // Enhanced caching strategy by resource type
+  if (request.destination === 'script' || request.destination === 'style') {
+    // JavaScript/CSS chunks - long-term cache with background updates
+    event.respondWith(
+      caches.open(CHUNK_CACHE_NAME).then(cache => {
+        return cache.match(request).then(response => {
+          const fetchAndCache = fetch(request).then(fetchResponse => {
+            if (fetchResponse.ok) {
+              cache.put(request, fetchResponse.clone());
+            }
+            return fetchResponse;
+          });
+          
+          // Return cached if available, otherwise fetch
+          return response || fetchAndCache;
+        });
+      })
+    );
+    return;
+  }
+  
+  if (request.destination === 'image') {
+    // Images - cache-first with long expiration
+    event.respondWith(
+      caches.open(IMAGE_CACHE_NAME).then(cache => {
+        return cache.match(request).then(response => {
+          if (response) return response;
+          
+          return fetch(request).then(fetchResponse => {
+            if (fetchResponse.ok) {
+              cache.put(request, fetchResponse.clone());
+            }
+            return fetchResponse;
+          });
+        });
+      })
+    );
+    return;
+  }
+  
+  if (request.destination === 'document' || request.destination === 'font') {
+    // Documents and fonts - stale-while-revalidate
     event.respondWith(
       caches.open(CACHE_NAME).then(cache => {
         return cache.match(request).then(response => {
-          // Return cached version and update in background
+          // Update in background if cached
           if (response) {
-            // Update cache in background
             fetch(request).then(fetchResponse => {
               if (fetchResponse.ok) {
                 cache.put(request, fetchResponse.clone());
               }
-            }).catch(() => {
-              // Network failed, keep using cache
-            });
+            }).catch(() => {});
             return response;
           }
           
-          // Not in cache, fetch and cache
+          // Not cached - fetch and cache
           return fetch(request).then(fetchResponse => {
             if (fetchResponse.ok) {
               cache.put(request, fetchResponse.clone());

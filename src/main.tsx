@@ -3,9 +3,15 @@ import App from './App.tsx'
 import './index.css'
 import './lib/code-splitting'
 import { initializeSecurity } from './lib/security-config'
+import { preloadCriticalChunks } from './hooks/useChunkLoadingOptimization'
+import { preloadCriticalIcons } from './lib/icon-optimizer'
 
 // Initialize app components registry
 import '@/apps/knowledge-base';
+
+// Preload critical resources
+preloadCriticalChunks();
+preloadCriticalIcons();
 
 // Initialize security configuration
 try {

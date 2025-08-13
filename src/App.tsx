@@ -15,6 +15,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryPersister } from "@/lib/query-persistence";
 import { PagePerformanceTracker } from "@/components/analytics/PagePerformanceTracker";
 import { PerformanceSinkConnector } from "@/components/analytics/PerformanceSinkConnector";
+import { enhancedPrefetchOnIntent } from "@/lib/critical-path-loader";
+import { useEffect } from "react";
 // Lazy load all page components for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -62,19 +64,26 @@ function FeatureDebugComponent() {
   );
 }
 
-const App = () => (
-  <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: cacheConfig.static.gcTime }}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <OrganizationProvider>
-          <BrowserRouter>
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoadingSpinner />}>
-                <PagePerformanceTracker />
-                <PerformanceSinkConnector />
-              <Routes>
+const App = () => {
+  // Initialize performance optimizations
+  useEffect(() => {
+    const cleanup = enhancedPrefetchOnIntent(queryClient);
+    return cleanup;
+  }, []);
+
+  return (
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: cacheConfig.static.gcTime }}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <OrganizationProvider>
+            <BrowserRouter>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoadingSpinner />}>
+                  <PagePerformanceTracker />
+                  <PerformanceSinkConnector />
+                <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
                <Route path="/invite/:token" element={<InviteAcceptance />} />
@@ -237,6 +246,7 @@ const App = () => (
       </AuthProvider>
     </TooltipProvider>
   </PersistQueryClientProvider>
-);
+  );
+};
 
 export default App;

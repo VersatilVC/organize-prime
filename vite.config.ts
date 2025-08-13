@@ -26,23 +26,48 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Vendor chunks for better caching
+          // Core vendor chunks - most critical
           'react-vendor': ['react', 'react-dom'],
           'router-vendor': ['react-router-dom'],
+          'query-vendor': ['@tanstack/react-query'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          
+          // UI vendor chunks - load on demand
           'ui-vendor': [
             '@radix-ui/react-dialog', 
             '@radix-ui/react-dropdown-menu',
             '@radix-ui/react-select',
-            '@radix-ui/react-tabs'
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-accordion'
           ],
-          'query-vendor': ['@tanstack/react-query'],
-          'supabase-vendor': ['@supabase/supabase-js'],
           
-          // Feature chunks
+          // Feature-specific chunks
           'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          'utils': ['date-fns', 'clsx', 'tailwind-merge'],
-          'icons': ['lucide-react'],
+          'utils': ['date-fns', 'clsx', 'tailwind-merge', 'lz-string'],
           'charts': ['recharts'],
+          
+          // Admin-only features (heavy, rarely used)
+          'admin-features': [
+            '@hello-pangea/dnd',
+            'src/components/admin/',
+            'src/pages/admin/'
+          ],
+          
+          // Knowledge base app
+          'kb-app': [
+            'src/apps/knowledge-base/',
+            'src/features/knowledge-base/'
+          ],
+          
+          // Settings and configuration
+          'settings': [
+            'src/components/settings/',
+            'src/pages/CompanySettings',
+            'src/pages/SystemSettings',
+            'src/pages/ProfileSettings'
+          ]
         },
       },
     },
