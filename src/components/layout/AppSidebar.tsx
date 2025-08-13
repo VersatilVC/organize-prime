@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import * as React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -175,7 +175,8 @@ const getAllSidebarSections = (
 const useSidebarSectionState = (sections: SidebarSection[]) => {
   const location = useLocation();
 
-  const collapsedSections = useMemo(() => {
+  // Initialize state from localStorage and sections
+  const initializeState = React.useCallback(() => {
     const state: Record<string, boolean> = {};
     
     sections.forEach(section => {
@@ -199,15 +200,36 @@ const useSidebarSectionState = (sections: SidebarSection[]) => {
     return state;
   }, [sections, location.pathname]);
 
-  const toggleSection = (sectionKey: string) => {
-    const newState = !collapsedSections[sectionKey];
-    const storageKey = `sidebar-section-${sectionKey}`;
-    
-    localStorage.setItem(storageKey, String(newState));
-    
-    // Force a re-render by updating a state value that affects the hook
-    window.dispatchEvent(new CustomEvent('sidebar-toggle'));
-  };
+  const [collapsedSections, setCollapsedSections] = React.useState(initializeState);
+
+  // Update state when sections or location changes
+  React.useEffect(() => {
+    setCollapsedSections(initializeState());
+  }, [initializeState]);
+
+  // Listen for custom toggle events
+  React.useEffect(() => {
+    const handleToggle = () => {
+      setCollapsedSections(initializeState());
+    };
+
+    window.addEventListener('sidebar-toggle', handleToggle);
+    return () => window.removeEventListener('sidebar-toggle', handleToggle);
+  }, [initializeState]);
+
+  const toggleSection = React.useCallback((sectionKey: string) => {
+    setCollapsedSections(prev => {
+      const newState = !prev[sectionKey];
+      const storageKey = `sidebar-section-${sectionKey}`;
+      
+      localStorage.setItem(storageKey, String(newState));
+      
+      return {
+        ...prev,
+        [sectionKey]: newState
+      };
+    });
+  }, []);
 
   return { collapsedSections, toggleSection };
 };
@@ -228,7 +250,7 @@ const NavigationItem = React.memo(({
   };
 
   // Enhanced active state detection with hierarchical logic
-  const isItemActive = useMemo(() => {
+  const isItemActive = React.useMemo(() => {
     const currentPath = location.pathname;
     
     // Exact match has highest priority
@@ -386,7 +408,7 @@ export function AppSidebar() {
   const organizationFeatureConfigs = useOrganizationFeatureConfigs();
   const featureNavigationSections = useFeatureNavigationSections();
 
-  const allSections = useMemo(() => {
+  const allSections = React.useMemo(() => {
     if (!role || !organizationFeatureConfigs.configs) return [];
     
     console.log('🔍 AppSidebar: Building sections with role:', role);
