@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,22 +9,42 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { IframeUtils } from '@/lib/iframe-utils';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
+  const [iframeContext, setIframeContext] = useState<any>(null);
   
   const { user, signIn, signUp, signInWithGoogle, resetPassword } = useSimpleAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (user) {
       navigate('/');
     }
   }, [user, navigate]);
+
+  // Initialize iframe context detection
+  useEffect(() => {
+    const context = IframeUtils.getIframeContext();
+    setIframeContext(context);
+    
+    // Handle special OAuth flows from URL params
+    const oauthParam = searchParams.get('oauth');
+    const contextParam = searchParams.get('context');
+    
+    if (oauthParam === 'google' && contextParam === 'newtab') {
+      // This is a new tab OAuth flow - auto-initiate Google OAuth
+      console.log('🆕 New tab OAuth flow detected');
+      handleGoogleSignInDirect();
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent, isSignUp: boolean) => {
     e.preventDefault();
@@ -46,12 +66,58 @@ export default function Auth() {
     }
   };
 
+  // Direct Google sign-in (for new tab flows)
+  const handleGoogleSignInDirect = async () => {
+    setLoading(true);
+    
+    try {
+      const result = await signInWithGoogle();
+      
+      if (result.error) {
+        console.error('🚨 Direct OAuth error:', result.error);
+        
+        // Send error back to parent window
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'oauth-complete',
+            success: false,
+            error: result.error.message
+          }, '*');
+        }
+      } else {
+        console.log('✅ Direct OAuth successful');
+        
+        // Send success back to parent window
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'oauth-complete',
+            success: true
+          }, '*');
+        }
+      }
+      
+    } catch (error) {
+      console.error('🚨 Direct OAuth catch:', error);
+      
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'oauth-complete',
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, '*');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Google sign-in with iframe awareness
   const handleGoogleSignIn = async () => {
     setLoading(true);
     
     try {
       console.log('🎯 Auth Page: Starting Google sign-in');
-      console.log('🌐 Auth Page: Current domain:', window.location.origin);
+      console.log('🖼️ Auth Page: Iframe context:', iframeContext);
       
       // Import diagnostics for enhanced debugging
       const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
@@ -59,9 +125,32 @@ export default function Auth() {
       // Log current OAuth state
       AuthDiagnostics.logOAuthState();
       
-      // Validate domain configuration
-      const domainConfig = AuthDiagnostics.validateDomainConfiguration();
+      // If in iframe context, check if we should use new tab approach
+      if (iframeContext?.isInIframe) {
+        console.log('🖼️ Iframe detected - offering new tab OAuth');
+        
+        toast({
+          title: "OAuth in Preview Mode",
+          description: "For the best experience, Google sign-in will open in a new tab.",
+        });
+        
+        // Use new tab OAuth approach
+        const result = await IframeUtils.handleOAuthInNewTab();
+        
+        if (result.error) {
+          setLoading(false);
+          toast({
+            title: "Google Sign In Failed",
+            description: result.error.message,
+            variant: "destructive",
+          });
+        }
+        // If successful, the page will reload automatically
+        
+        return;
+      }
       
+      // Standard OAuth flow for non-iframe context
       const result = await signInWithGoogle();
       
       console.log('🎯 Auth Page: Google sign-in result:', result);
@@ -125,6 +214,12 @@ ${AuthDiagnostics.getAuthGuideMessage()}`;
         variant: "destructive",
       });
     }
+  };
+
+  // Handle "Open in New Tab" button
+  const handleOpenInNewTab = () => {
+    const newTabUrl = IframeUtils.createNewTabUrl();
+    window.open(newTabUrl, '_blank');
   };
 
   if (resetMode) {
@@ -266,6 +361,16 @@ ${AuthDiagnostics.getAuthGuideMessage()}`;
             </div>
           </div>
           
+          {/* Iframe context notice */}
+          {iframeContext?.isInIframe && (
+            <Alert className="mt-4 mb-4">
+              <Icons.google className="h-4 w-4" />
+              <AlertDescription>
+                You're using the preview mode. For Google sign-in, we recommend opening in a new tab for the best experience.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Button
             variant="outline"
             className="w-full"
@@ -273,8 +378,20 @@ ${AuthDiagnostics.getAuthGuideMessage()}`;
             disabled={loading}
           >
             <Icons.google className="mr-2 h-4 w-4" />
-            Google
+            {iframeContext?.isInIframe ? 'Sign in with Google (New Tab)' : 'Google'}
           </Button>
+          
+          {/* Alternative new tab option for iframe context */}
+          {iframeContext?.isInIframe && (
+            <Button
+              variant="ghost"
+              className="w-full text-sm mt-2"
+              onClick={handleOpenInNewTab}
+              disabled={loading}
+            >
+              Or open sign-in page in new tab
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -127,38 +127,88 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Production-ready Google sign in with domain detection
+  // Iframe-aware Google sign in with hybrid OAuth approach
   const signInWithGoogle = async () => {
     console.log('🔍 Simple Auth: Google sign in attempt');
     
-    // Detect current domain for proper redirect configuration
-    const currentDomain = window.location.origin;
-    const isProduction = currentDomain.includes('lovableproject.com') || currentDomain.includes('lovable.app');
+    // Import iframe utilities for context detection
+    const { IframeUtils } = await import('@/lib/iframe-utils');
     
-    console.log('🌐 Domain:', currentDomain, 'Production:', isProduction);
+    // Detect iframe context and log for debugging
+    const iframeContext = IframeUtils.getIframeContext();
+    IframeUtils.logIframeContext();
+    
+    // Clear previous error state
+    localStorage.removeItem('oauth_error');
+    localStorage.removeItem('auth_failure_count');
     
     try {
-      // Clear previous error state
-      localStorage.removeItem('oauth_error');
-      localStorage.removeItem('auth_failure_count');
+      // Determine redirect URL based on context
+      let redirectUrl: string;
+      let shouldUseHybridApproach = false;
+      
+      if (iframeContext.isInIframe) {
+        console.log('🖼️ Iframe detected - using hybrid OAuth approach');
+        shouldUseHybridApproach = true;
+        
+        // Try to use parent window origin for better compatibility
+        if (iframeContext.parentOrigin) {
+          redirectUrl = `${iframeContext.parentOrigin}/auth/callback`;
+          console.log('🔗 Using parent origin for redirect:', redirectUrl);
+        } else {
+          redirectUrl = `${window.location.origin}/auth/callback`;
+          console.log('🔗 Using current origin for redirect:', redirectUrl);
+        }
+      } else {
+        // Standard OAuth flow for standalone context
+        redirectUrl = `${window.location.origin}/auth/callback`;
+        console.log('🔗 Standard OAuth redirect:', redirectUrl);
+      }
+
+      // Add iframe context to query params for server-side handling
+      const queryParams: Record<string, string> = {};
+      
+      if (shouldUseHybridApproach) {
+        queryParams.iframe_context = 'true';
+        queryParams.parent_origin = iframeContext.parentOrigin || '';
+      }
+      
+      // Add production-specific params
+      const isProduction = window.location.origin.includes('lovableproject.com') || 
+                          window.location.origin.includes('lovable.app');
+      
+      if (isProduction) {
+        queryParams.access_type = 'offline';
+        queryParams.prompt = 'consent';
+      }
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${currentDomain}/auth/callback`,
-          // Add production-specific query params if needed
-          queryParams: isProduction ? {
-            access_type: 'offline',
-            prompt: 'consent',
-          } : {},
+          redirectTo: redirectUrl,
+          queryParams,
         },
       });
       
       if (error) {
         console.error('🚨 Google sign in error:', error);
         localStorage.setItem('oauth_error', error.message);
+        
+        // For iframe context, suggest alternative approaches
+        if (shouldUseHybridApproach) {
+          console.log('💡 Iframe OAuth failed - consider "Open in New Tab" approach');
+        }
       } else {
         console.log('✅ Google OAuth initiated successfully');
+        
+        // For iframe context, notify about the OAuth attempt
+        if (shouldUseHybridApproach) {
+          IframeUtils.postToParent({
+            action: 'oauth-initiated',
+            provider: 'google',
+            redirectUrl
+          });
+        }
       }
       
       return { error };

@@ -29,18 +29,39 @@ export class AuthDiagnostics {
     const isLocalhost = currentDomain.includes('localhost');
     const isLovable = currentDomain.includes('lovableproject.com');
     
+    // Check iframe context
+    const isInIframe = window.self !== window.top;
+    let parentOrigin = null;
+    
+    try {
+      if (document.referrer) {
+        parentOrigin = new URL(document.referrer).origin;
+      }
+    } catch (e) {
+      // Ignore referrer errors
+    }
+    
     const config = {
       domain: currentDomain,
       isSecure,
       isLocalhost,
       isLovable,
       redirectUrl: `${currentDomain}/auth/callback`,
+      iframe: {
+        isInIframe,
+        parentOrigin,
+        isLovablePreview: parentOrigin?.includes('lovable') || false
+      }
     };
     
     console.log('🌐 Domain Configuration:', config);
     
     if (!isSecure && !isLocalhost) {
       console.warn('⚠️ Insecure domain detected:', currentDomain);
+    }
+    
+    if (isInIframe) {
+      console.log('🖼️ Iframe context detected - OAuth may need special handling');
     }
     
     return config;

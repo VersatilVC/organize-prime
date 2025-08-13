@@ -8,8 +8,20 @@ export class OAuthDebugger {
     'auth_callback_url'
   ];
 
-  // Monitor OAuth request initiation
+  // Monitor OAuth request initiation with iframe context
   static logOAuthRequest(provider: string, options: any) {
+    // Import iframe utilities for context detection
+    const isInIframe = window.self !== window.top;
+    let parentOrigin = null;
+    
+    try {
+      if (document.referrer) {
+        parentOrigin = new URL(document.referrer).origin;
+      }
+    } catch (e) {
+      // Ignore referrer errors
+    }
+
     console.log('🚀 OAuth Request Debug:', {
       provider,
       timestamp: new Date().toISOString(),
@@ -17,7 +29,12 @@ export class OAuthDebugger {
       redirectTo: options.redirectTo,
       scopes: options.scopes,
       queryParams: options.queryParams,
-      domain: window.location.origin
+      domain: window.location.origin,
+      iframe: {
+        isInIframe,
+        parentOrigin,
+        isLovablePreview: parentOrigin?.includes('lovable') || false
+      }
     });
 
     // Check existing OAuth state before new request
@@ -28,6 +45,7 @@ export class OAuthDebugger {
       provider,
       options,
       existingState,
+      iframe: { isInIframe, parentOrigin },
       timestamp: new Date().toISOString()
     };
   }
