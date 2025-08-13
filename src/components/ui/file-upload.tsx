@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/auth-migration';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 
