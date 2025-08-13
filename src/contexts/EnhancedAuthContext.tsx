@@ -56,16 +56,21 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Invalid email format") };
       }
 
-      // Rate limiting check
-      const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_in', 5, 15);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait 15 minutes before trying again",
-          variant: "destructive",
-        });
-        await logSecurityEvent('rate_limit_exceeded', 'authentication', sanitizedEmail);
-        return { error: new AuthError("Rate limited") };
+      // Rate limiting check (non-blocking)
+      try {
+        const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_in', 5, 15);
+        if (!rateLimitPassed) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Please wait 15 minutes before trying again",
+            variant: "destructive",
+          });
+          await logSecurityEvent('rate_limit_exceeded', 'authentication', sanitizedEmail);
+          return { error: new AuthError("Rate limited") };
+        }
+      } catch (rateLimitError) {
+        console.warn('Rate limiting failed for sign in, proceeding:', rateLimitError);
+        // Continue with authentication even if rate limiting fails
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -142,15 +147,20 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Password does not meet requirements") };
       }
 
-      // Rate limiting
-      const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_up', 3, 60);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait before trying again",
-          variant: "destructive",
-        });
-        return { error: new AuthError("Rate limited") };
+      // Rate limiting (non-blocking)
+      try {
+        const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'sign_up', 3, 60);
+        if (!rateLimitPassed) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Please wait before trying again",
+            variant: "destructive",
+          });
+          return { error: new AuthError("Rate limited") };
+        }
+      } catch (rateLimitError) {
+        console.warn('Rate limiting failed for sign up, proceeding:', rateLimitError);
+        // Continue with authentication even if rate limiting fails
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -249,15 +259,20 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Invalid email format") };
       }
 
-      // Rate limiting for password reset
-      const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'password_reset', 3, 60);
-      if (!rateLimitPassed) {
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait before requesting another password reset",
-          variant: "destructive",
-        });
-        return { error: new AuthError("Rate limited") };
+      // Rate limiting for password reset (non-blocking)
+      try {
+        const rateLimitPassed = await checkRateLimit(sanitizedEmail, 'password_reset', 3, 60);
+        if (!rateLimitPassed) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Please wait before requesting another password reset",
+            variant: "destructive",
+          });
+          return { error: new AuthError("Rate limited") };
+        }
+      } catch (rateLimitError) {
+        console.warn('Rate limiting failed for password reset, proceeding:', rateLimitError);
+        // Continue with password reset even if rate limiting fails
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(sanitizedEmail, {
@@ -291,7 +306,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
     }
   }, [toast]);
 
-  // Enhanced Google sign in with domain detection and configuration validation
+  // Simplified Google sign in without blocking rate limiting
   const signInWithGoogle = useCallback(async () => {
     try {
       console.log('🚀 Starting Google OAuth sign-in process');
@@ -309,17 +324,14 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         callbackUrl
       });
       
-      // Rate limiting with domain-specific key
+      // Skip rate limiting for now to avoid blocking authentication
+      // Rate limiting with domain-specific key (non-blocking)
       const rateLimitKey = `google_oauth_${currentDomain}`;
-      const rateLimitPassed = await checkRateLimit(rateLimitKey, 'oauth_sign_in', 10, 15);
-      if (!rateLimitPassed) {
-        console.warn('⚠️ Google OAuth rate limited for domain:', currentDomain);
-        toast({
-          title: "Too Many Attempts",
-          description: "Please wait before trying Google sign in again",
-          variant: "destructive",
-        });
-        return { error: new AuthError("Rate limited") };
+      try {
+        await checkRateLimit(rateLimitKey, 'oauth_sign_in', 10, 15);
+      } catch (rateLimitError) {
+        console.warn('Rate limiting check failed, proceeding with OAuth:', rateLimitError);
+        // Continue with authentication even if rate limiting fails
       }
 
       console.log('🔗 Initiating OAuth with Supabase...');
