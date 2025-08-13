@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserData } from './AuthContext';
+import { useEnhancedAuth } from './EnhancedAuthContext';
 import { safeStorage } from '@/lib/safe-storage';
 
 interface Organization {
@@ -37,7 +37,7 @@ let organizationCache: { data: Organization[]; timestamp: number } | null = null
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useUserData();
+  const { user } = useEnhancedAuth();
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
