@@ -291,19 +291,29 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
     }
   }, [toast]);
 
-  // Enhanced Google sign in with comprehensive debugging and timeout handling
+  // Enhanced Google sign in with domain detection and configuration validation
   const signInWithGoogle = useCallback(async () => {
     try {
       console.log('🚀 Starting Google OAuth sign-in process');
       
-      // Check if we're in the right environment
-      console.log('🌐 Current origin:', window.location.origin);
-      console.log('🔗 Callback URL will be:', `${window.location.origin}/auth/callback`);
+      // Domain analysis and validation
+      const currentDomain = window.location.origin;
+      const isLovableDomain = currentDomain.includes('lovableproject.com');
+      const isLocalhost = currentDomain.includes('localhost');
+      const callbackUrl = `${currentDomain}/auth/callback`;
       
-      // Temporarily increase rate limit for debugging OAuth issues
-      const rateLimitPassed = await checkRateLimit('google_oauth', 'oauth_sign_in', 20, 15);
+      console.log('🌐 Domain Analysis:', {
+        currentDomain,
+        isLovableDomain,
+        isLocalhost,
+        callbackUrl
+      });
+      
+      // Rate limiting with domain-specific key
+      const rateLimitKey = `google_oauth_${currentDomain}`;
+      const rateLimitPassed = await checkRateLimit(rateLimitKey, 'oauth_sign_in', 10, 15);
       if (!rateLimitPassed) {
-        console.warn('⚠️ Google OAuth rate limited');
+        console.warn('⚠️ Google OAuth rate limited for domain:', currentDomain);
         toast({
           title: "Too Many Attempts",
           description: "Please wait before trying Google sign in again",
@@ -312,13 +322,13 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         return { error: new AuthError("Rate limited") };
       }
 
-      console.log('🔗 Initiating OAuth with redirect to:', `${window.location.origin}/auth/callback`);
+      console.log('🔗 Initiating OAuth with Supabase...');
       
-      // Try the OAuth call with more detailed error handling
+      // Enhanced OAuth call with domain validation
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -326,43 +336,49 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         },
       });
       
-      console.log('📊 OAuth response data:', data);
-      console.log('📊 OAuth response error:', error);
+      console.log('📊 OAuth Response:', { data, error });
       
       if (error) {
         console.error('🚨 Google OAuth error:', error);
         
-        // Provide more specific error messages based on error type
+        // Enhanced error messaging with domain-specific guidance
         let userMessage = error.message;
+        let isDomainIssue = false;
+        
         if (error.message.includes('Provider not found')) {
-          userMessage = 'Google sign-in is not configured. Please contact support or try email/password.';
-        } else if (error.message.includes('Invalid redirect URL')) {
-          userMessage = 'Authentication configuration error. Please contact support.';
+          userMessage = 'Google sign-in provider is not configured in Supabase. Please contact support.';
+        } else if (error.message.includes('Invalid redirect URL') || 
+                   error.message.includes('unauthorized_client') ||
+                   error.message.includes('redirect_uri_mismatch')) {
+          isDomainIssue = true;
+          userMessage = `Domain configuration issue detected.\n\nCurrent domain: ${currentDomain}\n\nPlease ensure:\n1. This domain is added to Google Cloud Console\n2. Supabase Site URL matches this domain\n3. Redirect URL is properly configured`;
         }
         
         toast({
-          title: "Google Sign In Error",
+          title: "Google Sign In Failed",
           description: userMessage,
           variant: "destructive",
         });
         
         await logSecurityEvent('google_sign_in_failed', 'authentication', undefined, {
           error: error.message,
+          domain: currentDomain,
+          isDomainIssue,
           timestamp: new Date().toISOString(),
         });
       } else {
-        console.log('✅ Google OAuth call completed without error');
-        console.log('🔄 Should be redirecting to Google now...');
+        console.log('✅ Google OAuth initiated successfully');
+        console.log('🔄 User should be redirected to Google...');
         
         await logSecurityEvent('google_sign_in_initiated', 'authentication', undefined, {
-          redirect_url: `${window.location.origin}/auth/callback`,
+          domain: currentDomain,
+          redirectUrl: callbackUrl,
           timestamp: new Date().toISOString(),
         });
         
-        // Show immediate feedback to user
         toast({
           title: "Redirecting to Google",
-          description: "Please complete the sign-in process in the popup window.",
+          description: "Please complete authentication with Google.",
         });
       }
       
@@ -371,14 +387,22 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       const error = err as AuthError;
       console.error('🚨 Google sign in unexpected error:', error);
       
+      const currentDomain = window.location.origin;
+      let errorMessage = error.message;
+      
+      if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        errorMessage = `Network or timeout error. Current domain: ${currentDomain}. This may indicate a configuration issue.`;
+      }
+      
       toast({
         title: "Google Sign In Error",
-        description: "Google sign-in is not properly configured. Please try email/password or contact support.",
+        description: errorMessage,
         variant: "destructive",
       });
       
       await logSecurityEvent('google_sign_in_error', 'authentication', undefined, {
         error: error.message,
+        domain: currentDomain,
         stack: error.stack,
         timestamp: new Date().toISOString(),
       });

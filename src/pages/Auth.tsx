@@ -51,46 +51,60 @@ export default function Auth() {
     
     try {
       console.log('🎯 Auth Page: Starting Google sign-in');
+      console.log('🌐 Auth Page: Current domain:', window.location.origin);
       
       const result = await signInWithGoogle();
       
       console.log('🎯 Auth Page: Google sign-in result:', result);
       
       if (result.error) {
-        console.error('🚨 Auth Page: Google sign-in returned error:', result.error);
+        console.error('🚨 Auth Page: Google sign-in error:', result.error);
         setLoading(false);
         
-        // Show specific error message to help with debugging
+        // Enhanced error handling with domain-specific guidance
+        let errorDescription = result.error.message;
+        
+        if (errorDescription.includes('Domain configuration') || 
+            errorDescription.includes('unauthorized_client') ||
+            errorDescription.includes('redirect_uri_mismatch')) {
+          errorDescription += `\n\nTo fix this:\n1. Add ${window.location.origin} to Google Cloud Console\n2. Update Supabase Site URL to match\n3. Verify redirect URLs are configured correctly`;
+        }
+        
         toast({
           title: "Google Sign In Failed",
-          description: "Google authentication is not properly configured in Supabase. Please contact support or try email/password.",
+          description: errorDescription,
           variant: "destructive",
         });
       } else {
-        console.log('🎯 Auth Page: No error returned, but checking if redirect happened...');
+        console.log('🎯 Auth Page: OAuth initiated, monitoring for redirect...');
         
-        // If no error but we're still here after 3 seconds, something's wrong
-        setTimeout(() => {
+        // Monitor for successful redirect - if we're still here after 5 seconds, likely an issue
+        const redirectTimeout = setTimeout(() => {
           if (window.location.pathname === '/auth') {
-            console.warn('⚠️ Auth Page: Still on auth page after 3 seconds, redirect may have failed');
+            console.warn('⚠️ Auth Page: Still on auth page after 5 seconds - possible redirect failure');
             setLoading(false);
             
             toast({
-              title: "Sign In Issue",
-              description: "Google sign-in may not be configured. Please try email/password or contact support.",
+              title: "Redirect Issue",
+              description: `Google sign-in redirect may have failed. Current domain: ${window.location.origin}. Please check domain configuration.`,
               variant: "destructive",
             });
           }
-        }, 3000);
+        }, 5000);
+        
+        // Clear timeout if component unmounts
+        return () => clearTimeout(redirectTimeout);
       }
       
     } catch (error) {
       console.error('🚨 Auth Page: Google sign-in catch block:', error);
       setLoading(false);
       
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       toast({
-        title: "Google Sign In Failed",
-        description: "Google authentication is not available. Please use email/password to sign in.",
+        title: "Google Sign In Error",
+        description: `Authentication error: ${errorMessage}. Please try email/password instead.`,
         variant: "destructive",
       });
     }
