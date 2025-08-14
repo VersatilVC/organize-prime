@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 
 // Ensure React is globally available to prevent null reference errors
+window.React = React; // Make React globally available
 console.log('main.tsx: React available:', !!React);
+console.log('main.tsx: React globally set:', !!(window as any).React);
 console.log('main.tsx: StrictMode available:', !!StrictMode);
 
 // Absolutely minimal entry point with error handling

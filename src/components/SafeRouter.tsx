@@ -7,9 +7,23 @@ interface SafeRouterProps {
 
 // A wrapper component that ensures React Router only initializes when React is fully ready
 export function SafeRouter({ children }: SafeRouterProps) {
-  // Double-check React availability before rendering Router
-  if (!React || !React.useContext || !React.createContext) {
+  // More comprehensive React availability check
+  const reactAvailable = React && 
+    React.useContext && 
+    React.createContext && 
+    React.useState && 
+    React.useEffect &&
+    typeof React.useContext === 'function';
+
+  if (!reactAvailable) {
     console.warn('SafeRouter: React not fully available, skipping router initialization');
+    console.log('React availability check:', {
+      React: !!React,
+      useContext: !!React?.useContext,
+      createContext: !!React?.createContext,
+      useState: !!React?.useState,
+      useEffect: !!React?.useEffect
+    });
     return null;
   }
 

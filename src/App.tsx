@@ -6,6 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import AppRoutes from './AppRoutes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import './index.css';
 
 // Create QueryClient with error handling
 const queryClient = new QueryClient({
@@ -28,16 +29,28 @@ function App() {
   
   React.useEffect(() => {
     try {
-      // Validate React is fully available
-      if (!React || !React.useState || !React.useEffect || !React.createContext) {
-        throw new Error('React hooks not available');
+      // More comprehensive validation of React availability
+      const reactFeatures = {
+        React: !!React,
+        useState: !!React.useState,
+        useEffect: !!React.useEffect,
+        createContext: !!React.createContext,
+        useContext: !!React.useContext,
+        forwardRef: !!React.forwardRef
+      };
+      
+      console.log('App: React features check:', reactFeatures);
+      
+      // Ensure all essential React features are available
+      if (!Object.values(reactFeatures).every(Boolean)) {
+        throw new Error(`React features missing: ${Object.entries(reactFeatures).filter(([, available]) => !available).map(([feature]) => feature).join(', ')}`);
       }
       
-      // Small delay to ensure all React internals are properly initialized
+      // Longer delay to ensure everything is ready
       const timer = setTimeout(() => {
-        console.log('App: All React hooks validated, setting app ready');
+        console.log('App: All React features validated, setting app ready');
         setAppReady(true);
-      }, 50); // Slightly longer delay
+      }, 100); // Increased delay
       
       return () => clearTimeout(timer);
     } catch (error) {
