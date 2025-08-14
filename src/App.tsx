@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
@@ -6,6 +6,11 @@ import { AppRoutes } from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
+
+// Ensure React is available
+if (typeof window !== 'undefined') {
+  (window as any).React = React;
+}
 
 // Create a stable query client instance
 const queryClient = new QueryClient({
@@ -92,6 +97,7 @@ class ReactErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error) {
+    console.error('React Error Boundary triggered:', error);
     return { hasError: true, error };
   }
 
@@ -108,9 +114,15 @@ class ReactErrorBoundary extends React.Component<
   }
 }
 
-// Main App component with proper provider hierarchy
+// Main App component with robust error handling
 function App() {
   console.log('App component rendering');
+  
+  // Verify React hooks are available
+  if (!React.useState || !React.useEffect || !React.createContext) {
+    console.error('React hooks are not available in App component');
+    return <AppError error={new Error('React hooks are not available')} />;
+  }
   
   try {
     return (
