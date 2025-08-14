@@ -465,12 +465,14 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Organization Setup Modal */}
-      <OrganizationSetup
-        open={showSetup}
-        onOpenChange={onSetupOpenChange}
-        onSuccess={onSetupSuccess}
-      />
+      {/* Organization Setup Modal - Temporarily disabled to debug */}
+      {false && (
+        <OrganizationSetup
+          open={showSetup}
+          onOpenChange={onSetupOpenChange}
+          onSuccess={onSetupSuccess}
+        />
+      )}
     </>
   );
 }
