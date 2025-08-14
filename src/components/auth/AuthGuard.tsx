@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -8,7 +8,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, fallbackPath = '/auth' }: AuthGuardProps) {
-  const { user, loading } = useSimpleAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   // Show loading state while checking authentication
@@ -30,7 +30,7 @@ export function AuthGuard({ children, fallbackPath = '/auth' }: AuthGuardProps) 
 
 // Inverse guard - redirect away if authenticated
 export function GuestGuard({ children, fallbackPath = '/' }: AuthGuardProps) {
-  const { user, loading } = useSimpleAuth();
+  const { user, loading } = useAuth();
 
   // Show loading state while checking authentication
   if (loading) {

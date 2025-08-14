@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useOptimizedDashboardV2 } from '@/hooks/useOptimizedDashboardV2';
@@ -51,7 +51,7 @@ const StatCard = React.memo(({
 StatCard.displayName = 'StatCard';
 
 export default function SimpleDashboard() {
-  const { user } = useSimpleAuth();
+  const { user } = useAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
   const { stats, isLoading, isCoreReady, isFullyLoaded, notifications } = useOptimizedDashboardV2();

@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/hooks/useUserRole';
 import { Loader2, Eye, Send, Clock, Users, Building2, User, Calendar, FileText } from 'lucide-react';
 

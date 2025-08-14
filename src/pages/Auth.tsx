@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/secure-logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

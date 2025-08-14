@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Dashboard from './Dashboard';
 import { Button } from '@/components/ui/button';

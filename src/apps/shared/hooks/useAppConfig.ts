@@ -4,7 +4,7 @@ import { AppConfiguration, AppConfigurationError } from '../types/AppTypes';
 import { AppConfigService } from '../services/AppConfigService';
 import { AppAnalyticsService } from '../services/AppAnalyticsService';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
-import { useAuth } from '@/lib/auth-migration';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export interface UseAppConfigOptions {

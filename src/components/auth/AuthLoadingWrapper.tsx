@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { FastAppLayout } from '@/components/layout/FastAppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
@@ -16,7 +16,7 @@ export function AuthLoadingWrapper({
   requireAuth = false, 
   showAppLayout = false 
 }: AuthLoadingWrapperProps) {
-  const { loading, user } = useSimpleAuth();
+  const { loading, user } = useAuth();
 
   // Show immediate loading state without blank screen
   if (loading) {
