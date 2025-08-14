@@ -1,9 +1,7 @@
-import { StrictMode, Suspense, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/sonner';
 import { createOptimizedQueryClient } from '@/lib/optimized-query-client';
-import { initializeCriticalOptimizations } from '@/lib/critical-optimizations';
 import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { FeatureProvider } from '@/contexts/FeatureContext';
@@ -45,7 +43,6 @@ function App() {
                         </ErrorBoundary>
                       </Suspense>
                     </main>
-                    <Toaster />
                   </FeatureProvider>
                 </OrganizationProvider>
               </SimpleAuthProvider>
