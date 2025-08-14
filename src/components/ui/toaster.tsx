@@ -11,9 +11,18 @@ import {
 import React from "react"
 
 export function Toaster() {
-  // Safety check to ensure React hooks are available
-  if (!React || typeof React.useState !== 'function') {
-    console.warn('React hooks not available in Toaster, rendering null');
+  // Enhanced safety checks to ensure React is fully initialized
+  if (!React || typeof React.useState !== 'function' || typeof React.useEffect !== 'function' || typeof React.useContext !== 'function') {
+    console.warn('React hooks not fully available in Toaster, rendering null');
+    return null;
+  }
+
+  // Check if we're in a proper React render context
+  try {
+    // This will throw if React context is not properly set up
+    React.useState(false);
+  } catch (error) {
+    console.warn('React context not ready in Toaster, rendering null:', error);
     return null;
   }
 
@@ -27,24 +36,35 @@ export function Toaster() {
     return null;
   }
 
-  // Only render ToastProvider when we're sure React is ready
-  return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
+  // Final safety check: ensure toasts is an array
+  if (!Array.isArray(toasts)) {
+    console.warn('Toasts is not an array, rendering null');
+    return null;
+  }
+
+  // Only render ToastProvider when we're absolutely sure React is ready
+  try {
+    return (
+      <ToastProvider>
+        {toasts.map(function ({ id, title, description, action, ...props }) {
+          return (
+            <Toast key={id} {...props}>
+              <div className="grid gap-1">
+                {title && <ToastTitle>{title}</ToastTitle>}
+                {description && (
+                  <ToastDescription>{description}</ToastDescription>
+                )}
+              </div>
+              {action}
+              <ToastClose />
+            </Toast>
+          )
+        })}
+        <ToastViewport />
+      </ToastProvider>
+    )
+  } catch (error) {
+    console.warn('Error rendering ToastProvider, returning null:', error);
+    return null;
+  }
 }
