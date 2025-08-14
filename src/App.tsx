@@ -20,13 +20,13 @@ const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
   useEffect(() => {
-    // Initialize critical optimizations after React is mounted
-    initializeCriticalOptimizations();
+    // Initialize critical optimizations after React is mounted - removing for now
+    // initializeCriticalOptimizations();
     
-    // Initialize PWA features
-    import('@/lib/pwa-manager').then(({ pwaManager }) => {
-      pwaManager.initialize();
-    });
+    // Initialize PWA features - removing for now to isolate issue
+    // import('@/lib/pwa-manager').then(({ pwaManager }) => {
+    //   pwaManager.initialize();
+    // });
   }, []);
 
   return (

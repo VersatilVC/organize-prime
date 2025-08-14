@@ -1,7 +1,6 @@
-import * as React from 'react'; // Fixed React imports
+import { createContext, useState, useEffect, useContext, useMemo, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-// Remove logger import for performance
 
 // Minimal auth context that works reliably
 interface SimpleAuthContextType {
@@ -15,12 +14,12 @@ interface SimpleAuthContextType {
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
 }
 
-const SimpleAuthContext = React.createContext<SimpleAuthContextType | undefined>(undefined);
+const SimpleAuthContext = createContext<SimpleAuthContextType | undefined>(undefined);
 
-export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<User | null>(null);
-  const [session, setSession] = React.useState<Session | null>(null);
-  const [loading, setLoading] = React.useState(true);
+export function SimpleAuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Basic sign in
   const signIn = async (email: string, password: string) => {
@@ -182,7 +181,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Auth state management with enhanced error handling
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       // Set up auth state listener
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -210,7 +209,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
-  const value = React.useMemo(() => ({
+  const value = useMemo(() => ({
     user,
     session,
     loading,
@@ -229,7 +228,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 }
 
 export function useSimpleAuth() {
-  const context = React.useContext(SimpleAuthContext);
+  const context = useContext(SimpleAuthContext);
   if (context === undefined) {
     throw new Error('useSimpleAuth must be used within a SimpleAuthProvider');
   }
