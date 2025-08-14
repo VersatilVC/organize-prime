@@ -1,11 +1,11 @@
 import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import App from './App'
 import './index.css'
 
-// Test component with useState to verify hooks are working
+// Test if the basic test works first
 function TestApp() {
   const [count, setCount] = useState(0)
-  const [message, setMessage] = useState('React hooks are working!')
 
   return (
     <div style={{ 
@@ -24,72 +24,77 @@ function TestApp() {
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
       }}>
         <h1 style={{ color: '#1f2937', marginBottom: '1rem' }}>
-          React Hook Test ✅
+          React Test ✅ (Count: {count})
         </h1>
         
-        <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-          {message}
+        <button 
+          onClick={() => setCount(c => c + 1)}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginRight: '10px'
+          }}
+        >
+          Test useState
+        </button>
+        
+        <button 
+          onClick={() => {
+            console.log('Loading full app...');
+            window.location.hash = 'load-app';
+            window.location.reload();
+          }}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Load Full App
+        </button>
+        
+        <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+          If useState works, click "Load Full App" to test the main application
         </p>
-        
-        <div style={{ marginBottom: '2rem' }}>
-          <p style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>
-            Count: <strong>{count}</strong>
-          </p>
-          
-          <button 
-            onClick={() => setCount(c => c + 1)}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginRight: '10px'
-            }}
-          >
-            Increment
-          </button>
-          
-          <button 
-            onClick={() => setMessage(m => m === 'React hooks are working!' ? 'useState is functional!' : 'React hooks are working!')}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Toggle Message
-          </button>
-        </div>
-        
-        <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-          <p>If you can click these buttons and see state changes,</p>
-          <p>React and useState are working correctly!</p>
-        </div>
       </div>
     </div>
   )
 }
 
-// Test basic React functionality
+// Check if we should load the full app or just the test
+const shouldLoadFullApp = window.location.hash === '#load-app';
+
 try {
   const root = createRoot(document.getElementById('root')!)
   
-  root.render(
-    <StrictMode>
-      <TestApp />
-    </StrictMode>
-  )
+  if (shouldLoadFullApp) {
+    console.log('Loading full OrganizePrime app...');
+    root.render(
+      <StrictMode>
+        <App />
+      </StrictMode>
+    )
+  } else {
+    console.log('Loading React test app...');
+    root.render(
+      <StrictMode>
+        <TestApp />
+      </StrictMode>
+    )
+  }
   
-  console.log('✅ React test app rendered successfully')
+  console.log('✅ App rendered successfully')
 } catch (error) {
-  console.error('❌ Failed to render React test app:', error)
+  console.error('❌ Failed to render app:', error)
   
   // Fallback HTML if React fails
   const rootElement = document.getElementById('root')
