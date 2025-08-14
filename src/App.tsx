@@ -4,6 +4,7 @@ import { AuthProvider } from '@/auth/AuthProvider';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { AppRoutes } from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';
+import { ReactReadinessWrapper } from '@/components/ReactReadinessWrapper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 
@@ -19,14 +20,16 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <OrganizationProvider>
-          <AppRoutes />
-          <Toaster />
-        </OrganizationProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ReactReadinessWrapper>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <OrganizationProvider>
+            <AppRoutes />
+            <Toaster />
+          </OrganizationProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ReactReadinessWrapper>
   );
 }
 

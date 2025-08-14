@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
+        manualChunks: mode === 'production' ? (id) => {
           if (id.includes('node_modules')) {
             // Core React bundle
             if (id.includes('react') || id.includes('react-dom')) {
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
             // Everything else in one vendor chunk to avoid circular deps
             return 'vendor';
           }
-        },
+        } : undefined, // No chunk splitting in development to prevent race conditions
       },
     },
     // Increase chunk size warning limit for better optimization

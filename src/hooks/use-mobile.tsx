@@ -3,9 +3,13 @@ import React, { useState, useEffect } from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  // Ensure React is available before using hooks
-  if (!React || !useState || !useEffect) {
-    console.warn('React hooks not available in useIsMobile');
+  // Ensure React is fully available before using hooks
+  if (!React || typeof React !== 'object' || !React.useState || !React.useEffect) {
+    console.warn('React hooks not available in useIsMobile, React state:', { 
+      reactAvailable: !!React, 
+      useStateAvailable: !!(React && React.useState),
+      useEffectAvailable: !!(React && React.useEffect)
+    });
     return false;
   }
 
