@@ -1,16 +1,11 @@
-import * as React from 'react';
+import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { AppRoutes } from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
-
-// Ensure React is available
-if (typeof window !== 'undefined') {
-  (window as any).React = React;
-}
 
 // Create a stable query client instance
 const queryClient = new QueryClient({
@@ -23,128 +18,19 @@ const queryClient = new QueryClient({
   },
 });
 
-// Simple loading component
-const AppLoading = () => (
-  <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    fontFamily: 'system-ui'
-  }}>
-    <div style={{ textAlign: 'center' }}>
-      <div style={{
-        width: '32px',
-        height: '32px',
-        border: '3px solid #e5e7eb',
-        borderTop: '3px solid #3b82f6',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        margin: '0 auto 1rem'
-      }}></div>
-      <div style={{ color: '#6b7280' }}>Loading OrganizePrime...</div>
-    </div>
-  </div>
-);
-
-// Simple error component
-const AppError = ({ error }: { error: Error }) => (
-  <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f8fafc',
-    fontFamily: 'system-ui',
-    padding: '2rem'
-  }}>
-    <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-      <h2 style={{ color: '#1f2937', marginBottom: '1rem' }}>Application Error</h2>
-      <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-        Something went wrong with the application. Please refresh the page.
-      </p>
-      <button
-        onClick={() => window.location.reload()}
-        style={{
-          background: '#3b82f6',
-          color: 'white',
-          border: 'none',
-          padding: '0.75rem 1.5rem',
-          borderRadius: '0.5rem',
-          cursor: 'pointer',
-          fontSize: '1rem'
-        }}
-      >
-        Refresh Page
-      </button>
-      <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#9ca3af' }}>
-        Error: {error.message}
-      </p>
-    </div>
-  </div>
-);
-
-// Error boundary class component
-class ReactErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    console.error('React Error Boundary triggered:', error);
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('React Error Boundary caught error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError && this.state.error) {
-      return <AppError error={this.state.error} />;
-    }
-
-    return this.props.children;
-  }
-}
-
-// Main App component with robust error handling
 function App() {
-  console.log('App component rendering');
-  
-  // Verify React hooks are available
-  if (!React.useState || !React.useEffect || !React.createContext) {
-    console.error('React hooks are not available in App component');
-    return <AppError error={new Error('React hooks are not available')} />;
-  }
-  
-  try {
-    return (
-      <ReactErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <React.Suspense fallback={<AppLoading />}>
-              <AuthProvider>
-                <OrganizationProvider>
-                  <AppRoutes />
-                  <Toaster />
-                </OrganizationProvider>
-              </AuthProvider>
-            </React.Suspense>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </ReactErrorBoundary>
-    );
-  } catch (error) {
-    console.error('Error in App component:', error);
-    return <AppError error={error as Error} />;
-  }
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <OrganizationProvider>
+            <AppRoutes />
+            <Toaster />
+          </OrganizationProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
