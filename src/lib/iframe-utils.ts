@@ -72,80 +72,55 @@ export class IframeUtils {
   }
 
   /**
-   * Open URL in parent window (breaks out of iframe)
-   * Uses postMessage for secure iframe-to-parent communication
+   * Navigate within iframe context or break out when appropriate
+   * For iframe preview: use internal navigation to maintain preview experience
+   * For OAuth/external: break out of iframe
    */
   static openInParent(url: string): void {
     try {
+      if (this.isInIframe()) {
+        // For iframe preview, prefer internal navigation to maintain preview experience
+        console.log('🖼️ Iframe navigation - staying within iframe for preview');
+        window.location.href = url;
+      } else {
+        console.log('📱 Standard navigation');
+        window.location.href = url;
+      }
+    } catch (e) {
+      console.error('❌ Navigation failed:', e);
+      window.location.href = url;
+    }
+  }
+
+  /**
+   * Break out of iframe (for OAuth, external links, etc.)
+   * This is for specific cases where we need to escape the iframe
+   */
+  static breakOutOfIframe(url: string): void {
+    try {
       if (this.isInIframe() && window.parent) {
-        // Construct full URL if it's a relative path
-        const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? url : '/' + url}`;
-        console.log('🔄 Iframe navigation - sending postMessage to parent:', fullUrl);
+        console.log('🚀 Breaking out of iframe to parent:', url);
         
         // Use postMessage for secure iframe-to-parent communication
         window.parent.postMessage({
           type: 'LOVABLE_NAVIGATE',
-          url: fullUrl,
+          url: url,
           source: 'iframe-app',
           timestamp: Date.now()
         }, '*');
         
-        // Fallback timeout - if parent doesn't respond, try other methods
+        // Fallback: open in new tab if postMessage doesn't work
         setTimeout(() => {
-          console.log('⚠️ PostMessage timeout - trying fallback navigation');
-          this.handleNavigationFallback(fullUrl);
-        }, 2000);
+          console.log('⚠️ PostMessage timeout - opening in new tab');
+          window.open(url, '_blank');
+        }, 1000);
         
       } else {
-        console.log('📱 Not in iframe - using standard navigation');
         window.location.href = url;
       }
     } catch (e) {
-      console.error('❌ Failed to open in parent window:', e);
-      this.handleNavigationFallback(url);
-    }
-  }
-
-  /**
-   * Handle navigation fallbacks when postMessage fails
-   */
-  static handleNavigationFallback(url: string): void {
-    console.log('🔄 Attempting navigation fallback methods for:', url);
-    
-    try {
-      // Method 1: Try window.open in new tab
-      const newWindow = window.open(url, '_blank');
-      if (newWindow) {
-        console.log('✅ Opened in new tab successfully');
-        return;
-      }
-    } catch (e) {
-      console.warn('⚠️ window.open failed:', e);
-    }
-    
-    try {
-      // Method 2: Try current window navigation as last resort
-      console.log('🔄 Fallback to current window navigation');
-      window.location.href = url;
-    } catch (e) {
-      console.error('❌ All navigation methods failed:', e);
-      // Show user-friendly message
-      this.showNavigationHelp(url);
-    }
-  }
-
-  /**
-   * Show user-friendly navigation help when all methods fail
-   */
-  static showNavigationHelp(url: string): void {
-    const message = `Navigation blocked by browser security. Please manually navigate to: ${url}`;
-    console.log('🆘 Navigation help:', message);
-    
-    // Could show a toast notification here if available
-    if (typeof window !== 'undefined' && (window as any).showToast) {
-      (window as any).showToast(message);
-    } else {
-      alert(message);
+      console.error('❌ Failed to break out of iframe:', e);
+      window.open(url, '_blank');
     }
   }
 
