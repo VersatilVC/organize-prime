@@ -18,32 +18,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Check React availability first
-  if (typeof React === 'undefined' || !React.useState) {
-    console.error('React is not properly loaded');
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: 'white',
-        fontFamily: 'system-ui'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <h2>Loading...</h2>
-          <p>React is initializing...</p>
-        </div>
-      </div>
-    );
-  }
-
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Simple domain logic
   const handlePostAuthSetup = async (user: User) => {
     if (!user.email) return;
 
@@ -54,13 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    let mounted = true;
-
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
-        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -68,9 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Handle post-auth setup for new users
         if (event === 'SIGNED_IN' && session?.user) {
           setTimeout(() => {
-            if (mounted) {
-              handlePostAuthSetup(session.user);
-            }
+            handlePostAuthSetup(session.user);
           }, 0);
         }
       }
@@ -78,22 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     }).catch((error) => {
       console.error('Error getting session:', error);
-      if (mounted) {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
