@@ -9,7 +9,6 @@ import { FeatureProvider } from '@/contexts/FeatureContext';
 import { ThemeProvider } from 'next-themes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProductionLoadingFallback } from '@/components/ProductionLoadingFallback';
-import { logger } from '@/lib/secure-logger';
 import AppRoutes from './AppRoutes';
 
 // Create query client
@@ -19,10 +18,9 @@ const queryClient = createAdvancedQueryClient();
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
-  logger.debug('App component initializing');
+  // Remove all debug logging for performance
   
   try {
-    logger.debug('Setting up providers and contexts');
     return (
       <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -50,8 +48,8 @@ function App() {
     </ErrorBoundary>
   );
   } catch (error) {
-    logger.error('Fatal error in App component', error);
-    return <div>App initialization failed - check console</div>;
+    console.error('Fatal error in App component', error);
+    return <div>App initialization failed</div>;
   }
 }
 

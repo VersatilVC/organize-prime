@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
+import React from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PageLoadingSpinner } from '@/components/LoadingSkeletons';
 import { PlaceholderPage } from '@/components/ui/placeholder-page';
 import { FeatureRouter } from './components/FeatureRouter';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
-import { logger } from '@/lib/secure-logger';
 
 // Optimized loading component for routes
 const RouteLoadingSpinner = () => (
@@ -47,16 +47,14 @@ function KnowledgeBaseRedirect() {
 
 // Debug component for feature routing
 function FeatureDebugComponent() {
-  logger.debug('Features route matched without slug');
   return (
     <ProtectedRoute>
-      <div>Feature routing debug - check console</div>
+      <div>Feature routing debug</div>
     </ProtectedRoute>
   );
 }
 
 export default function AppRoutes() {
-  logger.debug('AppRoutes rendering');
   
   return (
     <Routes>
@@ -92,7 +90,9 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <AppLayout>
-                <PlaceholderPage title="Dashboard under construction" description="This page is not available yet." />
+                <Suspense fallback={<RouteLoadingSpinner />}>
+                  {React.createElement(lazy(() => import('./pages/SimpleDashboard')))}
+                </Suspense>
               </AppLayout>
             </ProtectedRoute>
           } 
