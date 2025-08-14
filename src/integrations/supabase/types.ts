@@ -2056,6 +2056,11 @@ export type Database = {
               p_max_attempts?: number
               p_window_minutes?: number
             }
+          | {
+              user_id_param: string
+              action_type_param: string
+              limit_per_hour?: number
+            }
         Returns: boolean
       }
       cleanup_security_data: {
@@ -2063,7 +2068,7 @@ export type Database = {
         Returns: undefined
       }
       create_organization_vector_table: {
-        Args: { org_name: string; table_suffix?: string }
+        Args: { org_id: string } | { org_name: string; table_suffix?: string }
         Returns: string
       }
       create_templated_notification: {
@@ -2222,7 +2227,7 @@ export type Database = {
         }[]
       }
       get_security_dashboard_stats: {
-        Args: { p_days?: number }
+        Args: Record<PropertyKey, never> | { p_days?: number }
         Returns: Json
       }
       get_system_stats: {
@@ -2243,10 +2248,11 @@ export type Database = {
         }[]
       }
       get_user_emails_for_super_admin: {
-        Args: { user_ids: string[] }
+        Args: Record<PropertyKey, never> | { user_ids: string[] }
         Returns: {
           user_id: string
           email: string
+          full_name: string
         }[]
       }
       get_user_list_optimized: {
@@ -2263,9 +2269,7 @@ export type Database = {
       }
       get_user_organizations: {
         Args: Record<PropertyKey, never>
-        Returns: {
-          organization_id: string
-        }[]
+        Returns: string[]
       }
       get_users_optimized: {
         Args: {
