@@ -1,3 +1,4 @@
+
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -7,8 +8,15 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+import React from "react"
 
 export function Toaster() {
+  // Safety check to ensure React hooks are available
+  if (!React || typeof React.useState !== 'function') {
+    console.warn('React hooks not available in Toaster, rendering null');
+    return null;
+  }
+
   const { toasts } = useToast()
 
   return (
