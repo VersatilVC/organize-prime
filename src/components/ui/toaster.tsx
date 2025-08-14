@@ -17,8 +17,17 @@ export function Toaster() {
     return null;
   }
 
-  const { toasts } = useToast()
+  // Additional check to ensure we can safely call useToast
+  let toasts;
+  try {
+    const toastHook = useToast();
+    toasts = toastHook.toasts;
+  } catch (error) {
+    console.warn('useToast hook failed, rendering null:', error);
+    return null;
+  }
 
+  // Only render ToastProvider when we're sure React is ready
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
