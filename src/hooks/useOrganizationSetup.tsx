@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 export function useOrganizationSetup() {
-  const { user } = useSimpleAuth();
+  const { user } = useAuth();
   const { organizations, loading: orgLoading } = useOrganization();
   const [showSetup, setShowSetup] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);

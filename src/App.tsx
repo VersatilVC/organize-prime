@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { OrganizationProvider } from '@/contexts/OrganizationContext';
+import Dashboard from '@/pages/Dashboard';
 import './index.css';
+
+const queryClient = new QueryClient();
 
 // Auth Page Component
 function AuthPage() {
@@ -113,69 +118,34 @@ function AuthPage() {
   );
 }
 
-// Home Page Component
-function HomePage() {
-  const [count, setCount] = useState(0);
-  const { user, signOut, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div>Loading...</div>
-      </div>
-    );
-  }
-
+// Protected Route Component that provides organization context
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Welcome to Your App!</h1>
-        
-        {user ? (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Hello, {user.email}!</h2>
-            <p className="text-gray-600 mb-4">You are successfully logged in.</p>
-            <button
-              onClick={signOut}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Sign Out
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Get Started</h2>
-            <p className="text-gray-600 mb-4">Sign up or sign in to access your account.</p>
-            <Link
-              to="/auth"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 inline-block"
-            >
-              Sign In / Sign Up
-            </Link>
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">React Test Counter</h3>
-          <p className="mb-4">React is working correctly!</p>
-          <button 
-            onClick={() => setCount(count + 1)}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          >
-            Count: {count}
-          </button>
-        </div>
-      </div>
-    </div>
+    <OrganizationProvider>
+      {children}
+    </OrganizationProvider>
   );
 }
 
 // App Router Component
 function AppRouter() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/" replace />} />
+      <Route path="/" element={user ? <ProtectedRoute><Dashboard /></ProtectedRoute> : <Navigate to="/auth" replace />} />
     </Routes>
   );
 }
@@ -183,11 +153,13 @@ function AppRouter() {
 // Main App Component
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRouter />
-      </AuthProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRouter />
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

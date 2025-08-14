@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSimpleAuth } from './SimpleAuthContext';
+import { useAuth } from './AuthContext';
 import { safeStorage } from '@/lib/safe-storage';
 
 interface Organization {
@@ -38,7 +38,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   console.log('OrganizationProvider starting');
-  const { user } = useSimpleAuth();
+  const { user } = useAuth();
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
