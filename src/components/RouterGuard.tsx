@@ -1,5 +1,4 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
 
 interface RouterGuardProps {
   children: React.ReactNode;
@@ -7,10 +6,9 @@ interface RouterGuardProps {
 }
 
 export function RouterGuard({ children, fallback }: RouterGuardProps) {
-  try {
-    useLocation();
+  // Simple check - if React is available, render children
+  if (typeof React === 'object' && React !== null) {
     return <>{children}</>;
-  } catch {
-    return <>{fallback || <div>Loading...</div>}</>;
   }
+  return <>{fallback || <div>Loading...</div>}</>;
 }

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
@@ -173,11 +172,10 @@ const getAllSidebarSections = (
 
 // Hook for managing section collapse state
 const useSidebarSectionState = (sections: SidebarSection[]) => {
-  const location = useLocation();
-
   // Initialize state from localStorage and sections
   const initializeState = React.useCallback(() => {
     const state: Record<string, boolean> = {};
+    const currentPath = window.location.pathname;
     
     sections.forEach(section => {
       const storageKey = `sidebar-section-${section.key}`;
@@ -188,8 +186,8 @@ const useSidebarSectionState = (sections: SidebarSection[]) => {
 
       // Auto-expand section if current route is within it
       const isCurrentSectionActive = section.items.some(item => 
-        location.pathname === item.href || 
-        (item.href !== '/' && item.href !== '/dashboard' && location.pathname.startsWith(item.href + '/'))
+        currentPath === item.href || 
+        (item.href !== '/' && item.href !== '/dashboard' && currentPath.startsWith(item.href + '/'))
       );
       
       if (isCurrentSectionActive) {
@@ -198,11 +196,11 @@ const useSidebarSectionState = (sections: SidebarSection[]) => {
     });
     
     return state;
-  }, [sections, location.pathname]);
+  }, [sections]);
 
   const [collapsedSections, setCollapsedSections] = React.useState(initializeState);
 
-  // Update state when sections or location changes
+  // Update state when sections change
   React.useEffect(() => {
     setCollapsedSections(initializeState());
   }, [initializeState]);
@@ -242,16 +240,17 @@ const NavigationItem = React.memo(({
   item: { name: string; href: string; icon: any; badge?: number };
   feedbackCount: number;
 }) => {
-  const location = useLocation();
-  const queryClient = useQueryClient();
-  
   const handleHover = () => {
     prefetchByPath(item.href);
   };
 
+  const handleClick = () => {
+    window.location.href = item.href;
+  };
+
   // Enhanced active state detection with hierarchical logic
   const isItemActive = React.useMemo(() => {
-    const currentPath = location.pathname;
+    const currentPath = window.location.pathname;
     
     // Exact match has highest priority
     if (item.href === currentPath) {
@@ -287,7 +286,7 @@ const NavigationItem = React.memo(({
     }
     
     return false;
-  }, [location.pathname, item.href]);
+  }, [item.href]);
 
   // Get the correct icon component, fallback to package if not found
   const IconComponent = typeof item.icon === 'string' ? Icons[item.icon as keyof typeof Icons] || Icons.package : item.icon;
@@ -295,9 +294,11 @@ const NavigationItem = React.memo(({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isItemActive}>
-        <NavLink 
-          to={item.href} 
-          className={isItemActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
+        <button 
+          onClick={handleClick}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 text-left ${
+            isItemActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+          }`}
           onMouseEnter={handleHover}
         >
           <IconComponent className="h-4 w-4" />
@@ -317,7 +318,7 @@ const NavigationItem = React.memo(({
               {feedbackCount}
             </Badge>
           )}
-        </NavLink>
+        </button>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );

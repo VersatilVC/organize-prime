@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery } from '@tanstack/react-query';
@@ -108,7 +107,7 @@ export function AppHeader() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           
-          <Link to="/" className="flex items-center space-x-2">
+          <button onClick={() => window.location.href = '/'} className="flex items-center space-x-2">
             {systemSettings?.app_logo_url ? (
               <OptimizedImage
                 src={systemSettings.app_logo_url}
@@ -125,7 +124,7 @@ export function AppHeader() {
             <span className="hidden font-bold sm:inline-block">
               {systemSettings?.app_name || 'SaaS Platform'}
             </span>
-          </Link>
+          </button>
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4">
@@ -171,18 +170,14 @@ export function AppHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/settings/profile">
-                  <Icons.settings className="mr-2 h-4 w-4" />
-                  Profile Settings
-                </Link>
+              <DropdownMenuItem onClick={() => window.location.href = '/settings/profile'}>
+                <Icons.settings className="mr-2 h-4 w-4" />
+                Profile Settings
               </DropdownMenuItem>
               {role === 'super_admin' && (
-                <DropdownMenuItem asChild>
-                  <Link to="/admin">
-                    <Icons.shield className="mr-2 h-4 w-4" />
-                    System Admin
-                  </Link>
+                <DropdownMenuItem onClick={() => window.location.href = '/admin'}>
+                  <Icons.shield className="mr-2 h-4 w-4" />
+                  System Admin
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
