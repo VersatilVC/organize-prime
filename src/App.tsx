@@ -1,56 +1,18 @@
-import { Suspense, useEffect } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { createOptimizedQueryClient } from '@/lib/optimized-query-client';
-import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext';
-import { OrganizationProvider } from '@/contexts/OrganizationContext';
-import { FeatureProvider } from '@/contexts/FeatureContext';
-import { ThemeProvider } from 'next-themes';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ProductionLoadingFallback } from '@/components/ProductionLoadingFallback';
-import AppRoutes from './AppRoutes';
+import { useState } from 'react';
 
-// Create optimized query client with advanced caching
-const queryClient = createOptimizedQueryClient();
-
-// Production-ready loading component
-const AppLoadingSpinner = () => <ProductionLoadingFallback />;
-
+// Minimal test component to verify React is working
 function App() {
-  useEffect(() => {
-    // Initialize critical optimizations after React is mounted - removing for now
-    // initializeCriticalOptimizations();
-    
-    // Initialize PWA features - removing for now to isolate issue
-    // import('@/lib/pwa-manager').then(({ pwaManager }) => {
-    //   pwaManager.initialize();
-    // });
-  }, []);
+  const [count, setCount] = useState(0);
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ErrorBoundary>
-              <SimpleAuthProvider>
-                <OrganizationProvider>
-                  <FeatureProvider slug="">
-                    <main className="min-h-screen bg-background">
-                      <Suspense fallback={<AppLoadingSpinner />}>
-                        <ErrorBoundary>
-                          <AppRoutes />
-                        </ErrorBoundary>
-                      </Suspense>
-                    </main>
-                  </FeatureProvider>
-                </OrganizationProvider>
-              </SimpleAuthProvider>
-            </ErrorBoundary>
-          </ThemeProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>React Test App</h1>
+      <p>If you can see this, React is loading correctly.</p>
+      <button onClick={() => setCount(count + 1)}>
+        Count: {count}
+      </button>
+      <p>Click the button to test useState hook.</p>
+    </div>
   );
 }
 
