@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithRange } from '@/components/ui/date-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { DashboardAreaChart, DashboardBarChart, DashboardPieChart } from '@/components/ChartWidget';
 import { TrendingUp, TrendingDown, Users, Activity, Download, Eye, MousePointer, Package } from 'lucide-react';
 import { useFeatureAnalytics } from '@/hooks/database/useFeatureAnalytics';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
@@ -194,21 +194,11 @@ export function FeatureAnalyticsDashboard() {
                 <CardTitle>Usage Trends (30 Days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={usageTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="#3b82f6" 
-                      fill="#3b82f6" 
-                      fillOpacity={0.3} 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <DashboardAreaChart 
+                  data={usageTrends} 
+                  height={300}
+                  dataKey="count"
+                />
               </CardContent>
             </Card>
 
@@ -218,25 +208,11 @@ export function FeatureAnalyticsDashboard() {
                 <CardTitle>Event Type Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={eventTypeData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {eventTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <DashboardPieChart 
+                  data={eventTypeData} 
+                  height={300}
+                  dataKey="value"
+                />
               </CardContent>
             </Card>
           </div>
@@ -291,18 +267,11 @@ export function FeatureAnalyticsDashboard() {
               <CardTitle>Feature Usage Comparison</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={featureUsageData.slice(0, 10)}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="page_views" fill="#3b82f6" name="Page Views" />
-                  <Bar dataKey="actions" fill="#10b981" name="Actions" />
-                  <Bar dataKey="installs" fill="#f59e0b" name="Installs" />
-                </BarChart>
-              </ResponsiveContainer>
+              <DashboardBarChart 
+                data={featureUsageData.slice(0, 10)} 
+                height={400}
+                dataKey="page_views"
+              />
             </CardContent>
           </Card>
         </TabsContent>

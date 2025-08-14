@@ -86,48 +86,7 @@ export function withLazyLoading<P extends object>(
   };
 }
 
-// Lazy chart component wrapper
-export function LazyChart({ 
-  type, 
-  data, 
-  ...props 
-}: { 
-  type: 'line' | 'bar' | 'pie' | 'area';
-  data: any[];
-  [key: string]: any;
-}) {
-  const [ChartComponent, setChartComponent] = useState<React.ComponentType<any> | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadChart = async () => {
-      try {
-        const recharts = await import('recharts');
-        
-        const componentMap = {
-          line: recharts.LineChart,
-          bar: recharts.BarChart,
-          pie: recharts.PieChart,
-          area: recharts.AreaChart,
-        };
-        
-        setChartComponent(() => componentMap[type]);
-      } catch (error) {
-        console.error('Failed to load chart component:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadChart();
-  }, [type]);
-
-  if (loading || !ChartComponent) {
-    return <ComponentLoadingSkeleton />;
-  }
-
-  return <ChartComponent data={data} {...props} />;
-}
+// Note: Chart functionality moved to ChartWidget component to prevent bundle conflicts
 
 // Lazy date picker component
 export function LazyDatePicker({ onSelect, ...props }: any) {
