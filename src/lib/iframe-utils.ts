@@ -77,8 +77,12 @@ export class IframeUtils {
   static openInParent(url: string): void {
     try {
       if (this.isInIframe() && window.parent) {
-        window.parent.location.href = url;
+        // Construct full URL if it's a relative path
+        const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? url : '/' + url}`;
+        console.log('Iframe navigation - redirecting parent to:', fullUrl);
+        window.parent.location.href = fullUrl;
       } else {
+        console.log('Not in iframe - using standard navigation');
         window.location.href = url;
       }
     } catch (e) {
