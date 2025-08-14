@@ -1,18 +1,50 @@
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import './index.css';
 
-// Minimal test component to verify React is working
-function App() {
+// Simple test pages
+function HomePage() {
   const [count, setCount] = useState(0);
-
+  
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>React Test App</h1>
-      <p>If you can see this, React is loading correctly.</p>
-      <button onClick={() => setCount(count + 1)}>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Home Page</h1>
+      <p className="mb-4">React is working correctly!</p>
+      <button 
+        onClick={() => setCount(count + 1)}
+        className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
+      >
         Count: {count}
       </button>
-      <p>Click the button to test useState hook.</p>
+      <Link to="/auth" className="bg-green-500 text-white px-4 py-2 rounded">
+        Go to Auth
+      </Link>
     </div>
+  );
+}
+
+function AuthPage() {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Auth Page</h1>
+      <p className="mb-4">Authentication page loaded successfully!</p>
+      <Link to="/" className="bg-blue-500 text-white px-4 py-2 rounded">
+        Back to Home
+      </Link>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/auth" element={<AuthPage />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 
