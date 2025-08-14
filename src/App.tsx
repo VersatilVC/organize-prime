@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactSafeRouter } from './components/ReactSafeRouter';
@@ -93,16 +94,15 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* Only render Router when React is fully ready */}
-        {appReady ? (
-          <ReactSafeRouter>
+        <ReactSafeRouter>
+          <ErrorBoundary>
             <AuthProvider>
               <OrganizationProvider>
                 <AppRoutes />
               </OrganizationProvider>
             </AuthProvider>
-          </ReactSafeRouter>
-        ) : null}
+          </ErrorBoundary>
+        </ReactSafeRouter>
       </QueryClientProvider>
     </ErrorBoundary>
   );
