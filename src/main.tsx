@@ -3,186 +3,139 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Enhanced error handling with proper logging
-const handleGlobalError = (error: Error, context: string) => {
-  console.error(`[${context}] Application Error:`, error);
+// Simple error fallback without DOM manipulation
+const showErrorFallback = (error: Error) => {
+  console.error('Application failed to load:', error);
   
-  // Safely handle DOM manipulation
-  const rootElement = document.getElementById('root');
-  if (rootElement) {
-    try {
-      // Clear any existing content safely
-      rootElement.innerHTML = '';
-      
-      // Create error display
-      rootElement.innerHTML = `
-        <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8fafc; font-family: system-ui;">
-          <div style="text-align: center; max-width: 500px; padding: 2rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-            <h2 style="color: #1f2937; margin-bottom: 1rem;">Application Error</h2>
-            <p style="color: #6b7280; margin-bottom: 2rem;">The application failed to load. This might be due to a network issue or server problem.</p>
-            <button onclick="window.location.reload()" style="
-              background: #3b82f6; 
-              color: white; 
-              border: none; 
-              padding: 0.75rem 1.5rem; 
-              border-radius: 0.5rem; 
-              cursor: pointer;
-              font-size: 1rem;
-              transition: background 0.2s;
-            " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
-              Refresh Page
-            </button>
-            <div style="margin-top: 1rem; font-size: 0.875rem; color: #9ca3af;">
-              Error: ${error.message}
-            </div>
-          </div>
-        </div>
-      `;
-    } catch (domError) {
-      console.error('Failed to update DOM:', domError);
-      // Fallback to alert if DOM manipulation fails
-      alert(`Application Error: ${error.message}\n\nPlease refresh the page.`);
-    }
-  }
+  // Use document.write as last resort to avoid DOM conflicts
+  const errorHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>OrganizePrime - Error</title>
+      <style>
+        body { 
+          font-family: system-ui; 
+          margin: 0; 
+          padding: 20px; 
+          background: #f8fafc; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          min-height: 100vh; 
+        }
+        .error-container { 
+          text-align: center; 
+          background: white; 
+          padding: 2rem; 
+          border-radius: 8px; 
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+          max-width: 500px;
+        }
+        .error-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .error-title { color: #1f2937; margin-bottom: 1rem; }
+        .error-message { color: #6b7280; margin-bottom: 2rem; }
+        .error-button { 
+          background: #3b82f6; 
+          color: white; 
+          border: none; 
+          padding: 0.75rem 1.5rem; 
+          border-radius: 0.5rem; 
+          cursor: pointer; 
+          font-size: 1rem;
+        }
+        .error-button:hover { background: #2563eb; }
+      </style>
+    </head>
+    <body>
+      <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h2 class="error-title">Application Error</h2>
+        <p class="error-message">OrganizePrime failed to load properly. Please refresh the page to try again.</p>
+        <button class="error-button" onclick="window.location.reload()">Refresh Page</button>
+        <p style="margin-top: 1rem; font-size: 0.875rem; color: #9ca3af;">Error: ${error.message}</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Replace entire document to avoid DOM conflicts
+  document.open();
+  document.write(errorHtml);
+  document.close();
 };
 
-// Wait for DOM to be ready and handle initialization
-const initializeApp = async () => {
+// Main initialization function with minimal DOM manipulation
+const initializeApp = () => {
   try {
-    // Ensure DOM is ready
+    console.log('🚀 Starting OrganizePrime initialization...');
+    
+    // Basic environment checks
+    if (typeof React !== 'object' || !React.createElement) {
+      throw new Error('React is not available');
+    }
+    
+    if (typeof createRoot !== 'function') {
+      throw new Error('React 18 createRoot is not available');
+    }
+    
+    // Get root element
     const rootElement = document.getElementById('root');
     if (!rootElement) {
-      throw new Error('Root element not found - HTML structure may be corrupted');
+      throw new Error('Root element not found in DOM');
     }
-
-    // Verify React is properly loaded
-    if (!React || typeof React.createElement !== 'function') {
-      throw new Error('React is not properly loaded or hooks are not available');
-    }
-
-    // Clear any existing content safely before creating root
-    try {
-      rootElement.innerHTML = '';
-    } catch (clearError) {
-      console.warn('Could not clear root element:', clearError);
-    }
-
-    // Create root with error handling
+    
+    console.log('✅ Environment checks passed');
+    
+    // Create React root WITHOUT clearing existing content
+    // This avoids the removeChild error
     let root;
     try {
       root = createRoot(rootElement);
+      console.log('✅ React root created successfully');
     } catch (rootError) {
       console.error('Failed to create React root:', rootError);
-      throw new Error('Failed to initialize React root - this might be a browser compatibility issue');
+      throw new Error(`React root creation failed: ${rootError.message}`);
     }
-
-    // Add loading indicator while app initializes
-    rootElement.innerHTML = `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #ffffff;">
-        <div style="text-align: center;">
-          <div style="
-            width: 40px; 
-            height: 40px; 
-            border: 3px solid #e5e7eb; 
-            border-top: 3px solid #3b82f6; 
-            border-radius: 50%; 
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-          "></div>
-          <div style="color: #6b7280; font-family: system-ui;">Loading OrganizePrime...</div>
-        </div>
-      </div>
-      <style>
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      </style>
-    `;
-
-    // Add a small delay to ensure DOM is ready
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Clear loading and render the React app
+    
+    // Render the app
     try {
-      rootElement.innerHTML = '';
-    } catch (clearError) {
-      console.warn('Could not clear loading state:', clearError);
-    }
-
-    // Render the React app with error boundary
-    try {
+      console.log('🎨 Rendering React application...');
+      
       root.render(
-        <React.StrictMode>
-          <App />
-        </React.StrictMode>
+        React.createElement(React.StrictMode, null,
+          React.createElement(App)
+        )
       );
+      
+      console.log('✅ OrganizePrime loaded successfully!');
+      
     } catch (renderError) {
-      console.error('Failed to render React app:', renderError);
+      console.error('React render failed:', renderError);
       throw new Error(`React rendering failed: ${renderError.message}`);
     }
-
-    console.log('✅ OrganizePrime application initialized successfully');
     
   } catch (error) {
-    handleGlobalError(error as Error, 'Initialization');
+    console.error('Initialization failed:', error);
+    showErrorFallback(error as Error);
   }
 };
 
-// Enhanced global error handlers
+// Minimal global error handling
 window.addEventListener('error', (event) => {
-  // Prevent the default browser error handling
-  event.preventDefault();
-  
-  // Handle different types of errors
-  let errorMessage = event.message || 'Unknown error occurred';
-  if (event.error) {
-    errorMessage = event.error.message || errorMessage;
-  }
-  
-  handleGlobalError(new Error(errorMessage), 'Global Error');
+  console.error('Global error:', event.error || event.message);
+  // Don't prevent default to maintain browser behavior
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  // Prevent the default unhandled rejection behavior
-  event.preventDefault();
-  
-  let errorMessage = 'Unhandled promise rejection';
-  if (event.reason) {
-    if (event.reason instanceof Error) {
-      errorMessage = event.reason.message;
-    } else if (typeof event.reason === 'string') {
-      errorMessage = event.reason;
-    } else {
-      errorMessage = JSON.stringify(event.reason);
-    }
-  }
-  
-  handleGlobalError(new Error(errorMessage), 'Unhandled Promise');
+  console.error('Unhandled promise rejection:', event.reason);
+  // Don't prevent default to maintain browser behavior
 });
 
-// Add DOM error handling
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM Content Loaded - initializing app');
-  initializeApp();
-});
-
-// Initialize app when DOM is ready with fallback
+// Initialize when DOM is ready
 if (document.readyState === 'loading') {
-  // DOM is still loading, wait for DOMContentLoaded
-  console.log('DOM still loading, waiting for DOMContentLoaded event');
+  document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
-  // DOM is already ready
-  console.log('DOM already ready, initializing app immediately');
+  // DOM is already ready, initialize immediately
   initializeApp();
 }
-
-// Additional safety net - initialize after a delay if nothing else worked
-setTimeout(() => {
-  const rootElement = document.getElementById('root');
-  if (rootElement && (!rootElement.hasChildNodes() || rootElement.innerHTML.includes('Loading OrganizePrime'))) {
-    console.log('Fallback initialization triggered');
-    initializeApp();
-  }
-}, 2000);
