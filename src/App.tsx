@@ -1,118 +1,134 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { AppRoutes } from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';
-import { ReactReadinessWrapper } from '@/components/ReactReadinessWrapper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorBoundary } from '@/components/ui/error-boundary';
 import './index.css';
 
-// Create a single query client instance with enhanced error handling
+// Create a simple query client without complex error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: false,
-      retry: (failureCount, error) => {
-        // Don't retry on auth errors
-        if (error?.message?.includes('401') || error?.message?.includes('403')) {
-          return false;
-        }
-        return failureCount < 3;
-      },
-      onError: (error) => {
-        console.error('Query error:', error);
-      },
-    },
-    mutations: {
       retry: 1,
-      onError: (error) => {
-        console.error('Mutation error:', error);
-      },
     },
   },
 });
 
-// Enhanced loading component
+// Simple loading component without complex styling
 const AppLoading = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center space-y-4">
-      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      <p className="text-sm text-muted-foreground">Initializing OrganizePrime...</p>
+  <div style={{
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    fontFamily: 'system-ui'
+  }}>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{
+        width: '32px',
+        height: '32px',
+        border: '3px solid #e5e7eb',
+        borderTop: '3px solid #3b82f6',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        margin: '0 auto 1rem'
+      }}></div>
+      <div style={{ color: '#6b7280' }}>Loading OrganizePrime...</div>
     </div>
   </div>
 );
 
-// Error fallback component
-const AppErrorFallback = ({ error, resetError }: { error: Error; resetError: () => void }) => (
-  <div className="min-h-screen flex items-center justify-center bg-background p-4">
-    <div className="text-center max-w-md">
-      <div className="text-6xl mb-4">⚠️</div>
-      <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
-      <p className="text-muted-foreground mb-4">
-        The application encountered an error. Please try refreshing the page.
+// Simple error component
+const AppError = ({ error }: { error: Error }) => (
+  <div style={{
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+    fontFamily: 'system-ui',
+    padding: '2rem'
+  }}>
+    <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+      <h2 style={{ color: '#1f2937', marginBottom: '1rem' }}>Application Error</h2>
+      <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
+        Something went wrong with the application. Please refresh the page.
       </p>
-      <div className="space-x-2">
-        <button
-          onClick={resetError}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-        >
-          Try Again
-        </button>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
-        >
-          Refresh Page
-        </button>
-      </div>
-      {process.env.NODE_ENV === 'development' && (
-        <details className="mt-4 text-left">
-          <summary className="cursor-pointer text-sm font-medium">Error Details</summary>
-          <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
-            {error.stack}
-          </pre>
-        </details>
-      )}
+      <button
+        onClick={() => window.location.reload()}
+        style={{
+          background: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '0.5rem',
+          cursor: 'pointer',
+          fontSize: '1rem'
+        }}
+      >
+        Refresh Page
+      </button>
+      <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#9ca3af' }}>
+        Error: {error.message}
+      </p>
     </div>
   </div>
 );
 
+// Error boundary class component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('React Error Boundary caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      return <AppError error={this.state.error} />;
+    }
+
+    return this.props.children;
+  }
+}
+
+// Main App component with minimal complexity
 function App() {
+  console.log('App component rendering');
+  
   try {
     return (
-      <ReactReadinessWrapper>
-        <ErrorBoundary fallback={AppErrorFallback}>
-          <QueryClientProvider client={queryClient}>
-            <Suspense fallback={<AppLoading />}>
-              <AuthProvider>
-                <OrganizationProvider>
-                  <AppRoutes />
-                  <Toaster />
-                </OrganizationProvider>
-              </AuthProvider>
-            </Suspense>
-          </QueryClientProvider>
-        </ErrorBoundary>
-      </ReactReadinessWrapper>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <React.Suspense fallback={<AppLoading />}>
+            <AuthProvider>
+              <OrganizationProvider>
+                <AppRoutes />
+                <Toaster />
+              </OrganizationProvider>
+            </AuthProvider>
+          </React.Suspense>
+        </QueryClientProvider>
+      </ErrorBoundary>
     );
   } catch (error) {
-    console.error('Critical error in App component:', error);
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-800 mb-2">Critical Application Error</h1>
-          <p className="text-red-600 mb-4">Failed to initialize the application</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            Reload Application
-          </button>
-        </div>
-      </div>
-    );
+    console.error('Error in App component:', error);
+    return <AppError error={error as Error} />;
   }
 }
 
