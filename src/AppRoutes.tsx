@@ -1,7 +1,8 @@
-import React from 'react';
+import * as React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 // Import components directly to avoid lazy loading issues
 import Index from '@/pages/Index';
@@ -19,7 +20,7 @@ export function AppRoutes() {
   return (
     <ErrorBoundary>
       <Routes>
-        {/* Public routes */}
+        {/* Public routes - no layout */}
         <Route path="/" element={<Index />} />
         
         <Route 
@@ -31,12 +32,14 @@ export function AppRoutes() {
           } 
         />
 
-        {/* Protected routes */}
+        {/* Protected routes with layout */}
         <Route 
           path="/dashboard" 
           element={
             <AuthGuard>
-              <Dashboard />
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
             </AuthGuard>
           } 
         />
@@ -45,7 +48,9 @@ export function AppRoutes() {
           path="/users" 
           element={
             <AuthGuard>
-              <Users />
+              <AppLayout>
+                <Users />
+              </AppLayout>
             </AuthGuard>
           } 
         />
@@ -54,7 +59,9 @@ export function AppRoutes() {
           path="/organizations" 
           element={
             <AuthGuard>
-              <Organizations />
+              <AppLayout>
+                <Organizations />
+              </AppLayout>
             </AuthGuard>
           } 
         />
@@ -63,7 +70,9 @@ export function AppRoutes() {
           path="/profile-settings" 
           element={
             <AuthGuard>
-              <ProfileSettings />
+              <AppLayout>
+                <ProfileSettings />
+              </AppLayout>
             </AuthGuard>
           } 
         />
@@ -72,7 +81,9 @@ export function AppRoutes() {
           path="/company-settings" 
           element={
             <AuthGuard>
-              <CompanySettings />
+              <AppLayout>
+                <CompanySettings />
+              </AppLayout>
             </AuthGuard>
           } 
         />
@@ -81,7 +92,9 @@ export function AppRoutes() {
           path="/system-settings" 
           element={
             <AuthGuard>
-              <SystemSettings />
+              <AppLayout>
+                <SystemSettings />
+              </AppLayout>
             </AuthGuard>
           } 
         />
@@ -90,7 +103,9 @@ export function AppRoutes() {
           path="/feedback" 
           element={
             <AuthGuard>
-              <Feedback />
+              <AppLayout>
+                <Feedback />
+              </AppLayout>
             </AuthGuard>
           } 
         />
