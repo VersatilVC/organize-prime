@@ -4,7 +4,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { UserTableRow } from './UserTableRow';
 import { TableLoadingSkeleton } from '@/components/LoadingSkeletons';
 import { User } from '@/types/api';
-import { usePerformanceTracking } from '@/lib/performance';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface UserTableProps {
@@ -24,7 +23,6 @@ export const UserTable = memo(({
   onUserAction,
   isLoading
 }: UserTableProps) => {
-  usePerformanceTracking('UserTable');
   const allSelected = users.length > 0 && selectedUsers.length === users.length;
   const someSelected = selectedUsers.length > 0 && selectedUsers.length < users.length;
 

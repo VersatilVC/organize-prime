@@ -5,7 +5,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePerformanceTracking } from '@/lib/performance';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 export interface TableColumn<T = any> {
@@ -67,7 +66,6 @@ export const DataTable = memo(<T,>({
   maxBodyHeight = 480,
   className
 }: DataTableProps<T>) => {
-  usePerformanceTracking('DataTable');
   const hasSelection = onItemSelect && onSelectAll;
   const allSelected = data.length > 0 && selectedItems.length === data.length;
   const someSelected = selectedItems.length > 0 && selectedItems.length < data.length;
