@@ -23,7 +23,7 @@ const RouteLoading = () => (
   </div>
 );
 
-export default function AppRoutes() {
+export function AppRoutes() {
   return (
     <BrowserRouter>
       <ErrorBoundary>

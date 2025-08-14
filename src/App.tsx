@@ -2,7 +2,7 @@
 import React from 'react';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
-import AppRoutes from './AppRoutes';
+import { AppRoutes } from './AppRoutes';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
