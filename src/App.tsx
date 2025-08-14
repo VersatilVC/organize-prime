@@ -3,6 +3,8 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SafeRouter } from './components/SafeRouter';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import AppRoutes from './AppRoutes';
 import './index.css';
 
@@ -16,14 +18,18 @@ const queryClient = new QueryClient({
   },
 });
 
-// Main App with proper routing
+// Main App with proper routing and context providers
 function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SafeRouter>
-          <AppRoutes />
-        </SafeRouter>
+        <AuthProvider>
+          <OrganizationProvider>
+            <SafeRouter>
+              <AppRoutes />
+            </SafeRouter>
+          </OrganizationProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
