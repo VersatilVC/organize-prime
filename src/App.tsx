@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SafeRouter } from './components/SafeRouter';
+import { ReactSafeRouter } from './components/ReactSafeRouter';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import AppRoutes from './AppRoutes';
@@ -96,13 +96,13 @@ function App() {
       <QueryClientProvider client={queryClient}>
         {/* Only render Router when React is fully ready */}
         {appReady ? (
-          <SafeRouter>
+          <ReactSafeRouter>
             <AuthProvider>
               <OrganizationProvider>
                 <AppRoutes />
               </OrganizationProvider>
             </AuthProvider>
-          </SafeRouter>
+          </ReactSafeRouter>
         ) : null}
       </QueryClientProvider>
     </ErrorBoundary>

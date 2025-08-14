@@ -5,7 +5,7 @@ import Dashboard from './Dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/ui/icons';
-import { Link } from 'react-router-dom';
+
 // import { usePagePerformance } from '@/lib/performance';
 
 // Loading component for auth check
@@ -84,8 +84,11 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Connect your tools</p>
               </div>
             </div>
-            <Button asChild className="w-full">
-              <Link to="/auth">Get Started</Link>
+            <Button 
+              onClick={() => window.location.href = '/auth'} 
+              className="w-full"
+            >
+              Get Started
             </Button>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
