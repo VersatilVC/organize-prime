@@ -1,5 +1,5 @@
 
-import { useState, useEffect, ReactNode } from "react"
+import * as React from "react"
 
 import type {
   ToastActionElement,
@@ -11,8 +11,8 @@ const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
   id: string
-  title?: ReactNode
-  description?: ReactNode
+  title?: React.ReactNode
+  description?: React.ReactNode
   action?: ToastActionElement
 }
 
@@ -170,19 +170,10 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  // Safety check to ensure React hooks are available
-  if (typeof useState !== 'function') {
-    console.warn('React hooks not available in useToast, returning fallback');
-    return {
-      toasts: [],
-      toast: () => ({ id: '', dismiss: () => {}, update: () => {} }),
-      dismiss: () => {},
-    };
-  }
+  // Use React hooks with namespace to avoid conflicts
+  const [state, setState] = React.useState<State>(memoryState)
 
-  const [state, setState] = useState<State>(memoryState)
-
-  useEffect(() => {
+  React.useEffect(() => {
     listeners.push(setState)
     return () => {
       const index = listeners.indexOf(setState)
