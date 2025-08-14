@@ -19,6 +19,7 @@ const RouteLoadingSpinner = () => (
 );
 
 // Lazy load all page components for code splitting
+const SimpleDashboard = lazy(() => import('./pages/SimpleDashboard'));
 const Index = lazy(() => import('./pages/Index'));
 const Auth = lazy(() => import('./pages/Auth'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
@@ -55,8 +56,6 @@ function FeatureDebugComponent() {
 }
 
 export default function AppRoutes() {
-  console.log('AppRoutes component rendering');
-  
   return (
     <Routes>
         <Route path="/" element={
@@ -92,7 +91,7 @@ export default function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <Suspense fallback={<RouteLoadingSpinner />}>
-                  {React.createElement(lazy(() => import('./pages/SimpleDashboard')))}
+                  <SimpleDashboard />
                 </Suspense>
               </AppLayout>
             </ProtectedRoute>

@@ -18,40 +18,32 @@ const queryClient = createAdvancedQueryClient();
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
-  console.log('App component starting to render');
-  
-  try {
-    console.log('App component entering try block');
-    return (
-      <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ErrorBoundary>
-              <SimpleAuthProvider>
-                <OrganizationProvider>
-                  <FeatureProvider slug="">
-                    <main className="min-h-screen bg-background">
-                      <Suspense fallback={<AppLoadingSpinner />}>
-                        <ErrorBoundary>
-                          <AppRoutes />
-                        </ErrorBoundary>
-                      </Suspense>
-                    </main>
-                    <Toaster />
-                  </FeatureProvider>
-                </OrganizationProvider>
-              </SimpleAuthProvider>
-            </ErrorBoundary>
-          </ThemeProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ErrorBoundary>
+  return (
+    <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ErrorBoundary>
+            <SimpleAuthProvider>
+              <OrganizationProvider>
+                <FeatureProvider slug="">
+                  <main className="min-h-screen bg-background">
+                    <Suspense fallback={<AppLoadingSpinner />}>
+                      <ErrorBoundary>
+                        <AppRoutes />
+                      </ErrorBoundary>
+                    </Suspense>
+                  </main>
+                  <Toaster />
+                </FeatureProvider>
+              </OrganizationProvider>
+            </SimpleAuthProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ErrorBoundary>
   );
-  } catch (error) {
-    console.error('Fatal error in App component', error);
-    return <div>App initialization failed</div>;
-  }
 }
 
 export default App;

@@ -18,7 +18,6 @@ interface SimpleAuthContextType {
 const SimpleAuthContext = React.createContext<SimpleAuthContextType | undefined>(undefined);
 
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('SimpleAuthProvider starting');
   const [user, setUser] = React.useState<User | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
