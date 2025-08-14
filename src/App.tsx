@@ -2,7 +2,8 @@ import { StrictMode, Suspense } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
-import { createAdvancedQueryClient } from '@/lib/advanced-query-client';
+import { createOptimizedQueryClient } from '@/lib/optimized-query-client';
+import { initializeCriticalOptimizations } from '@/lib/critical-optimizations';
 import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { FeatureProvider } from '@/contexts/FeatureContext';
@@ -11,8 +12,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProductionLoadingFallback } from '@/components/ProductionLoadingFallback';
 import AppRoutes from './AppRoutes';
 
-// Create query client
-const queryClient = createAdvancedQueryClient();
+// Create optimized query client with advanced caching
+const queryClient = createOptimizedQueryClient();
+
+// Initialize critical path optimizations
+initializeCriticalOptimizations();
 
 // Production-ready loading component
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;

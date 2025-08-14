@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
+import { useOptimizedDashboardV2 } from '@/hooks/useOptimizedDashboardV2';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { useOrganizationSetup } from '@/hooks/useOrganizationSetup';
 import { OrganizationSetup } from '@/components/OrganizationSetup';
@@ -54,7 +54,7 @@ export default function SimpleDashboard() {
   const { user } = useSimpleAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
-  const { stats, isLoading } = useOptimizedDashboard();
+  const { stats, isLoading, isCoreReady, isFullyLoaded, notifications } = useOptimizedDashboardV2();
   
   // Check for automatic organization creation (business domains)
   useOrganizationCreation();
@@ -163,6 +163,36 @@ export default function SimpleDashboard() {
   // Show empty state for users with no organizations
   const showEmptyState = organizations.length === 0 && !isLoading;
 
+  // Show skeleton while core data is loading
+  if (!isCoreReady) {
+    return (
+      <div className="flex-1 space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-9 w-48 mb-2" />
+            <Skeleton className="h-5 w-64" />
+          </div>
+          <Skeleton className="h-6 w-20" />
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex-1 space-y-6 p-6">
@@ -254,7 +284,11 @@ export default function SimpleDashboard() {
                     <Link to="/notifications">
                       <Icons.bell className="h-6 w-6 mb-2" />
                       <span className="text-sm">Notifications</span>
-                      {/* Notification badge - placeholder */}
+                      {notifications && notifications.length > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
+                          {notifications.length}
+                        </Badge>
+                      )}
                     </Link>
                   </Button>
                 </div>
