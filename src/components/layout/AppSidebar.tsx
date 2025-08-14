@@ -41,11 +41,11 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
     
     case 'management':
       const managementItems = [
-        { name: 'Users', href: '/users', icon: Icons.users },
+        { name: 'Users', href: '/users', icon: Icons.users, requiresRole: 'admin' },
         { name: 'Send Feedback', href: '/feedback', icon: Icons.messageSquare },
       ];
       
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'super_admin') {
         managementItems.push({ name: 'Manage Feedback', href: '/admin/feedback', icon: Icons.settings });
       }
       
@@ -53,6 +53,7 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
     
     case 'system-admin':
       return role === 'super_admin' ? [
+        { name: 'Organizations', href: '/organizations', icon: Icons.building },
         { name: 'System Settings', href: '/settings/system', icon: Icons.settings },
       ] : [];
     
@@ -61,6 +62,7 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
         { name: 'Notifications', href: '/notifications', icon: Icons.bell },
         { name: 'Profile Settings', href: '/settings/profile', icon: Icons.user },
         { name: 'Company Settings', href: '/settings/company', icon: Icons.building, requiresRole: 'admin' },
+        { name: 'Help Center', href: '/help', icon: Icons.helpCircle },
       ];
     
     default:

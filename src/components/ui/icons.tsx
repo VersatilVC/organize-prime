@@ -50,6 +50,7 @@ import {
   Image,
   AlertTriangle,
   Loader2,
+  Check,
   // New icons for marketplace
   Book,
   BookOpen,
@@ -128,6 +129,7 @@ export const Icons = {
   image: Image,
   alertTriangle: AlertTriangle,
   loader: Loader2,
+  check: Check,
   // New icons for marketplace
   book: Book,
   bookOpen: BookOpen,

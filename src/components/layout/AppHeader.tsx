@@ -22,6 +22,9 @@ import { OptimizedImage } from '@/components/ui/optimized-image';
 import { useAvatarCache } from '@/hooks/useImageCache';
 import { AdvancedSearchDialog } from '@/components/search/AdvancedSearchDialog';
 import { Search } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
+import { MobileNavTrigger } from './MobileNav';
+import { OrganizationSwitcher } from '../OrganizationSwitcher';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
@@ -105,7 +108,11 @@ export function AppHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+          {/* Mobile nav trigger for small screens */}
+          <MobileNavTrigger className="md:hidden" />
+          
+          {/* Desktop sidebar trigger */}
+          <SidebarTrigger className="hidden md:flex" />
           
           <button onClick={() => window.location.href = '/'} className="flex items-center space-x-2">
             {systemSettings?.app_logo_url ? (
@@ -125,6 +132,9 @@ export function AppHeader() {
               {systemSettings?.app_name || 'SaaS Platform'}
             </span>
           </button>
+          
+          {/* Organization switcher */}
+          <OrganizationSwitcher />
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4">
@@ -134,11 +144,17 @@ export function AppHeader() {
         <div className="flex items-center gap-2">
           {/* Advanced Search */}
           <AdvancedSearchDialog>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="hidden sm:flex">
               <Search className="h-4 w-4 mr-2" />
               Search
             </Button>
+            <Button variant="outline" size="sm" className="sm:hidden">
+              <Search className="h-4 w-4" />
+            </Button>
           </AdvancedSearchDialog>
+          
+          {/* Theme Toggle */}
+          <ThemeToggle />
           
           {/* Notifications */}
           <NotificationBell />
