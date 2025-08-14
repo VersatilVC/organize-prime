@@ -9,16 +9,17 @@ import { KBAuthorizeRoute } from './components/shared/KBAuthorizeRoute';
 import { useFeatureRoutes } from '@/hooks/useFeatureRoutes';
 import { getComponent } from '@/apps/shared/utils/componentRegistry';
 import { useFeatureSync } from '@/hooks/useFeatureSync';
+import { logger } from '@/lib/secure-logger';
 
 // Dynamic route component that renders based on database configuration
 function DynamicRoute({ route }: { route: any }) {
-  console.log('🔍 DynamicRoute: Rendering route:', route);
+  logger.debug('Rendering dynamic route', { 
+    component: 'DynamicRoute',
+    action: 'route_render'
+  });
+  
   const Component = getComponent(route.component);
   const isAdminRoute = route.permissions?.includes('admin') || route.permissions?.includes('super_admin');
-  
-  console.log('🔍 DynamicRoute: Got component:', Component.name || 'Anonymous');
-  console.log('🔍 DynamicRoute: Is admin route:', isAdminRoute);
-  console.log('🔍 DynamicRoute: Route permissions:', route.permissions);
   
   const element = React.createElement(Component);
   
@@ -36,7 +37,7 @@ function DynamicRoute({ route }: { route: any }) {
     kbPermissions.push('can_chat');
   }
   
-  console.log('🔍 DynamicRoute: Mapped KB permissions:', kbPermissions);
+  logger.debug('KB permissions mapped');
   
   const wrapped = (
     <KBAuthorizeRoute permissions={kbPermissions} component={route.component}>
@@ -54,8 +55,10 @@ function DynamicRoute({ route }: { route: any }) {
 export default function KBApp() {
   const { routes, isLoading } = useFeatureRoutes('knowledge-base');
   
-  console.log('🔍 KBApp: Routes loaded:', routes);
-  console.log('🔍 KBApp: Is loading:', isLoading);
+  logger.debug('KB App mounted', { 
+    component: 'KBApp',
+    action: 'mount'
+  });
   
   // Auto-sync feature pages if they don't exist
   useFeatureSync();
@@ -63,7 +66,7 @@ export default function KBApp() {
   // Find default route for redirect - normalize route paths
   const defaultRoute = React.useMemo(() => {
     const defaultPageRoute = routes.find(r => r.isDefault);
-    console.log('🔍 KBApp: Default page route:', defaultPageRoute);
+    logger.debug('Finding default route');
     if (defaultPageRoute) {
       // Handle both /apps/ and /features/ prefixes and normalize
       let normalizedRoute = defaultPageRoute.path;
@@ -74,12 +77,12 @@ export default function KBApp() {
       } else if (normalizedRoute.startsWith('/knowledge-base/')) {
         normalizedRoute = normalizedRoute.replace('/knowledge-base/', '');
       }
-      console.log('🔍 KBApp: Normalized default route:', normalizedRoute);
+      logger.debug('Using default route');
       return normalizedRoute;
     }
     const fallbackRoute = routes.length > 0 ? 
       routes[0].path.replace(/^\/(apps|features)\/knowledge-base\//, '') : 'dashboard';
-    console.log('🔍 KBApp: Using fallback route:', fallbackRoute);
+    logger.debug('Using fallback route');
     return fallbackRoute;
   }, [routes]);
 
@@ -111,7 +114,7 @@ export default function KBApp() {
               } else if (routePath.startsWith('/knowledge-base/')) {
                 routePath = routePath.replace('/knowledge-base/', '');
               }
-              console.log('🔍 KBApp: Creating route:', { originalPath: route.path, routePath, title: route.title });
+              logger.debug('Creating KB route');
               return (
                 <Route
                   key={route.path}

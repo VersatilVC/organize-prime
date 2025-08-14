@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/composition/EmptyState';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertTriangle, Lock, Settings } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { logger } from '@/lib/secure-logger';
 
 // Lazy load feature pages
 const FeatureDashboard = React.lazy(() => import('@/pages/features/FeatureDashboard'));
@@ -30,9 +31,9 @@ interface FeatureRouteParams extends Record<string, string> {
 function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slug: string }) {
   const { data: organizationFeatures = [], isLoading, error } = useOrganizationFeatures();
 
-  console.log('🔐 FeatureAccessCheck: Checking access for slug:', slug, {
-    organizationFeatures: organizationFeatures.map(f => ({ slug: f.system_feature.slug, enabled: f.is_enabled })),
-    isLoading
+  logger.debug('Feature access check', {
+    component: 'FeatureAccessCheck',
+    feature: slug
   });
 
   if (isLoading) {
@@ -47,7 +48,7 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
   }
 
   if (error) {
-    console.error('❌ FeatureAccessCheck: Error loading features:', error);
+    logger.error('Error loading features', error);
     return (
       <EmptyState
         icon={AlertTriangle}
@@ -64,7 +65,7 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
   const feature = organizationFeatures.find(f => f.system_feature.slug === slug);
 
   if (!feature) {
-    console.log('🚫 FeatureAccessCheck: Feature not found or not enabled:', slug);
+    logger.debug('Feature not found or enabled', { component: 'FeatureAccessCheck', feature: slug });
     return (
       <EmptyState
         icon={Lock}
@@ -78,8 +79,8 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
     );
   }
 
-  // For now, assume all enabled features are properly set up
-  console.log('✅ FeatureAccessCheck: Feature access granted for:', slug);
+  // Feature access granted
+  logger.debug('Feature access granted', { component: 'FeatureAccessCheck', feature: slug });
 
   return <>{children}</>;
 }
@@ -87,12 +88,11 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
 function FeatureRoutes() {
   const { slug } = useParams<FeatureRouteParams>();
   
-  console.log('🔍 FeatureRoutes: Component mounted with slug:', slug);
-  console.log('🔍 FeatureRoutes: Current pathname:', window.location.pathname);
+  logger.debug('FeatureRoutes mounted', { component: 'FeatureRoutes', feature: slug });
   
   // Special handling for Knowledge Base app
   if (slug === 'knowledge-base') {
-    console.log('🔍 FeatureRoutes: Detected knowledge-base slug, rendering KBApp');
+    logger.debug('Rendering Knowledge Base app', { component: 'FeatureRoutes' });
     return (
       <Suspense fallback={
         <div className="space-y-4">
@@ -137,14 +137,14 @@ function FeatureRoutes() {
 export function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
 
-  console.log('🔍 FeatureRouter: Component mounted, URL params:', { slug, allParams: useParams(), pathname: window.location.pathname });
+  logger.debug('FeatureRouter mounted', { component: 'FeatureRouter', feature: slug });
 
   if (!slug) {
-    console.log('❌ FeatureRouter: No slug in URL params, showing NotFound');
+    logger.debug('No feature slug provided');
     return <NotFound />;
   }
 
-  console.log('✅ FeatureRouter: Rendering with slug:', slug);
+  logger.debug('Rendering feature router', { component: 'FeatureRouter', feature: slug });
 
   return (
     <FeatureAccessCheck slug={slug}>

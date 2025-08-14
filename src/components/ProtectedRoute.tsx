@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Skeleton } from '@/components/ui/skeleton';
+import { logger } from '@/lib/secure-logger';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,16 +15,11 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
   const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
 
-  // Debug logging to understand authentication state
+  // State monitoring for debugging
   React.useEffect(() => {
-    console.log('ProtectedRoute state:', {
-      user: !!user,
-      authLoading,
-      roleLoading,
-      role,
-      pathname: location.pathname,
-      requiredRole,
-      timestamp: new Date().toISOString()
+    logger.debug('ProtectedRoute state check', {
+      component: 'ProtectedRoute',
+      action: 'permission_check'
     });
   }, [user, authLoading, roleLoading, role, location.pathname, requiredRole]);
 
@@ -32,7 +28,7 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
   
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('ProtectedRoute: Loading timeout reached, forcing render');
+      logger.warn('Loading timeout reached');
       setTimeoutReached(true);
     }, 5000); // 5 second timeout
     
@@ -40,7 +36,7 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
   }, []);
 
   if ((authLoading || roleLoading) && !timeoutReached) {
-    console.log('ProtectedRoute: Still loading auth state', { authLoading, roleLoading, timeoutReached });
+    logger.debug('Auth state loading');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="space-y-4 w-full max-w-md">
@@ -52,15 +48,10 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
     );
   }
 
-  console.log('ProtectedRoute: Auth state resolved, rendering children', { 
-    user: !!user, 
-    role, 
-    pathname: location.pathname,
-    requiredRole 
-  });
+  logger.debug('Auth state resolved');
 
   if (!user) {
-    console.log('ProtectedRoute: No user found, redirecting to auth');
+    logger.debug('Redirecting to auth - no user');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

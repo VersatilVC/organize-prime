@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/ui/icons';
 import { InviteUserDialog } from './InviteUserDialog';
+import { logger } from '@/lib/secure-logger';
 
 export function OrganizationSwitcher() {
   const { currentOrganization, organizations, loading } = useOrganizationData();
@@ -31,11 +32,9 @@ export function OrganizationSwitcher() {
 
   const canInviteUsers = role === 'admin' || role === 'super_admin';
   
-  console.log('OrganizationSwitcher debug:', { 
-    role, 
-    canInviteUsers, 
-    currentOrganization: currentOrganization?.name,
-    organizationsCount: organizations.length 
+  logger.debug('OrganizationSwitcher state', {
+    component: 'OrganizationSwitcher',
+    action: 'state_check'
   });
 
   return null; // Component removed from header

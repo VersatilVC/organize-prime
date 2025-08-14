@@ -6,6 +6,7 @@ import { PlaceholderPage } from '@/components/ui/placeholder-page';
 import { FeatureRouter } from './components/FeatureRouter';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
+import { logger } from '@/lib/secure-logger';
 
 // Optimized loading component for routes
 const RouteLoadingSpinner = () => (
@@ -46,7 +47,7 @@ function KnowledgeBaseRedirect() {
 
 // Debug component for feature routing
 function FeatureDebugComponent() {
-  console.log('🔍 App: Debug - Features route matched but no slug captured. URL:', window.location.pathname);
+  logger.debug('Features route matched without slug');
   return (
     <ProtectedRoute>
       <div>Feature routing debug - check console</div>
@@ -55,7 +56,7 @@ function FeatureDebugComponent() {
 }
 
 export default function AppRoutes() {
-  console.log('🛣️ APP_ROUTES: AppRoutes component rendering - current path:', window.location.pathname);
+  logger.debug('AppRoutes rendering');
   
   return (
     <Routes>
