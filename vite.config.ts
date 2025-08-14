@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
+        // Disable manual chunks in development to prevent React loading issues
         manualChunks: mode === 'production' ? (id) => {
           if (id.includes('node_modules')) {
             // Core React bundle
@@ -34,7 +35,7 @@ export default defineConfig(({ mode }) => ({
             // Everything else in one vendor chunk to avoid circular deps
             return 'vendor';
           }
-        } : undefined, // No chunk splitting in development to prevent race conditions
+        } : undefined,
       },
     },
     // Increase chunk size warning limit for better optimization
@@ -44,5 +45,10 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  // Ensure React is properly resolved
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+    force: true
   },
 }));
