@@ -11,38 +11,56 @@ import {
 import React from "react"
 
 export function Toaster() {
-  // Enhanced safety checks to ensure React is fully initialized
-  if (!React || typeof React.useState !== 'function' || typeof React.useEffect !== 'function' || typeof React.useContext !== 'function') {
-    console.warn('React hooks not fully available in Toaster, rendering null');
+  // Comprehensive React availability check
+  if (
+    !React || 
+    typeof React !== 'object' ||
+    !React.useState || 
+    !React.useEffect || 
+    !React.useContext ||
+    typeof React.useState !== 'function' ||
+    typeof React.useEffect !== 'function' ||
+    typeof React.useContext !== 'function'
+  ) {
+    console.warn('React hooks not available in Toaster, skipping render');
     return null;
   }
 
-  // Check if we're in a proper React render context
+  // Test if React context is working by attempting a hook call
+  let testState;
   try {
-    // This will throw if React context is not properly set up
-    React.useState(false);
+    testState = React.useState(null);
+    if (!testState || !Array.isArray(testState)) {
+      console.warn('React hooks not working properly in Toaster');
+      return null;
+    }
   } catch (error) {
-    console.warn('React context not ready in Toaster, rendering null:', error);
+    console.warn('React hooks failed in Toaster, skipping render:', error);
     return null;
   }
 
-  // Additional check to ensure we can safely call useToast
+  // Now try to get toasts
   let toasts;
   try {
     const toastHook = useToast();
     toasts = toastHook.toasts;
   } catch (error) {
-    console.warn('useToast hook failed, rendering null:', error);
+    console.warn('useToast hook failed in Toaster, skipping render:', error);
     return null;
   }
 
-  // Final safety check: ensure toasts is an array
+  // Validate toasts
   if (!Array.isArray(toasts)) {
-    console.warn('Toasts is not an array, rendering null');
+    console.warn('Toasts is not an array in Toaster, skipping render');
     return null;
   }
 
-  // Only render ToastProvider when we're absolutely sure React is ready
+  // Only render if we have no toasts (to avoid rendering ToastProvider unnecessarily)
+  if (toasts.length === 0) {
+    return null;
+  }
+
+  // Final safety check before rendering ToastProvider
   try {
     return (
       <ToastProvider>
@@ -64,7 +82,7 @@ export function Toaster() {
       </ToastProvider>
     )
   } catch (error) {
-    console.warn('Error rendering ToastProvider, returning null:', error);
+    console.warn('Error rendering ToastProvider in Toaster:', error);
     return null;
   }
 }
