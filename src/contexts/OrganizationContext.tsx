@@ -122,5 +122,10 @@ export function useOrganization() {
   return context;
 }
 
-// Add alias export for backward compatibility
+// Multiple aliases for backward compatibility with different naming conventions
 export const useOrganizationData = useOrganization;
+export const useOrganizationMethods = useOrganization;
+export const useOrganizationContext = useOrganization;
+
+// Export types for TypeScript
+export type { Organization, OrganizationContextType };
