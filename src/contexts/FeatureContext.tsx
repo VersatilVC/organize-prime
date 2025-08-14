@@ -1,10 +1,10 @@
-import * as React from 'react'; // Fixed React imports
+import { createContext, useContext, ReactNode } from 'react';
 import { useFeatureData, FeatureContext as FeatureContextType } from '@/hooks/useFeatureData';
 
-const FeatureContext = React.createContext<FeatureContextType | undefined>(undefined);
+const FeatureContext = createContext<FeatureContextType | undefined>(undefined);
 
 interface FeatureProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
   slug: string;
 }
 
@@ -28,7 +28,7 @@ export function FeatureProvider({ children, slug }: FeatureProviderProps) {
 }
 
 export function useFeatureContext() {
-  const context = React.useContext(FeatureContext);
+  const context = useContext(FeatureContext);
   if (context === undefined) {
     throw new Error('useFeatureContext must be used within a FeatureProvider');
   }
