@@ -1,4 +1,4 @@
-import { StrictMode, Suspense } from 'react';
+import { StrictMode, Suspense, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
@@ -15,45 +15,45 @@ import AppRoutes from './AppRoutes';
 // Create optimized query client with advanced caching
 const queryClient = createOptimizedQueryClient();
 
-// Initialize critical path optimizations and PWA features
-initializeCriticalOptimizations();
-
-// Initialize PWA features
-if (typeof window !== 'undefined') {
-  import('@/lib/pwa-manager').then(({ pwaManager }) => {
-    pwaManager.initialize();
-  });
-}
-
 // Production-ready loading component
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
+  useEffect(() => {
+    // Initialize critical optimizations after React is mounted
+    initializeCriticalOptimizations();
+    
+    // Initialize PWA features
+    import('@/lib/pwa-manager').then(({ pwaManager }) => {
+      pwaManager.initialize();
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ErrorBoundary>
-            <SimpleAuthProvider>
-              <OrganizationProvider>
-                <FeatureProvider slug="">
-                  <main className="min-h-screen bg-background">
-                    <Suspense fallback={<AppLoadingSpinner />}>
-                      <ErrorBoundary>
-                        <AppRoutes />
-                      </ErrorBoundary>
-                    </Suspense>
-                  </main>
-                  <Toaster />
-                </FeatureProvider>
-              </OrganizationProvider>
-            </SimpleAuthProvider>
-          </ErrorBoundary>
-        </ThemeProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ErrorBoundary>
+              <SimpleAuthProvider>
+                <OrganizationProvider>
+                  <FeatureProvider slug="">
+                    <main className="min-h-screen bg-background">
+                      <Suspense fallback={<AppLoadingSpinner />}>
+                        <ErrorBoundary>
+                          <AppRoutes />
+                        </ErrorBoundary>
+                      </Suspense>
+                    </main>
+                    <Toaster />
+                  </FeatureProvider>
+                </OrganizationProvider>
+              </SimpleAuthProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
