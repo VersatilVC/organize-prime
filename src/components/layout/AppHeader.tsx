@@ -21,6 +21,8 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { OptimizedImage } from '@/components/ui/optimized-image';
 import { useAvatarCache } from '@/hooks/useImageCache';
+import { AdvancedSearchDialog } from '@/components/search/AdvancedSearchDialog';
+import { Search } from 'lucide-react';
 
 export function AppHeader() {
   const { user, signOut } = useSimpleAuth();
@@ -127,20 +129,18 @@ export function AppHeader() {
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4">
-          <form onSubmit={handleSearch} className="w-full max-w-sm">
-            <div className="relative">
-              <Icons.search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </form>
+          {/* Replaced with Advanced Search Dialog */}
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Advanced Search */}
+          <AdvancedSearchDialog>
+            <Button variant="outline" size="sm">
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+          </AdvancedSearchDialog>
+          
           {/* Notifications */}
           <NotificationBell />
 

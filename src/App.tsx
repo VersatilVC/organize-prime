@@ -15,8 +15,15 @@ import AppRoutes from './AppRoutes';
 // Create optimized query client with advanced caching
 const queryClient = createOptimizedQueryClient();
 
-// Initialize critical path optimizations
+// Initialize critical path optimizations and PWA features
 initializeCriticalOptimizations();
+
+// Initialize PWA features
+if (typeof window !== 'undefined') {
+  import('@/lib/pwa-manager').then(({ pwaManager }) => {
+    pwaManager.initialize();
+  });
+}
 
 // Production-ready loading component
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;
