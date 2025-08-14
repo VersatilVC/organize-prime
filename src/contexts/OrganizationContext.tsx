@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
+import * as React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/auth/AuthProvider';
 import { safeStorage } from '@/lib/safe-storage';
@@ -21,15 +21,15 @@ interface OrganizationContextType {
   refreshOrganizations: () => Promise<void>;
 }
 
-const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
+const OrganizationContext = React.createContext<OrganizationContextType | undefined>(undefined);
 
-export function OrganizationProvider({ children }: { children: ReactNode }) {
+export function OrganizationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [currentOrganization, setCurrentOrganization] = React.useState<Organization | null>(null);
+  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const refreshOrganizations = useCallback(async () => {
+  const refreshOrganizations = React.useCallback(async () => {
     if (!user) {
       setOrganizations([]);
       setCurrentOrganization(null);
@@ -86,11 +86,11 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     refreshOrganizations();
   }, [refreshOrganizations]);
 
-  const handleSetCurrentOrganization = useCallback((org: Organization | null) => {
+  const handleSetCurrentOrganization = React.useCallback((org: Organization | null) => {
     setCurrentOrganization(org);
     if (org) {
       safeStorage.setItemSync('currentOrganizationId', org.id);
@@ -99,7 +99,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const contextValue = useMemo(() => ({
+  const contextValue = React.useMemo(() => ({
     currentOrganization,
     organizations,
     loading,
@@ -107,17 +107,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     refreshOrganizations,
   }), [currentOrganization, organizations, loading, handleSetCurrentOrganization, refreshOrganizations]);
 
-  return (
-    <OrganizationContext.Provider value={contextValue}>
-      {children}
-    </OrganizationContext.Provider>
+  return React.createElement(
+    OrganizationContext.Provider,
+    { value: contextValue },
+    children
   );
 }
 
 export function useOrganization() {
-  const context = useContext(OrganizationContext);
+  const context = React.useContext(OrganizationContext);
   if (context === undefined) {
     throw new Error('useOrganization must be used within an OrganizationProvider');
   }
   return context;
 }
+
+// Add alias export for backward compatibility
+export const useOrganizationData = useOrganization;
