@@ -22,12 +22,17 @@ function App() {
   console.log('App: Starting application, React available:', !!React);
   console.log('App: QueryClient created:', !!queryClient);
   
-  // Ensure all React hooks are available
+  // Ensure all React hooks are available before proceeding
   const [appReady, setAppReady] = React.useState(false);
   
   React.useEffect(() => {
-    console.log('App: useEffect running, setting app ready');
-    setAppReady(true);
+    // Small delay to ensure all React internals are properly initialized
+    const timer = setTimeout(() => {
+      console.log('App: useEffect running, setting app ready');
+      setAppReady(true);
+    }, 0);
+    
+    return () => clearTimeout(timer);
   }, []);
   
   if (!appReady) {
