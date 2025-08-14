@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/lib/auth-migration';
 import { logger } from '@/lib/secure-logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,7 @@ export default function Auth() {
   const [resetMode, setResetMode] = useState(false);
   const [iframeContext, setIframeContext] = useState<any>(null);
   
-  const { user, signIn, signUp, signInWithGoogle, resetPassword } = useSimpleAuth();
+  const { user, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();

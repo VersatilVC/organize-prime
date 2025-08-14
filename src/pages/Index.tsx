@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/lib/auth-migration';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Dashboard from './Dashboard';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ const Index = () => {
   let loading = true;
   
   try {
-    const auth = useSimpleAuth();
+    const auth = useAuth();
     user = auth.user;
     loading = auth.loading;
     console.log('Auth state:', { user: !!user, loading });
