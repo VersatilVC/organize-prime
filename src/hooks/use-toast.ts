@@ -1,3 +1,4 @@
+
 import { useState, useEffect, ReactNode } from "react"
 
 import type {
@@ -169,6 +170,16 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
+  // Safety check to ensure React hooks are available
+  if (typeof useState !== 'function') {
+    console.warn('React hooks not available in useToast, returning fallback');
+    return {
+      toasts: [],
+      toast: () => ({ id: '', dismiss: () => {}, update: () => {} }),
+      dismiss: () => {},
+    };
+  }
+
   const [state, setState] = useState<State>(memoryState)
 
   useEffect(() => {
