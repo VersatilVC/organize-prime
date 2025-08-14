@@ -28,9 +28,9 @@ function App() {
             <AppLayout>
               <AppRoutes />
             </AppLayout>
-            <Toaster />
           </OrganizationProvider>
         </AuthProvider>
+        <Toaster />
       </Router>
     </QueryClientProvider>
   );
