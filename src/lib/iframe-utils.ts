@@ -72,24 +72,13 @@ export class IframeUtils {
   }
 
   /**
-   * Navigate within iframe context or break out when appropriate
-   * For iframe preview: use internal navigation to maintain preview experience
-   * For OAuth/external: break out of iframe
+   * Navigate within iframe context
+   * This method is deprecated - use React Router through useIframeNavigation instead
+   * @deprecated Use useIframeNavigation hook with React Router
    */
   static openInParent(url: string): void {
-    try {
-      if (this.isInIframe()) {
-        // For iframe preview, prefer internal navigation to maintain preview experience
-        console.log('🖼️ Iframe navigation - staying within iframe for preview');
-        window.location.href = url;
-      } else {
-        console.log('📱 Standard navigation');
-        window.location.href = url;
-      }
-    } catch (e) {
-      console.error('❌ Navigation failed:', e);
-      window.location.href = url;
-    }
+    console.warn('⚠️ IframeUtils.openInParent is deprecated. Use useIframeNavigation hook instead.');
+    window.location.href = url;
   }
 
   /**

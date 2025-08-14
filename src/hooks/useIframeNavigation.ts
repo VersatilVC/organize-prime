@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IframeUtils } from '@/lib/iframe-utils';
 
 export interface IframeNavigationResult {
@@ -10,9 +11,11 @@ export interface IframeNavigationResult {
 
 /**
  * Hook for iframe-aware navigation
- * Automatically detects iframe context and uses appropriate navigation method
+ * Uses React Router navigate for smooth in-app navigation
+ * Falls back to iframe breaking for external scenarios
  */
 export function useIframeNavigation(): IframeNavigationResult {
+  const navigate = useNavigate();
   const iframeContext = useMemo(() => IframeUtils.getIframeContext(), []);
   
   const navigateTo = useCallback((path: string) => {
@@ -22,14 +25,23 @@ export function useIframeNavigation(): IframeNavigationResult {
       isLovablePreview: iframeContext.isLovablePreview
     });
     
-    if (iframeContext.isInIframe) {
-      console.log('Using iframe-aware navigation (openInParent)');
-      IframeUtils.openInParent(path);
+    // For OAuth or external URLs, break out of iframe
+    if (path.includes('/auth') && path.includes('provider=google')) {
+      console.log('OAuth detected - breaking out of iframe');
+      IframeUtils.breakOutOfIframe(path);
+      return;
+    }
+    
+    // For internal navigation, use React Router for smooth navigation
+    if (path.startsWith('/') && !path.startsWith('http')) {
+      console.log('Using React Router navigation for smooth transition');
+      navigate(path);
     } else {
-      console.log('Using standard navigation (window.location.href)');
+      // For external URLs or full URLs, use standard navigation
+      console.log('External URL - using standard navigation');
       window.location.href = path;
     }
-  }, [iframeContext.isInIframe]);
+  }, [navigate, iframeContext]);
 
   return {
     navigateTo,
