@@ -1,16 +1,10 @@
-// Re-export the new auth system for backward compatibility
-import { useAuth as useAuthOriginal, AuthProvider } from '../auth/AuthProvider';
-export { AuthProvider };
+// This file is deprecated - use AuthProvider from '@/auth/AuthProvider' directly
+// Keeping this file temporarily to prevent import errors during migration
 
-// Define UserRole type locally to avoid import issues
+export { useAuth, AuthProvider } from '@/auth/AuthProvider';
+
+// Legacy exports for backward compatibility
 export type UserRole = 'super_admin' | 'admin' | 'user';
 
-// Legacy hook for backward compatibility
-export function useUserData() {
-  const { user, loading } = useAuthOriginal();
-  return { user, loading };
-}
-
-export function useAuth() {
-  return useAuthOriginal();
-}
+// Re-export useAuth as useUserData for backward compatibility
+export { useAuth as useUserData } from '@/auth/AuthProvider';
