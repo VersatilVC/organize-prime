@@ -20,6 +20,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   const [user, setUser] = React.useState<User | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
+  
+  console.log('🏗️ SimpleAuthProvider rendering - URL:', window.location.href);
 
   // Basic sign in
   const signIn = async (email: string, password: string) => {
@@ -220,35 +222,44 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Auth state management
+  // Auth state management with enhanced error handling
   React.useEffect(() => {
-    console.log('🔧 Simple Auth: Setting up auth listener');
+    console.log('🔧 Simple Auth: Setting up auth listener - URL:', window.location.href);
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('🔔 Auth state change:', event, session?.user?.email);
+    try {
+      // Set up auth state listener
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          console.log('🔔 Auth state change:', event, session?.user?.email);
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      );
+
+      // Get initial session with better error handling
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('🚨 Error getting initial session:', error);
+        } else {
+          console.log('🔍 Initial session check successful:', session?.user?.email);
+        }
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-      }
-    );
+      }).catch((error) => {
+        console.error('🚨 Failed to get initial session:', error);
+        setLoading(false);
+      });
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔍 Initial session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
+      return () => {
+        console.log('🧹 Simple Auth: Cleaning up auth listener');
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error('🚨 Error setting up auth listener:', error);
       setLoading(false);
-    }).catch((error) => {
-      console.error('🚨 Error getting initial session:', error);
-      setLoading(false);
-    });
-
-    return () => {
-      console.log('🧹 Simple Auth: Cleaning up auth listener');
-      subscription.unsubscribe();
-    };
+    }
   }, []);
 
   const value = React.useMemo(() => ({

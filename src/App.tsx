@@ -19,32 +19,30 @@ const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
   return (
-    <StrictMode>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <ErrorBoundary>
-                <SimpleAuthProvider>
-                  <OrganizationProvider>
-                    <FeatureProvider slug="">
-                      <main className="min-h-screen bg-background">
-                        <Suspense fallback={<AppLoadingSpinner />}>
-                          <ErrorBoundary>
-                            <AppRoutes />
-                          </ErrorBoundary>
-                        </Suspense>
-                      </main>
-                      <Toaster />
-                    </FeatureProvider>
-                  </OrganizationProvider>
-                </SimpleAuthProvider>
-              </ErrorBoundary>
-            </ThemeProvider>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </StrictMode>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ErrorBoundary>
+              <SimpleAuthProvider>
+                <OrganizationProvider>
+                  <FeatureProvider slug="">
+                    <main className="min-h-screen bg-background">
+                      <Suspense fallback={<AppLoadingSpinner />}>
+                        <ErrorBoundary>
+                          <AppRoutes />
+                        </ErrorBoundary>
+                      </Suspense>
+                    </main>
+                    <Toaster />
+                  </FeatureProvider>
+                </OrganizationProvider>
+              </SimpleAuthProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

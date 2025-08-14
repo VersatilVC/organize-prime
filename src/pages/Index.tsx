@@ -19,7 +19,13 @@ const AuthLoadingSpinner = () => (
 );
 
 const Index = () => {
-  usePagePerformance('Home');
+  console.log('Index component rendering - Preview URL check');
+  
+  try {
+    usePagePerformance('Home');
+  } catch (error) {
+    console.warn('Performance monitoring failed:', error);
+  }
   
   // Safely try to get auth context, handle if provider not ready
   let user = null;
@@ -29,8 +35,9 @@ const Index = () => {
     const auth = useSimpleAuth();
     user = auth.user;
     loading = auth.loading;
+    console.log('Auth state:', { user: !!user, loading });
   } catch (error) {
-    console.warn('Auth context not available yet, showing loading state');
+    console.warn('Auth context not available yet, showing loading state:', error);
     return <AuthLoadingSpinner />;
   }
 
