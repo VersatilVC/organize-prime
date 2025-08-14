@@ -1,9 +1,14 @@
 // Re-export the new auth system for backward compatibility
-export { useAuth, AuthProvider } from '../auth/AuthProvider';
+import { useAuth as useAuthOriginal, AuthProvider } from '../auth/AuthProvider';
+export { AuthProvider };
 export type { UserRole } from '../auth/hooks/useRoleAccess';
 
 // Legacy hook for backward compatibility
 export function useUserData() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthOriginal();
   return { user, loading };
+}
+
+export function useAuth() {
+  return useAuthOriginal();
 }

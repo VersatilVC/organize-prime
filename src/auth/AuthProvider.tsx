@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useDomainLogic } from './hooks/useDomainLogic';
 
 interface AuthContextType {
   user: User | null;
@@ -24,7 +23,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { handlePostAuthSetup } = useDomainLogic();
+  // Simple domain logic without hooks to avoid initialization issues
+  const handlePostAuthSetup = async (user: User) => {
+    if (!user.email) return;
+
+    const domain = user.email.split('@')[1]?.toLowerCase();
+    const personalDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com', 'mail.com'];
+    
+    // For now, just log the setup - we'll implement full logic later
+    console.log('Post-auth setup for:', user.email, 'Domain:', domain, 'Is personal:', personalDomains.includes(domain));
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -51,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [handlePostAuthSetup]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     setError(null);

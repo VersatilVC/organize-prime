@@ -5,6 +5,7 @@ import { IframeUtils } from '@/lib/iframe-utils';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { AuthPage } from '@/auth/pages/AuthPage';
 import { AuthGuard } from '@/auth/AuthGuard';
+import { DomainLogicHandler } from '@/auth/components/DomainLogicHandler';
 
 export function MinimalApp() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -144,6 +145,7 @@ export function MinimalApp() {
 
   return (
     <AuthProvider>
+      <DomainLogicHandler />
       {currentPath === '/auth' ? (
         <AuthPage onAuthenticated={() => navigateTo('/dashboard')} />
       ) : (
