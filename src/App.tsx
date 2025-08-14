@@ -1,10 +1,8 @@
-import React from 'react';
+import * as React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './auth/AuthProvider';
 import { OrganizationProvider } from './contexts/OrganizationContext';
-import { AppLayout } from './components/layout/AppLayout';
 import { AppRoutes } from './AppRoutes';
 import './index.css';
 
@@ -25,12 +23,9 @@ function App() {
       <Router>
         <AuthProvider>
           <OrganizationProvider>
-            <AppLayout>
-              <AppRoutes />
-            </AppLayout>
+            <AppRoutes />
           </OrganizationProvider>
         </AuthProvider>
-        <Toaster />
       </Router>
     </QueryClientProvider>
   );
