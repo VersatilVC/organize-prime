@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,18 +18,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Safety check to ensure React hooks are available
-  if (!React || !React.useState) {
-    console.error('React hooks not available in AuthProvider');
+  // Check React availability first
+  if (typeof React === 'undefined' || !React.useState) {
+    console.error('React is not properly loaded');
     return (
       <div style={{ 
         minHeight: '100vh', 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        background: 'white' 
+        background: 'white',
+        fontFamily: 'system-ui'
       }}>
-        <div>Loading...</div>
+        <div style={{ textAlign: 'center' }}>
+          <h2>Loading...</h2>
+          <p>React is initializing...</p>
+        </div>
       </div>
     );
   }
@@ -40,21 +43,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Simple domain logic without hooks to avoid initialization issues
+  // Simple domain logic
   const handlePostAuthSetup = async (user: User) => {
     if (!user.email) return;
 
     const domain = user.email.split('@')[1]?.toLowerCase();
     const personalDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com', 'mail.com'];
     
-    // For now, just log the setup - we'll implement full logic later
     console.log('Post-auth setup for:', user.email, 'Domain:', domain, 'Is personal:', personalDomains.includes(domain));
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -62,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Handle post-auth setup for new users
         if (event === 'SIGNED_IN' && session?.user) {
           setTimeout(() => {
-            handlePostAuthSetup(session.user);
+            if (mounted) {
+              handlePostAuthSetup(session.user);
+            }
           }, 0);
         }
       }
@@ -70,12 +78,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+    }).catch((error) => {
+      console.error('Error getting session:', error);
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -135,19 +153,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearError = () => setError(null);
 
+  const contextValue: AuthContextType = {
+    user,
+    session,
+    loading,
+    error,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    signInWithGoogle,
+    clearError
+  };
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      loading,
-      error,
-      signIn,
-      signUp,
-      signOut,
-      resetPassword,
-      signInWithGoogle,
-      clearError
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
