@@ -30,7 +30,11 @@ export function AuthGuard({ children, fallbackPath = '/auth' }: AuthGuardProps) 
 
 // Inverse guard - redirect away if authenticated
 export function GuestGuard({ children, fallbackPath = '/' }: AuthGuardProps) {
+  console.log('🛡️ GUEST_GUARD: GuestGuard component called');
+  
   const { user, loading } = useSimpleAuth();
+  
+  console.log('🛡️ GUEST_GUARD: Auth state - user:', !!user, 'loading:', loading);
 
   // Show loading state while checking authentication
   if (loading) {

@@ -18,8 +18,12 @@ const queryClient = createAdvancedQueryClient();
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
-  return (
-    <ErrorBoundary>
+  console.log('🏗️ APP.TSX: App component rendering started');
+  
+  try {
+    console.log('🏗️ APP.TSX: Setting up providers and contexts');
+    return (
+      <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -44,6 +48,10 @@ function App() {
       </QueryClientProvider>
     </ErrorBoundary>
   );
+  } catch (error) {
+    console.error('❌ APP.TSX: Fatal error in App component:', error);
+    return <div>App initialization failed - check console</div>;
+  }
 }
 
 export default App;

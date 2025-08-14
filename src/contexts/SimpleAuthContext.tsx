@@ -17,11 +17,13 @@ interface SimpleAuthContextType {
 const SimpleAuthContext = React.createContext<SimpleAuthContextType | undefined>(undefined);
 
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
+  console.log('🔧 SIMPLE_AUTH_CONTEXT: SimpleAuthProvider function called');
+  
   const [user, setUser] = React.useState<User | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
   
-  console.log('🏗️ SimpleAuthProvider rendering - URL:', window.location.href);
+  console.log('🔧 SIMPLE_AUTH_CONTEXT: State initialized, starting component setup - URL:', window.location.href);
 
   // Basic sign in
   const signIn = async (email: string, password: string) => {
