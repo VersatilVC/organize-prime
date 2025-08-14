@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactSafeRouter } from './components/ReactSafeRouter';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import AppRoutes from './AppRoutes';
@@ -18,91 +18,18 @@ const queryClient = new QueryClient({
   },
 });
 
-// Main App Component with comprehensive error handling
+// Simplified App Component without complex initialization
 function App() {
-  console.log('App: Starting application, React available:', !!React);
-  console.log('App: QueryClient created:', !!queryClient);
-  
-  // Ensure all React hooks are available before proceeding
-  const [appReady, setAppReady] = React.useState(false);
-  const [initError, setInitError] = React.useState<string | null>(null);
-  
-  React.useEffect(() => {
-    try {
-      // More comprehensive validation of React availability
-      const reactFeatures = {
-        React: !!React,
-        useState: !!React.useState,
-        useEffect: !!React.useEffect,
-        createContext: !!React.createContext,
-        useContext: !!React.useContext,
-        forwardRef: !!React.forwardRef
-      };
-      
-      console.log('App: React features check:', reactFeatures);
-      
-      // Ensure all essential React features are available
-      if (!Object.values(reactFeatures).every(Boolean)) {
-        throw new Error(`React features missing: ${Object.entries(reactFeatures).filter(([, available]) => !available).map(([feature]) => feature).join(', ')}`);
-      }
-      
-      // Longer delay to ensure everything is ready
-      const timer = setTimeout(() => {
-        console.log('App: All React features validated, setting app ready');
-        setAppReady(true);
-      }, 100); // Increased delay
-      
-      return () => clearTimeout(timer);
-    } catch (error) {
-      console.error('App: React initialization failed:', error);
-      setInitError(error instanceof Error ? error.message : 'Unknown initialization error');
-    }
-  }, []);
-  
-  // Show error state if initialization failed
-  if (initError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-destructive mb-2">Application Error</h1>
-          <p className="text-muted-foreground mb-4">{initError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-primary text-primary-foreground rounded"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!appReady) {
-    console.log('App: Not ready yet, showing loading');
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p>Loading application...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  console.log('App: App ready, rendering full app');
-  
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ReactSafeRouter>
-          <ErrorBoundary>
-            <AuthProvider>
-              <OrganizationProvider>
-                <AppRoutes />
-              </OrganizationProvider>
-            </AuthProvider>
-          </ErrorBoundary>
-        </ReactSafeRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <OrganizationProvider>
+              <AppRoutes />
+            </OrganizationProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>
   );
