@@ -1,7 +1,6 @@
-import React, { Suspense } from 'react';
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
-import { PageLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 // Import components directly to avoid lazy loading issues
@@ -16,98 +15,89 @@ import SystemSettings from '@/pages/SystemSettings';
 import Feedback from '@/pages/Feedback';
 import NotFound from '@/pages/NotFound';
 
-// Loading component for route transitions
-const RouteLoading = () => (
-  <div className="flex items-center justify-center min-h-[400px]">
-    <PageLoadingSkeleton />
-  </div>
-);
-
 export function AppRoutes() {
   return (
-    <BrowserRouter>
-      <ErrorBoundary>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Index />} />
-          
-          <Route 
-            path="/auth" 
-            element={
-              <GuestGuard>
-                <AuthPage />
-              </GuestGuard>
-            } 
-          />
+    <ErrorBoundary>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<Index />} />
+        
+        <Route 
+          path="/auth" 
+          element={
+            <GuestGuard>
+              <AuthPage />
+            </GuestGuard>
+          } 
+        />
 
-          {/* Protected routes */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <AuthGuard>
-                <Dashboard />
-              </AuthGuard>
-            } 
-          />
+        {/* Protected routes */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <AuthGuard>
+              <Dashboard />
+            </AuthGuard>
+          } 
+        />
 
-          <Route 
-            path="/users" 
-            element={
-              <AuthGuard>
-                <Users />
-              </AuthGuard>
-            } 
-          />
+        <Route 
+          path="/users" 
+          element={
+            <AuthGuard>
+              <Users />
+            </AuthGuard>
+          } 
+        />
 
-          <Route 
-            path="/organizations" 
-            element={
-              <AuthGuard>
-                <Organizations />
-              </AuthGuard>
-            } 
-          />
+        <Route 
+          path="/organizations" 
+          element={
+            <AuthGuard>
+              <Organizations />
+            </AuthGuard>
+          } 
+        />
 
-          <Route 
-            path="/profile-settings" 
-            element={
-              <AuthGuard>
-                <ProfileSettings />
-              </AuthGuard>
-            } 
-          />
+        <Route 
+          path="/profile-settings" 
+          element={
+            <AuthGuard>
+              <ProfileSettings />
+            </AuthGuard>
+          } 
+        />
 
-          <Route 
-            path="/company-settings" 
-            element={
-              <AuthGuard>
-                <CompanySettings />
-              </AuthGuard>
-            } 
-          />
+        <Route 
+          path="/company-settings" 
+          element={
+            <AuthGuard>
+              <CompanySettings />
+            </AuthGuard>
+          } 
+        />
 
-          <Route 
-            path="/system-settings" 
-            element={
-              <AuthGuard>
-                <SystemSettings />
-              </AuthGuard>
-            } 
-          />
+        <Route 
+          path="/system-settings" 
+          element={
+            <AuthGuard>
+              <SystemSettings />
+            </AuthGuard>
+          } 
+        />
 
-          <Route 
-            path="/feedback" 
-            element={
-              <AuthGuard>
-                <Feedback />
-              </AuthGuard>
-            } 
-          />
+        <Route 
+          path="/feedback" 
+          element={
+            <AuthGuard>
+              <Feedback />
+            </AuthGuard>
+          } 
+        />
 
-          {/* Catch all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </ErrorBoundary>
-    </BrowserRouter>
+        {/* Catch all route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
