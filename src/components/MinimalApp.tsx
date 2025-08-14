@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IframeUtils } from '@/lib/iframe-utils';
+import { AuthProvider } from '@/auth/AuthProvider';
+import { AuthPage } from '@/auth/pages/AuthPage';
+import { AuthGuard } from '@/auth/AuthGuard';
 
 export function MinimalApp() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -140,11 +143,15 @@ export function MinimalApp() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b p-4">
-        <h1 className="text-2xl font-bold">OrganizePrime</h1>
-        <p className="text-muted-foreground">Current path: {currentPath}</p>
-      </header>
+    <AuthProvider>
+      {currentPath === '/auth' ? (
+        <AuthPage onAuthenticated={() => navigateTo('/dashboard')} />
+      ) : (
+        <div className="min-h-screen bg-background text-foreground">
+          <header className="border-b p-4">
+            <h1 className="text-2xl font-bold">OrganizePrime</h1>
+            <p className="text-muted-foreground">Current path: {currentPath}</p>
+          </header>
       
       <main className="container mx-auto p-6">
         {renderContent()}
@@ -168,8 +175,10 @@ export function MinimalApp() {
             <li>Parent Origin: {iframeContext.parentOrigin || 'N/A'}</li>
             <li>Navigation Method: <span className="font-mono">{iframeContext.isInIframe ? 'postMessage to parent' : 'window.location.href'}</span></li>
           </ul>
+          </div>
+        </main>
         </div>
-      </main>
-    </div>
+      )}
+    </AuthProvider>
   );
 }
