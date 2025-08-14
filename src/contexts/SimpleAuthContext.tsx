@@ -1,6 +1,7 @@
 import * as React from 'react'; // Fixed React imports
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/secure-logger';
 
 // Minimal auth context that works reliably
 interface SimpleAuthContextType {
@@ -17,18 +18,12 @@ interface SimpleAuthContextType {
 const SimpleAuthContext = React.createContext<SimpleAuthContextType | undefined>(undefined);
 
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('🔧 SIMPLE_AUTH_CONTEXT: SimpleAuthProvider function called');
-  
   const [user, setUser] = React.useState<User | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
-  
-  console.log('🔧 SIMPLE_AUTH_CONTEXT: State initialized, starting component setup - URL:', window.location.href);
 
   // Basic sign in
   const signIn = async (email: string, password: string) => {
-    console.log('🔐 Simple Auth: Sign in attempt for:', email);
-    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -36,14 +31,17 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       });
       
       if (error) {
-        console.error('🚨 Sign in error:', error);
+        logger.error('Sign in failed', error, { component: 'SimpleAuth', action: 'signIn' });
       } else if (data.user) {
-        console.log('✅ Sign in successful');
+        logger.security({
+          type: 'auth_attempt',
+          severity: 'low'
+        }, 'Sign in successful');
       }
       
       return { error };
     } catch (err) {
-      console.error('🚨 Sign in unexpected error:', err);
+      logger.error('Sign in unexpected error', err as Error, { component: 'SimpleAuth', action: 'signIn' });
       const error = err as AuthError;
       return { error };
     }
@@ -51,8 +49,6 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   // Basic sign up
   const signUp = async (email: string, password: string) => {
-    console.log('📝 Simple Auth: Sign up attempt for:', email);
-    
     try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -63,14 +59,17 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       });
       
       if (error) {
-        console.error('🚨 Sign up error:', error);
+        logger.error('Sign up failed', error, { component: 'SimpleAuth', action: 'signUp' });
       } else {
-        console.log('✅ Sign up successful');
+        logger.security({
+          type: 'auth_attempt',
+          severity: 'low'
+        }, 'Sign up successful');
       }
       
       return { error };
     } catch (err) {
-      console.error('🚨 Sign up unexpected error:', err);
+      logger.error('Sign up unexpected error', err as Error, { component: 'SimpleAuth', action: 'signUp' });
       const error = err as AuthError;
       return { error };
     }
@@ -78,13 +77,15 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   // Basic sign out
   const signOut = async () => {
-    console.log('🚪 Simple Auth: Sign out');
-    
     try {
       const { error } = await supabase.auth.signOut();
       
       if (!error) {
-        console.log('✅ Sign out successful');
+        logger.security({
+          type: 'auth_attempt',
+          severity: 'low'
+        }, 'Sign out successful');
+        
         // Clear OAuth state
         const oauthKeys = [
           'supabase.auth.token',
@@ -100,21 +101,19 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
           try {
             localStorage.removeItem(key);
           } catch (e) {
-            console.warn('Could not clear localStorage key:', key);
+            logger.warn('Could not clear localStorage key', { component: 'SimpleAuth', action: 'signOut' });
           }
         });
       } else {
-        console.error('🚨 Sign out error:', error);
+        logger.error('Sign out failed', error, { component: 'SimpleAuth', action: 'signOut' });
       }
     } catch (error) {
-      console.error('🚨 Sign out unexpected error:', error);
+      logger.error('Sign out unexpected error', error as Error, { component: 'SimpleAuth', action: 'signOut' });
     }
   };
 
   // Basic password reset
   const resetPassword = async (email: string) => {
-    console.log('🔄 Simple Auth: Password reset for:', email);
-    
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
@@ -123,9 +122,18 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         }
       );
       
+      if (error) {
+        logger.error('Password reset failed', error, { component: 'SimpleAuth', action: 'resetPassword' });
+      } else {
+        logger.security({
+          type: 'auth_attempt',
+          severity: 'low'
+        }, 'Password reset initiated');
+      }
+      
       return { error };
     } catch (err) {
-      console.error('🚨 Password reset error:', err);
+      logger.error('Password reset error', err as Error, { component: 'SimpleAuth', action: 'resetPassword' });
       const error = err as AuthError;
       return { error };
     }
@@ -133,40 +141,33 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   // Iframe-aware Google sign in with hybrid OAuth approach
   const signInWithGoogle = async () => {
-    console.log('🔍 Simple Auth: Google sign in attempt');
-    
-    // Import iframe utilities for context detection
-    const { IframeUtils } = await import('@/lib/iframe-utils');
-    
-    // Detect iframe context and log for debugging
-    const iframeContext = IframeUtils.getIframeContext();
-    IframeUtils.logIframeContext();
-    
-    // Clear previous error state
-    localStorage.removeItem('oauth_error');
-    localStorage.removeItem('auth_failure_count');
-    
     try {
+      // Import iframe utilities for context detection
+      const { IframeUtils } = await import('@/lib/iframe-utils');
+      
+      // Detect iframe context
+      const iframeContext = IframeUtils.getIframeContext();
+      
+      // Clear previous error state
+      localStorage.removeItem('oauth_error');
+      localStorage.removeItem('auth_failure_count');
+      
       // Determine redirect URL based on context
       let redirectUrl: string;
       let shouldUseHybridApproach = false;
       
       if (iframeContext.isInIframe) {
-        console.log('🖼️ Iframe detected - using hybrid OAuth approach');
         shouldUseHybridApproach = true;
         
         // Try to use parent window origin for better compatibility
         if (iframeContext.parentOrigin) {
           redirectUrl = `${iframeContext.parentOrigin}/auth/callback`;
-          console.log('🔗 Using parent origin for redirect:', redirectUrl);
         } else {
           redirectUrl = `${window.location.origin}/auth/callback`;
-          console.log('🔗 Using current origin for redirect:', redirectUrl);
         }
       } else {
         // Standard OAuth flow for standalone context
         redirectUrl = `${window.location.origin}/auth/callback`;
-        console.log('🔗 Standard OAuth redirect:', redirectUrl);
       }
 
       // Add iframe context to query params for server-side handling
@@ -195,15 +196,17 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       });
       
       if (error) {
-        console.error('🚨 Google sign in error:', error);
+        logger.error('Google OAuth failed', error, { 
+          component: 'SimpleAuth', 
+          action: 'signInWithGoogle',
+          feature: 'oauth'
+        });
         localStorage.setItem('oauth_error', error.message);
-        
-        // For iframe context, suggest alternative approaches
-        if (shouldUseHybridApproach) {
-          console.log('💡 Iframe OAuth failed - consider "Open in New Tab" approach');
-        }
       } else {
-        console.log('✅ Google OAuth initiated successfully');
+        logger.security({
+          type: 'auth_attempt',
+          severity: 'low'
+        }, 'Google OAuth initiated');
         
         // For iframe context, notify about the OAuth attempt
         if (shouldUseHybridApproach) {
@@ -217,7 +220,10 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       
       return { error };
     } catch (err) {
-      console.error('🚨 Google sign in unexpected error:', err);
+      logger.error('Google OAuth unexpected error', err as Error, {
+        component: 'SimpleAuth',
+        action: 'signInWithGoogle'
+      });
       const error = err as AuthError;
       localStorage.setItem('oauth_error', error.message);
       return { error };
@@ -226,13 +232,10 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   // Auth state management with enhanced error handling
   React.useEffect(() => {
-    console.log('🔧 Simple Auth: Setting up auth listener - URL:', window.location.href);
-    
     try {
       // Set up auth state listener
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         (event, session) => {
-          console.log('🔔 Auth state change:', event, session?.user?.email);
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
@@ -242,24 +245,21 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       // Get initial session with better error handling
       supabase.auth.getSession().then(({ data: { session }, error }) => {
         if (error) {
-          console.error('🚨 Error getting initial session:', error);
-        } else {
-          console.log('🔍 Initial session check successful:', session?.user?.email);
+          logger.error('Error getting initial session', error, { component: 'SimpleAuth' });
         }
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
       }).catch((error) => {
-        console.error('🚨 Failed to get initial session:', error);
+        logger.error('Failed to get initial session', error as Error, { component: 'SimpleAuth' });
         setLoading(false);
       });
 
       return () => {
-        console.log('🧹 Simple Auth: Cleaning up auth listener');
         subscription.unsubscribe();
       };
     } catch (error) {
-      console.error('🚨 Error setting up auth listener:', error);
+      logger.error('Error setting up auth listener', error as Error, { component: 'SimpleAuth' });
       setLoading(false);
     }
   }, []);

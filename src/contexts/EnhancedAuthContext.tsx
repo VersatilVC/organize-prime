@@ -2,6 +2,7 @@ import * as React from 'react'; // Fixed React imports
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/secure-logger';
 import { 
   checkRateLimit, 
   logSecurityEvent, 
@@ -69,7 +70,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           return { error: new AuthError("Rate limited") };
         }
       } catch (rateLimitError) {
-        console.warn('Rate limiting failed for sign in, proceeding:', rateLimitError);
+        // Rate limiting failed - continue with authentication
         // Continue with authentication even if rate limiting fails
       }
 
@@ -103,7 +104,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       return { error };
     } catch (err) {
       const error = err as AuthError;
-      console.error('Sign in error:', error);
+      logger.error('Sign in error', error, { component: 'EnhancedAuth' });
       await logSecurityEvent('sign_in_error', 'authentication', undefined, {
         error: error.message,
       });
@@ -159,7 +160,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           return { error: new AuthError("Rate limited") };
         }
       } catch (rateLimitError) {
-        console.warn('Rate limiting failed for sign up, proceeding:', rateLimitError);
+        // Rate limiting failed - continue with authentication
         // Continue with authentication even if rate limiting fails
       }
 
@@ -198,7 +199,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       return { error };
     } catch (err) {
       const error = err as AuthError;
-      console.error('Sign up error:', error);
+      logger.error('Sign up error', error, { component: 'EnhancedAuth' });
       return { error };
     }
   }, [toast]);
@@ -227,7 +228,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         });
       }
     } catch (error) {
-      console.error('Sign out error:', error);
+      logger.error('Sign out error', error as Error, { component: 'EnhancedAuth' });
       toast({
         title: "Sign Out Error",
         description: "An error occurred during sign out",
@@ -271,7 +272,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           return { error: new AuthError("Rate limited") };
         }
       } catch (rateLimitError) {
-        console.warn('Rate limiting failed for password reset, proceeding:', rateLimitError);
+        // Rate limiting failed - continue with password reset
         // Continue with password reset even if rate limiting fails
       }
 
@@ -301,7 +302,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       return { error };
     } catch (err) {
       const error = err as AuthError;
-      console.error('Password reset error:', error);
+      logger.error('Password reset error', error, { component: 'EnhancedAuth' });
       return { error };
     }
   }, [toast]);
@@ -309,20 +310,9 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   // Simplified Google sign in without blocking rate limiting
   const signInWithGoogle = React.useCallback(async () => {
     try {
-      console.log('🚀 Starting Google OAuth sign-in process');
-      
       // Domain analysis and validation
       const currentDomain = window.location.origin;
-      const isLovableDomain = currentDomain.includes('lovableproject.com');
-      const isLocalhost = currentDomain.includes('localhost');
       const callbackUrl = `${currentDomain}/auth/callback`;
-      
-      console.log('🌐 Domain Analysis:', {
-        currentDomain,
-        isLovableDomain,
-        isLocalhost,
-        callbackUrl
-      });
       
       // Skip rate limiting for now to avoid blocking authentication
       // Rate limiting with domain-specific key (non-blocking)
@@ -330,12 +320,10 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       try {
         await checkRateLimit(rateLimitKey, 'oauth_sign_in', 10, 15);
       } catch (rateLimitError) {
-        console.warn('Rate limiting check failed, proceeding with OAuth:', rateLimitError);
+        // Rate limiting check failed - proceed with OAuth
         // Continue with authentication even if rate limiting fails
       }
 
-      console.log('🔗 Initiating OAuth with Supabase...');
-      
       // Enhanced OAuth call with domain validation
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -348,10 +336,8 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         },
       });
       
-      console.log('📊 OAuth Response:', { data, error });
-      
       if (error) {
-        console.error('🚨 Google OAuth error:', error);
+        logger.error('Google OAuth error', error, { component: 'EnhancedAuth', action: 'signInWithGoogle' });
         
         // Enhanced error messaging with domain-specific guidance
         let userMessage = error.message;
@@ -379,9 +365,6 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           timestamp: new Date().toISOString(),
         });
       } else {
-        console.log('✅ Google OAuth initiated successfully');
-        console.log('🔄 User should be redirected to Google...');
-        
         await logSecurityEvent('google_sign_in_initiated', 'authentication', undefined, {
           domain: currentDomain,
           redirectUrl: callbackUrl,
@@ -397,7 +380,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       return { error };
     } catch (err) {
       const error = err as AuthError;
-      console.error('🚨 Google sign in unexpected error:', error);
+      logger.error('Google sign in unexpected error', error, { component: 'EnhancedAuth', action: 'signInWithGoogle' });
       
       const currentDomain = window.location.origin;
       let errorMessage = error.message;
@@ -442,7 +425,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         .maybeSingle();
 
       if (selectError) {
-        console.error('Error checking profile:', selectError);
+        logger.error('Error checking profile', selectError, { component: 'EnhancedAuth', action: 'ensureProfile' });
         await logSecurityEvent('profile_check_failed', 'user', user.id, {
           error: selectError.message,
         });
@@ -472,7 +455,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           });
 
           if (retryError) {
-            console.error('Error creating profile with unique username:', retryError);
+            logger.error('Error creating profile with unique username', retryError, { component: 'EnhancedAuth', action: 'ensureProfile' });
             await logSecurityEvent('profile_creation_failed', 'user', user.id, {
               error: retryError.message,
             });
@@ -482,7 +465,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
             });
           }
         } else if (error) {
-          console.error('Error creating profile:', error);
+          logger.error('Error creating profile', error, { component: 'EnhancedAuth', action: 'ensureProfile' });
           await logSecurityEvent('profile_creation_failed', 'user', user.id, {
             error: error.message,
           });
@@ -498,13 +481,13 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           .eq('id', user.id);
 
         if (updateError) {
-          console.error('Error marking first login completed:', updateError);
+          logger.error('Error marking first login completed', updateError, { component: 'EnhancedAuth', action: 'ensureProfile' });
         } else {
           await logSecurityEvent('first_login_completed', 'user', user.id);
         }
       }
     } catch (error) {
-      console.error('Error in ensureProfile:', error);
+      logger.error('Error in ensureProfile', error as Error, { component: 'EnhancedAuth', action: 'ensureProfile' });
       await logSecurityEvent('profile_error', 'user', user.id, {
         error: (error as Error).message,
       });
@@ -519,7 +502,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('Error getting initial session:', error);
+        logger.error('Error getting initial session', error, { component: 'EnhancedAuth' });
         await logSecurityEvent('session_error', 'authentication', undefined, {
           error: error.message,
         });
@@ -534,7 +517,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         if (session?.user) {
           validateSessionSecurity().then(isValid => {
             if (!isValid) {
-              console.warn('Session security validation failed');
+              // Session security validation failed - handled securely
               signOut();
             }
           });

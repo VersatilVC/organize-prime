@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { logger } from '@/lib/secure-logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +42,6 @@ export default function Auth() {
     
     if (oauthParam === 'google' && contextParam === 'newtab') {
       // This is a new tab OAuth flow - auto-initiate Google OAuth
-      console.log('🆕 New tab OAuth flow detected');
       handleGoogleSignInDirect();
     }
   }, [searchParams]);
@@ -59,9 +59,9 @@ export default function Auth() {
       } else {
         await signIn(email, password);
       }
-    } catch (error) {
-      console.error('Auth error:', error);
-    } finally {
+      } catch (error) {
+        logger.error('Auth error', error as Error, { component: 'Auth' });
+      } finally {
       setLoading(false);
     }
   };
@@ -74,7 +74,7 @@ export default function Auth() {
       const result = await signInWithGoogle();
       
       if (result.error) {
-        console.error('🚨 Direct OAuth error:', result.error);
+        logger.error('Direct OAuth error', result.error, { component: 'Auth', action: 'handleGoogleSignInDirect' });
         
         // Send error back to parent window
         if (window.opener) {
@@ -85,8 +85,6 @@ export default function Auth() {
           }, '*');
         }
       } else {
-        console.log('✅ Direct OAuth successful');
-        
         // Send success back to parent window
         if (window.opener) {
           window.opener.postMessage({
@@ -97,7 +95,7 @@ export default function Auth() {
       }
       
     } catch (error) {
-      console.error('🚨 Direct OAuth catch:', error);
+      logger.error('Direct OAuth catch', error as Error, { component: 'Auth', action: 'handleGoogleSignInDirect' });
       
       if (window.opener) {
         window.opener.postMessage({
@@ -116,18 +114,11 @@ export default function Auth() {
     setLoading(true);
     
     try {
-      console.log('🎯 Auth Page: Starting Google sign-in');
-      console.log('🖼️ Auth Page: Iframe context:', iframeContext);
-      
       // Import diagnostics for enhanced debugging
       const { AuthDiagnostics } = await import('@/lib/auth-diagnostics');
       
-      // Log current OAuth state
-      AuthDiagnostics.logOAuthState();
-      
       // If in iframe context, check if we should use new tab approach
       if (iframeContext?.isInIframe) {
-        console.log('🖼️ Iframe detected - offering new tab OAuth');
         
         toast({
           title: "OAuth in Preview Mode",
@@ -153,10 +144,8 @@ export default function Auth() {
       // Standard OAuth flow for non-iframe context
       const result = await signInWithGoogle();
       
-      console.log('🎯 Auth Page: Google sign-in result:', result);
-      
       if (result.error) {
-        console.error('🚨 Auth Page: Google sign-in error:', result.error);
+        logger.error('Google sign-in error', result.error, { component: 'Auth', action: 'handleGoogleSignIn' });
         setLoading(false);
         
         // Enhanced error handling with specific guidance
@@ -182,12 +171,9 @@ ${AuthDiagnostics.getAuthGuideMessage()}`;
           variant: "destructive",
         });
       } else {
-        console.log('🎯 Auth Page: OAuth initiated successfully');
-        
         // Monitor for redirect with enhanced timeout
         const redirectTimeout = setTimeout(() => {
           if (window.location.pathname === '/auth') {
-            console.warn('⚠️ Auth Page: OAuth redirect timeout');
             setLoading(false);
             
             toast({
@@ -203,7 +189,7 @@ ${AuthDiagnostics.getAuthGuideMessage()}`;
       }
       
     } catch (error) {
-      console.error('🚨 Auth Page: Google sign-in catch block:', error);
+      logger.error('Google sign-in catch block', error as Error, { component: 'Auth', action: 'handleGoogleSignIn' });
       setLoading(false);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

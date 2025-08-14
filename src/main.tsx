@@ -2,25 +2,21 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import '@/lib/remove-debug-statements';
 
-console.log('🚀 MAIN.TSX: Starting application initialization - URL:', window.location.href);
-
-// Simple, clean entry point without complex imports that could cause issues
+// Production-safe entry point
 try {
-  console.log('🚀 MAIN.TSX: Creating React root');
   const rootElement = document.getElementById('root');
   if (!rootElement) {
-    console.error('❌ MAIN.TSX: Root element not found!');
     throw new Error('Root element not found');
   }
   
-  console.log('🚀 MAIN.TSX: Root element found, rendering App component');
   createRoot(rootElement).render(
     <StrictMode>
       <App />
     </StrictMode>,
   );
-  console.log('✅ MAIN.TSX: React render initiated successfully');
 } catch (error) {
-  console.error('❌ MAIN.TSX: Fatal error during initialization:', error);
+  // Only log essential errors in production
+  console.error('Application initialization failed:', error);
 }
