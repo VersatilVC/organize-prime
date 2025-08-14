@@ -25,6 +25,18 @@ export interface SecurityEvent {
 class SecureLogger {
   private isDevelopment = import.meta.env.DEV;
   private isProduction = import.meta.env.PROD;
+  public originalConsole: Console;
+
+  constructor() {
+    // Store original console methods before any overrides
+    this.originalConsole = {
+      log: console.log.bind(console),
+      info: console.info.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      debug: console.debug?.bind(console) || (() => {})
+    } as Console;
+  }
 
   /**
    * Development-only debug logging
@@ -33,7 +45,7 @@ class SecureLogger {
   debug(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
       const sanitizedContext = this.sanitizeContext(context);
-      console.log(`[DEBUG] ${message}`, sanitizedContext);
+      this.originalConsole.log(`[DEBUG] ${message}`, sanitizedContext);
     }
   }
 
@@ -43,7 +55,7 @@ class SecureLogger {
   info(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
       const sanitizedContext = this.sanitizeContext(context);
-      console.info(`[INFO] ${message}`, sanitizedContext);
+      this.originalConsole.info(`[INFO] ${message}`, sanitizedContext);
     }
   }
 
@@ -52,7 +64,7 @@ class SecureLogger {
    */
   warn(message: string, context?: LogContext): void {
     const sanitizedContext = this.sanitizeContext(context);
-    console.warn(`[WARN] ${message}`, sanitizedContext);
+    this.originalConsole.warn(`[WARN] ${message}`, sanitizedContext);
   }
 
   /**
@@ -63,11 +75,11 @@ class SecureLogger {
     const sanitizedContext = this.sanitizeContext(context);
     
     if (this.isDevelopment) {
-      console.error(`[ERROR] ${message}`, error, sanitizedContext);
+      this.originalConsole.error(`[ERROR] ${message}`, error, sanitizedContext);
     } else {
       // Production: Log error message but not stack trace or sensitive data
       const errorInfo = error ? { name: error.name, message: this.sanitizeErrorMessage(error.message) } : undefined;
-      console.error(`[ERROR] ${message}`, errorInfo, sanitizedContext);
+      this.originalConsole.error(`[ERROR] ${message}`, errorInfo, sanitizedContext);
     }
   }
 
@@ -85,7 +97,7 @@ class SecureLogger {
     };
 
     // Always log security events
-    console.warn(`[SECURITY] ${event.type} - ${event.severity}`, sanitizedEvent);
+    this.originalConsole.warn(`[SECURITY] ${event.type} - ${event.severity}`, sanitizedEvent);
   }
 
   /**
@@ -94,7 +106,7 @@ class SecureLogger {
   performance(operation: string, duration: number, context?: LogContext): void {
     if (this.isDevelopment) {
       const sanitizedContext = this.sanitizeContext(context);
-      console.info(`[PERF] ${operation}: ${duration}ms`, sanitizedContext);
+      this.originalConsole.info(`[PERF] ${operation}: ${duration}ms`, sanitizedContext);
     }
   }
 
@@ -181,23 +193,26 @@ export const secureConsole = {
 // Development helper to track console usage
 if (import.meta.env.DEV) {
   // Override console in development to track usage
-  const originalConsole = { ...console };
+  const originalConsole = { 
+    log: console.log.bind(console),
+    info: console.info.bind(console), 
+    warn: console.warn.bind(console),
+    error: console.error.bind(console)
+  };
   
   console.log = (...args) => {
-    logger.warn('Direct console.log usage detected - use logger.debug() instead');
+    // Use logger's original console to avoid recursion
+    logger.originalConsole.warn('Direct console.log usage detected - use logger.debug() instead');
     originalConsole.log(...args);
   };
   
   console.error = (...args) => {
-    logger.warn('Direct console.error usage detected - use logger.error() instead');
+    logger.originalConsole.warn('Direct console.error usage detected - use logger.error() instead');
     originalConsole.error(...args);
   };
   
   console.warn = (...args) => {
-    logger.warn('Direct console.warn usage detected - use logger.warn() instead');
+    logger.originalConsole.warn('Direct console.warn usage detected - use logger.warn() instead');
     originalConsole.warn(...args);
   };
-  
-  // Restore original console for logger internal use
-  (logger as any).originalConsole = originalConsole;
 }
