@@ -13,73 +13,26 @@ interface Organization {
   updated_at: string;
 }
 
-// Split organization context into methods and data for better performance
-interface OrganizationMethodsContextType {
+interface OrganizationContextType {
+  currentOrganization: Organization | null;
+  organizations: Organization[];
+  loading: boolean;
   setCurrentOrganization: (org: Organization | null) => void;
   refreshOrganizations: () => Promise<void>;
 }
 
-interface OrganizationDataContextType {
-  currentOrganization: Organization | null;
-  organizations: Organization[];
-  loading: boolean;
-}
-
-// Legacy interface for backward compatibility
-interface OrganizationContextType extends OrganizationMethodsContextType, OrganizationDataContextType {}
-
-const OrganizationMethodsContext = createContext<OrganizationMethodsContextType | undefined>(undefined);
-const OrganizationDataContext = createContext<OrganizationDataContextType | undefined>(undefined);
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
 
-// Organization cache to prevent unnecessary refetching
-let organizationCache: { data: Organization[]; timestamp: number } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export function OrganizationProvider({ children }: { children: ReactNode }) {
-  console.log('OrganizationProvider starting');
-  
-  // Check React availability first
-  if (typeof React === 'undefined' || !React.useState) {
-    console.error('React is not properly loaded in OrganizationProvider');
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: 'white',
-        fontFamily: 'system-ui'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <h2>Loading...</h2>
-          <p>Organization context is initializing...</p>
-        </div>
-      </div>
-    );
-  }
-
   const { user } = useAuth();
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Optimized refresh with caching
   const refreshOrganizations = useCallback(async () => {
-    console.log('🔍 OrganizationContext: refreshOrganizations called', { user: !!user });
     if (!user) {
-      console.log('🔍 OrganizationContext: No user, clearing organizations');
       setOrganizations([]);
       setCurrentOrganization(null);
-      setLoading(false);
-      organizationCache = null;
-      return;
-    }
-
-    // Check cache first
-    const now = Date.now();
-    if (organizationCache && (now - organizationCache.timestamp) < CACHE_DURATION) {
-      setOrganizations(organizationCache.data);
       setLoading(false);
       return;
     }
@@ -110,19 +63,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       }
 
       const userOrgs = memberships?.map(m => m.organizations).filter(Boolean) as Organization[] || [];
-      
-      // Update cache
-      organizationCache = {
-        data: userOrgs,
-        timestamp: now
-      };
-      
       setOrganizations(userOrgs);
-
-      console.log('🔍 OrganizationContext: Organizations fetched:', {
-        userOrgsCount: userOrgs.length,
-        userOrgs: userOrgs.map(o => ({ id: o.id, name: o.name }))
-      });
 
       // Set current organization from localStorage or first available
       const savedOrgId = safeStorage.getItemSync('currentOrganizationId');
@@ -133,11 +74,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       } else {
         currentOrg = userOrgs[0] || null;
       }
-
-      console.log('🔍 OrganizationContext: Setting current organization:', {
-        savedOrgId,
-        currentOrg: currentOrg ? { id: currentOrg.id, name: currentOrg.name } : null
-      });
 
       setCurrentOrganization(currentOrg);
       if (currentOrg) {
@@ -151,15 +87,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    let mounted = true;
-    
-    if (mounted) {
-      refreshOrganizations();
-    }
-    
-    return () => {
-      mounted = false;
-    };
+    refreshOrganizations();
   }, [refreshOrganizations]);
 
   const handleSetCurrentOrganization = useCallback((org: Organization | null) => {
@@ -171,53 +99,21 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Memoize context values to prevent unnecessary re-renders
-  const organizationMethods = useMemo(() => ({
-    setCurrentOrganization: handleSetCurrentOrganization,
-    refreshOrganizations,
-  }), [handleSetCurrentOrganization, refreshOrganizations]);
-
-  const organizationData = useMemo(() => ({
+  const contextValue = useMemo(() => ({
     currentOrganization,
     organizations,
     loading,
-  }), [currentOrganization, organizations, loading]);
-
-  // Legacy combined value for backward compatibility
-  const legacyValue = useMemo(() => ({
-    ...organizationData,
-    ...organizationMethods,
-  }), [organizationData, organizationMethods]);
+    setCurrentOrganization: handleSetCurrentOrganization,
+    refreshOrganizations,
+  }), [currentOrganization, organizations, loading, handleSetCurrentOrganization, refreshOrganizations]);
 
   return (
-    <OrganizationMethodsContext.Provider value={organizationMethods}>
-      <OrganizationDataContext.Provider value={organizationData}>
-        <OrganizationContext.Provider value={legacyValue}>
-          {children}
-        </OrganizationContext.Provider>
-      </OrganizationDataContext.Provider>
-    </OrganizationMethodsContext.Provider>
+    <OrganizationContext.Provider value={contextValue}>
+      {children}
+    </OrganizationContext.Provider>
   );
 }
 
-// Optimized hooks for selective context subscriptions
-export function useOrganizationMethods() {
-  const context = useContext(OrganizationMethodsContext);
-  if (context === undefined) {
-    throw new Error('useOrganizationMethods must be used within an OrganizationProvider');
-  }
-  return context;
-}
-
-export function useOrganizationData() {
-  const context = useContext(OrganizationDataContext);
-  if (context === undefined) {
-    throw new Error('useOrganizationData must be used within an OrganizationProvider');
-  }
-  return context;
-}
-
-// Legacy hook for backward compatibility
 export function useOrganization() {
   const context = useContext(OrganizationContext);
   if (context === undefined) {
