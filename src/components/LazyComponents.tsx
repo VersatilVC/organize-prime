@@ -47,30 +47,11 @@ export const ChartWidget = lazy(() =>
   }))
 );
 
-// Specific chart components
-export const DashboardLineChart = lazy(() => 
-  import('./ChartWidget').then(module => ({ 
-    default: module.DashboardLineChart || (() => <div>Chart not found</div>)
-  }))
-);
-
-export const DashboardBarChart = lazy(() => 
-  import('./ChartWidget').then(module => ({ 
-    default: module.DashboardBarChart || (() => <div>Chart not found</div>)
-  }))
-);
-
-export const DashboardAreaChart = lazy(() => 
-  import('./ChartWidget').then(module => ({ 
-    default: module.DashboardAreaChart || (() => <div>Chart not found</div>)
-  }))
-);
-
-export const DashboardPieChart = lazy(() => 
-  import('./ChartWidget').then(module => ({ 
-    default: module.DashboardPieChart || (() => <div>Chart not found</div>)
-  }))
-);
+// Simplified chart components
+export const DashboardLineChart = lazy(() => import('./ChartWidget').then(m => ({ default: m.DashboardLineChart })));
+export const DashboardBarChart = lazy(() => import('./ChartWidget').then(m => ({ default: m.DashboardBarChart })));
+export const DashboardAreaChart = lazy(() => import('./ChartWidget').then(m => ({ default: m.DashboardAreaChart })));
+export const DashboardPieChart = lazy(() => import('./ChartWidget').then(m => ({ default: m.DashboardPieChart })));
 
 // File upload components
 export const FileUpload = lazy(() => 

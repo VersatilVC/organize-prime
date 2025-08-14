@@ -26,51 +26,13 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Core vendor chunks - most critical
           if (id.includes('node_modules')) {
+            // Core React bundle
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
             }
-            if (id.includes('react-router-dom')) {
-              return 'router-vendor';
-            }
-            if (id.includes('@tanstack/react-query')) {
-              return 'query-vendor';
-            }
-            if (id.includes('@supabase/supabase-js')) {
-              return 'supabase-vendor';
-            }
-            
-            // UI vendor chunks
-            if (id.includes('@radix-ui/') || id.includes('lucide-react')) {
-              return 'ui-vendor';
-            }
-            
-            // Feature-specific chunks
-            if (id.includes('react-hook-form') || id.includes('@hookform/resolvers') || id.includes('zod')) {
-              return 'forms';
-            }
-            if (id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge') || id.includes('lz-string')) {
-              return 'utils';
-            }
-            // Move dnd to ui-vendor to ensure React context access
-            if (id.includes('@hello-pangea/dnd')) {
-              return 'ui-vendor';
-            }
-          }
-          
-          // App-specific chunks
-          if (id.includes('src/components/admin/') || id.includes('src/pages/admin/')) {
-            return 'admin-features';
-          }
-          if (id.includes('src/apps/knowledge-base/') || id.includes('src/features/knowledge-base/')) {
-            return 'kb-app';
-          }
-          if (id.includes('src/components/settings/') || 
-              id.includes('src/pages/CompanySettings') || 
-              id.includes('src/pages/SystemSettings') || 
-              id.includes('src/pages/ProfileSettings')) {
-            return 'settings';
+            // Everything else in one vendor chunk to avoid circular deps
+            return 'vendor';
           }
         },
       },

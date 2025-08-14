@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/hooks/use-toast';
-import { usePagePerformance } from '@/lib/performance';
+// import { usePagePerformance } from '@/lib/performance';
 import { debounce } from '@/lib/utils';
 
 // Memoized UserRow component to prevent unnecessary re-renders
@@ -331,8 +331,8 @@ export default function Users() {
   const [usersPageSize, setUsersPageSize] = useState(50);
   const [invitationsPageSize, setInvitationsPageSize] = useState(50);
   
-  // Performance tracking
-  usePagePerformance('Users');
+  // Performance tracking - temporarily disabled
+  // usePagePerformance('Users');
   
   // Debounce search input
   const applyDebouncedSearch = useMemo(() => debounce((v: string) => setDebouncedSearch(v), 300), []);

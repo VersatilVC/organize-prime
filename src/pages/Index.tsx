@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
-import { usePagePerformance } from '@/lib/performance';
+// import { usePagePerformance } from '@/lib/performance';
 
 // Loading component for auth check
 const AuthLoadingSpinner = () => (
@@ -21,11 +21,12 @@ const AuthLoadingSpinner = () => (
 const Index = () => {
   console.log('Index component rendering - Preview URL check');
   
-  try {
-    usePagePerformance('Home');
-  } catch (error) {
-    console.warn('Performance monitoring failed:', error);
-  }
+  // Performance monitoring temporarily disabled
+  // try {
+  //   usePagePerformance('Home');
+  // } catch (error) {
+  //   console.warn('Performance monitoring failed:', error);
+  // }
   
   // Safely try to get auth context, handle if provider not ready
   let user = null;
