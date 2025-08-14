@@ -37,6 +37,7 @@ let organizationCache: { data: Organization[]; timestamp: number } | null = null
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
+  console.log('OrganizationProvider starting');
   const { user } = useSimpleAuth();
   const [currentOrganization, setCurrentOrganization] = React.useState<Organization | null>(null);
   const [organizations, setOrganizations] = React.useState<Organization[]>([]);

@@ -51,6 +51,7 @@ const StatCard = React.memo(({
 StatCard.displayName = 'StatCard';
 
 export default function SimpleDashboard() {
+  console.log('SimpleDashboard component rendering');
   const { user } = useSimpleAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();

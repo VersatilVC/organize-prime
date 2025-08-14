@@ -55,6 +55,7 @@ function FeatureDebugComponent() {
 }
 
 export default function AppRoutes() {
+  console.log('AppRoutes component rendering');
   
   return (
     <Routes>

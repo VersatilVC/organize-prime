@@ -18,9 +18,10 @@ const queryClient = createAdvancedQueryClient();
 const AppLoadingSpinner = () => <ProductionLoadingFallback />;
 
 function App() {
-  // Remove all debug logging for performance
+  console.log('App component starting to render');
   
   try {
+    console.log('App component entering try block');
     return (
       <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
