@@ -6,7 +6,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Icons } from '@/components/ui/icons';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '../AuthProvider';
-import { useDomainLogic } from '../hooks/useDomainLogic';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -19,7 +18,6 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [loading, setLoading] = useState(false);
   
   const { signUp, signInWithGoogle, error, clearError } = useAuth();
-  const { isPersonalDomain } = useDomainLogic();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +42,12 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const isPersonalDomain = (email: string): boolean => {
+    const personalDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com', 'mail.com'];
+    const domain = email.split('@')[1]?.toLowerCase();
+    return personalDomains.includes(domain);
   };
 
   const getDomainMessage = () => {

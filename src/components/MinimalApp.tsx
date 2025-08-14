@@ -4,8 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IframeUtils } from '@/lib/iframe-utils';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { AuthPage } from '@/auth/pages/AuthPage';
-import { AuthGuard } from '@/auth/AuthGuard';
-import { DomainLogicHandler } from '@/auth/components/DomainLogicHandler';
 
 export function MinimalApp() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -51,9 +49,9 @@ export function MinimalApp() {
               <CardTitle>Authentication</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>This would be the authentication page.</p>
+              <p>Authentication page - basic form will be here.</p>
               <Button onClick={() => navigateTo('/dashboard')} className="mt-4">
-                Continue to Dashboard
+                Continue to Dashboard (Test)
               </Button>
             </CardContent>
           </Card>
@@ -145,7 +143,6 @@ export function MinimalApp() {
 
   return (
     <AuthProvider>
-      <DomainLogicHandler />
       {currentPath === '/auth' ? (
         <AuthPage onAuthenticated={() => navigateTo('/dashboard')} />
       ) : (

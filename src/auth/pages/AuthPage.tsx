@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
 import { ForgotPasswordForm } from '../components/ForgotPasswordForm';
-import { OrganizationSetupModal } from '../components/OrganizationSetupModal';
 import { GuestGuard } from '../AuthGuard';
 
 interface AuthPageProps {
@@ -26,7 +25,6 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
             <ForgotPasswordForm onBack={handleSwitchToLogin} />
           </CardContent>
         </Card>
-        <OrganizationSetupModal />
       </div>
     );
   }
@@ -55,7 +53,6 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
             </Tabs>
           </CardContent>
         </Card>
-        <OrganizationSetupModal />
       </div>
     </GuestGuard>
   );
