@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './auth/AuthProvider';
 import { OrganizationProvider } from './contexts/OrganizationContext';
-import { AppLayout } from './components/layout/AppLayout'; // Named import instead of default
+import { AppLayout } from './components/layout/AppLayout';
+import { AppRoutes } from './AppRoutes';
 import './index.css';
 
 // Create a client instance
@@ -25,7 +26,7 @@ function App() {
         <AuthProvider>
           <OrganizationProvider>
             <AppLayout>
-              {/* AppLayout expects children - add RouterGuard component here */}
+              <AppRoutes />
             </AppLayout>
             <Toaster />
           </OrganizationProvider>
