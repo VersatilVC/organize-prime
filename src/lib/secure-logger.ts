@@ -30,10 +30,10 @@ class SecureLogger {
   constructor() {
     // Store original console methods before any overrides
     this.originalConsole = {
-      log: console.log.bind(console),
-      info: console.info.bind(console),
-      warn: console.warn.bind(console),
-      error: console.error.bind(console),
+      log: console.log?.bind(console) || (() => {}),
+      info: console.info?.bind(console) || (() => {}),
+      warn: console.warn?.bind(console) || (() => {}),
+      error: console.error?.bind(console) || (() => {}),
       debug: console.debug?.bind(console) || (() => {})
     } as Console;
   }
@@ -45,7 +45,9 @@ class SecureLogger {
   debug(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
       const sanitizedContext = this.sanitizeContext(context);
-      this.originalConsole.log(`[DEBUG] ${message}`, sanitizedContext);
+      // Fallback to regular console if originalConsole is not available
+      const logger = this.originalConsole?.log || console.log;
+      logger(`[DEBUG] ${message}`, sanitizedContext);
     }
   }
 
@@ -55,7 +57,8 @@ class SecureLogger {
   info(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
       const sanitizedContext = this.sanitizeContext(context);
-      this.originalConsole.info(`[INFO] ${message}`, sanitizedContext);
+      const logger = this.originalConsole?.info || console.info;
+      logger(`[INFO] ${message}`, sanitizedContext);
     }
   }
 
@@ -64,7 +67,8 @@ class SecureLogger {
    */
   warn(message: string, context?: LogContext): void {
     const sanitizedContext = this.sanitizeContext(context);
-    this.originalConsole.warn(`[WARN] ${message}`, sanitizedContext);
+    const logger = this.originalConsole?.warn || console.warn;
+    logger(`[WARN] ${message}`, sanitizedContext);
   }
 
   /**
@@ -75,11 +79,13 @@ class SecureLogger {
     const sanitizedContext = this.sanitizeContext(context);
     
     if (this.isDevelopment) {
-      this.originalConsole.error(`[ERROR] ${message}`, error, sanitizedContext);
+      const logger = this.originalConsole?.error || console.error;
+      logger(`[ERROR] ${message}`, error, sanitizedContext);
     } else {
       // Production: Log error message but not stack trace or sensitive data
       const errorInfo = error ? { name: error.name, message: this.sanitizeErrorMessage(error.message) } : undefined;
-      this.originalConsole.error(`[ERROR] ${message}`, errorInfo, sanitizedContext);
+      const logger = this.originalConsole?.error || console.error;
+      logger(`[ERROR] ${message}`, errorInfo, sanitizedContext);
     }
   }
 
@@ -97,7 +103,8 @@ class SecureLogger {
     };
 
     // Always log security events
-    this.originalConsole.warn(`[SECURITY] ${event.type} - ${event.severity}`, sanitizedEvent);
+    const logger = this.originalConsole?.warn || console.warn;
+    logger(`[SECURITY] ${event.type} - ${event.severity}`, sanitizedEvent);
   }
 
   /**
@@ -106,7 +113,8 @@ class SecureLogger {
   performance(operation: string, duration: number, context?: LogContext): void {
     if (this.isDevelopment) {
       const sanitizedContext = this.sanitizeContext(context);
-      this.originalConsole.info(`[PERF] ${operation}: ${duration}ms`, sanitizedContext);
+      const logger = this.originalConsole?.info || console.info;
+      logger(`[PERF] ${operation}: ${duration}ms`, sanitizedContext);
     }
   }
 
@@ -194,25 +202,28 @@ export const secureConsole = {
 if (import.meta.env.DEV) {
   // Override console in development to track usage
   const originalConsole = { 
-    log: console.log.bind(console),
-    info: console.info.bind(console), 
-    warn: console.warn.bind(console),
-    error: console.error.bind(console)
+    log: console.log?.bind(console) || (() => {}),
+    info: console.info?.bind(console) || (() => {}), 
+    warn: console.warn?.bind(console) || (() => {}),
+    error: console.error?.bind(console) || (() => {})
   };
   
   console.log = (...args) => {
-    // Use logger's original console to avoid recursion
-    logger.originalConsole.warn('Direct console.log usage detected - use logger.debug() instead');
+    // Use safe fallback to avoid recursion
+    const safeWarn = logger.originalConsole?.warn || originalConsole.warn;
+    safeWarn('Direct console.log usage detected - use logger.debug() instead');
     originalConsole.log(...args);
   };
   
   console.error = (...args) => {
-    logger.originalConsole.warn('Direct console.error usage detected - use logger.error() instead');
+    const safeWarn = logger.originalConsole?.warn || originalConsole.warn;
+    safeWarn('Direct console.error usage detected - use logger.error() instead');
     originalConsole.error(...args);
   };
   
   console.warn = (...args) => {
-    logger.originalConsole.warn('Direct console.warn usage detected - use logger.warn() instead');
+    const safeWarn = logger.originalConsole?.warn || originalConsole.warn;
+    safeWarn('Direct console.warn usage detected - use logger.warn() instead');
     originalConsole.warn(...args);
   };
 }
