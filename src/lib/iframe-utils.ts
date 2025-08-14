@@ -73,22 +73,79 @@ export class IframeUtils {
 
   /**
    * Open URL in parent window (breaks out of iframe)
+   * Uses postMessage for secure iframe-to-parent communication
    */
   static openInParent(url: string): void {
     try {
       if (this.isInIframe() && window.parent) {
         // Construct full URL if it's a relative path
         const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? url : '/' + url}`;
-        console.log('Iframe navigation - redirecting parent to:', fullUrl);
-        window.parent.location.href = fullUrl;
+        console.log('🔄 Iframe navigation - sending postMessage to parent:', fullUrl);
+        
+        // Use postMessage for secure iframe-to-parent communication
+        window.parent.postMessage({
+          type: 'LOVABLE_NAVIGATE',
+          url: fullUrl,
+          source: 'iframe-app',
+          timestamp: Date.now()
+        }, '*');
+        
+        // Fallback timeout - if parent doesn't respond, try other methods
+        setTimeout(() => {
+          console.log('⚠️ PostMessage timeout - trying fallback navigation');
+          this.handleNavigationFallback(fullUrl);
+        }, 2000);
+        
       } else {
-        console.log('Not in iframe - using standard navigation');
+        console.log('📱 Not in iframe - using standard navigation');
         window.location.href = url;
       }
     } catch (e) {
-      console.error('Failed to open in parent window:', e);
-      // Fallback to current window
+      console.error('❌ Failed to open in parent window:', e);
+      this.handleNavigationFallback(url);
+    }
+  }
+
+  /**
+   * Handle navigation fallbacks when postMessage fails
+   */
+  static handleNavigationFallback(url: string): void {
+    console.log('🔄 Attempting navigation fallback methods for:', url);
+    
+    try {
+      // Method 1: Try window.open in new tab
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        console.log('✅ Opened in new tab successfully');
+        return;
+      }
+    } catch (e) {
+      console.warn('⚠️ window.open failed:', e);
+    }
+    
+    try {
+      // Method 2: Try current window navigation as last resort
+      console.log('🔄 Fallback to current window navigation');
       window.location.href = url;
+    } catch (e) {
+      console.error('❌ All navigation methods failed:', e);
+      // Show user-friendly message
+      this.showNavigationHelp(url);
+    }
+  }
+
+  /**
+   * Show user-friendly navigation help when all methods fail
+   */
+  static showNavigationHelp(url: string): void {
+    const message = `Navigation blocked by browser security. Please manually navigate to: ${url}`;
+    console.log('🆘 Navigation help:', message);
+    
+    // Could show a toast notification here if available
+    if (typeof window !== 'undefined' && (window as any).showToast) {
+      (window as any).showToast(message);
+    } else {
+      alert(message);
     }
   }
 
