@@ -1,292 +1,113 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
-import React from 'react';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { PageLoadingSpinner } from '@/components/LoadingSkeletons';
-import { PlaceholderPage } from '@/components/ui/placeholder-page';
-import { FeatureRouter } from './components/FeatureRouter';
-import { AppLayout } from '@/components/layout/AppLayout';
+import React, { Suspense } from 'react';
+import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
+import { PageLoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
-// Optimized loading component for routes
-const RouteLoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center space-y-4">
-      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
-      <p className="text-sm text-muted-foreground">Loading page...</p>
-    </div>
+// Import components directly to avoid lazy loading issues
+import Index from '@/pages/Index';
+import { AuthPage } from '@/auth/pages/AuthPage';
+import Dashboard from '@/pages/Dashboard';
+import Users from '@/pages/Users';
+import Organizations from '@/pages/Organizations';
+import ProfileSettings from '@/pages/ProfileSettings';
+import CompanySettings from '@/pages/CompanySettings';
+import SystemSettings from '@/pages/SystemSettings';
+import Feedback from '@/pages/Feedback';
+import NotFound from '@/pages/NotFound';
+
+// Loading component for route transitions
+const RouteLoading = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <PageLoadingSkeleton />
   </div>
 );
 
-// Lazy load all page components for code splitting
-const SimpleDashboard = lazy(() => import('./pages/SimpleDashboard'));
-const Index = lazy(() => import('./pages/Index'));
-const Auth = lazy(() => import('./pages/Auth'));
-const AuthCallback = lazy(() => import('./pages/AuthCallback'));
-const NotFound = lazy(() => import('./pages/NotFound'));
-const Organizations = lazy(() => import('./pages/Organizations'));
-const Users = lazy(() => import('./pages/Users'));
-const InviteAcceptance = lazy(() => import('./pages/InviteAcceptance'));
-const CompanySettings = lazy(() => import('./pages/CompanySettings'));
-const Billing = lazy(() => import('./pages/Billing'));
-const FeatureDetail = lazy(() => import('./pages/FeatureDetail'));
-const FeedbackManagement = lazy(() => import('./pages/admin/FeedbackManagement'));
-const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
-const SystemSettings = lazy(() => import('./pages/SystemSettings'));
-const Feedback = lazy(() => import('./pages/Feedback'));
-const FeedbackDetail = lazy(() => import('./pages/FeedbackDetail'));
-const MyFeedback = lazy(() => import('./pages/MyFeedback'));
-const Notifications = lazy(() => import('./pages/Notifications'));
-const NotificationManagement = lazy(() => import('./pages/NotificationManagement'));
-
-// Redirect component for legacy knowledge base URLs
-function KnowledgeBaseRedirect() {
-  const currentPath = window.location.pathname;
-  const newPath = currentPath.replace('/knowledge-base', '/features/knowledge-base');
-  return <Navigate to={newPath} replace />;
-}
-
-// Debug component for feature routing
-function FeatureDebugComponent() {
-  return (
-    <ProtectedRoute>
-      <div>Feature routing debug</div>
-    </ProtectedRoute>
-  );
-}
-
 export default function AppRoutes() {
   return (
-    <Routes>
-        <Route path="/" element={
-          <Suspense fallback={<RouteLoadingSpinner />}>
-            <Index />
-          </Suspense>
-        } />
-        
-        <Route path="/auth" element={
-          <GuestGuard>
-            <Suspense fallback={<RouteLoadingSpinner />}>
-              <Auth />
-            </Suspense>
-          </GuestGuard>
-        } />
-        
-        <Route path="/auth/callback" element={
-          <Suspense fallback={<RouteLoadingSpinner />}>
-            <AuthCallback />
-          </Suspense>
-        } />
-        
-        <Route path="/invite/:token" element={
-          <Suspense fallback={<RouteLoadingSpinner />}>
-            <InviteAcceptance />
-          </Suspense>
-        } />
-        
-        {/* Protected Routes */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Suspense fallback={<RouteLoadingSpinner />}>
-                  <SimpleDashboard />
-                </Suspense>
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/organizations" 
-          element={
-            <ProtectedRoute requiredRole="super_admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <Organizations />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/users" 
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
+    <BrowserRouter>
+      <ErrorBoundary>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Index />} />
+          
+          <Route 
+            path="/auth" 
+            element={
+              <GuestGuard>
+                <AuthPage />
+              </GuestGuard>
+            } 
+          />
+
+          {/* Protected routes */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <AuthGuard>
+                <Dashboard />
+              </AuthGuard>
+            } 
+          />
+
+          <Route 
+            path="/users" 
+            element={
+              <AuthGuard>
                 <Users />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Management Routes */}
-        <Route 
-          path="/settings/company" 
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <CompanySettings />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/billing" 
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <Billing />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Feature Routes */}
-        <Route 
-          path="/features/:slug/*" 
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <FeatureRouter />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Debug route to verify feature routing */}
-        <Route 
-          path="/features/*" 
-          element={<FeatureDebugComponent />} 
-        />
-        
-        {/* Legacy Knowledge Base redirect */}
-        <Route 
-          path="/knowledge-base/*" 
-          element={
-            <ProtectedRoute>
-              <KnowledgeBaseRedirect />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* System Admin Routes */}
-        <Route 
-          path="/admin/feedback" 
-          element={
-            <ProtectedRoute requiredRole="super_admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <FeedbackManagement />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/feedback/manage" 
-          element={
-            <ProtectedRoute requiredRole="super_admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <FeedbackManagement />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Settings Routes */}
-        <Route 
-          path="/settings/profile" 
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<RouteLoadingSpinner />}>
+              </AuthGuard>
+            } 
+          />
+
+          <Route 
+            path="/organizations" 
+            element={
+              <AuthGuard>
+                <Organizations />
+              </AuthGuard>
+            } 
+          />
+
+          <Route 
+            path="/profile-settings" 
+            element={
+              <AuthGuard>
                 <ProfileSettings />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/settings/system" 
-          element={
-            <ProtectedRoute requiredRole="super_admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
+              </AuthGuard>
+            } 
+          />
+
+          <Route 
+            path="/company-settings" 
+            element={
+              <AuthGuard>
+                <CompanySettings />
+              </AuthGuard>
+            } 
+          />
+
+          <Route 
+            path="/system-settings" 
+            element={
+              <AuthGuard>
                 <SystemSettings />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/feedback/my" 
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <MyFeedback />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/feedback/:id" 
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <FeedbackDetail />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/feedback" 
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<RouteLoadingSpinner />}>
+              </AuthGuard>
+            } 
+          />
+
+          <Route 
+            path="/feedback" 
+            element={
+              <AuthGuard>
                 <Feedback />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/notifications" 
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <Notifications />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/settings/notifications" 
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <Suspense fallback={<RouteLoadingSpinner />}>
-                <NotificationManagement />
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/admin/*" 
-          element={
-            <ProtectedRoute requiredRole="super_admin">
-              <div>System Admin (Coming Soon)</div>
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={
-          <Suspense fallback={<PageLoadingSpinner />}>
-            <NotFound />
-          </Suspense>
-        } />
-      </Routes>
+              </AuthGuard>
+            } 
+          />
+
+          {/* Catch all route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </ErrorBoundary>
+    </BrowserRouter>
   );
 }
