@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithRange } from '@/components/ui/date-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardAreaChart, DashboardBarChart, DashboardPieChart } from '@/components/ChartWidget';
+import { DashboardAreaChart, DashboardBarChart, DashboardPieChart } from '@/components/LazyComponents';
 import { TrendingUp, TrendingDown, Users, Activity, Download, Eye, MousePointer, Package } from 'lucide-react';
 import { useFeatureAnalytics } from '@/hooks/database/useFeatureAnalytics';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';

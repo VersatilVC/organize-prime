@@ -53,9 +53,6 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge') || id.includes('lz-string')) {
               return 'utils';
             }
-            if (id.includes('recharts')) {
-              return 'charts';
-            }
             // Move dnd to ui-vendor to ensure React context access
             if (id.includes('@hello-pangea/dnd')) {
               return 'ui-vendor';

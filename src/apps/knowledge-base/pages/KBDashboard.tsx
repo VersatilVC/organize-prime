@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DashboardLineChart, DashboardBarChart, DashboardPieChart } from '@/components/ChartWidget';
+import { DashboardLineChart, DashboardBarChart, DashboardPieChart } from '@/components/LazyComponents';
 import { ChartLoadingSkeleton } from '@/components/LoadingSkeletons';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/lib/auth-migration';
