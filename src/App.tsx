@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
 
 // Create a stable query client
@@ -14,83 +15,86 @@ const queryClient = new QueryClient({
   },
 });
 
-// Stage 3: Add QueryClient and BrowserRouter
+// Stage 4: Add AuthProvider
 function App() {
-  const [message, setMessage] = React.useState('App + QueryClient + Router Works!');
-  const [stage, setStage] = React.useState(3);
+  const [message, setMessage] = React.useState('App + QueryClient + Router + AuthProvider Works!');
+  const [stage, setStage] = React.useState(4);
   
   const nextStage = () => {
     setStage(s => s + 1);
-    setMessage(`Ready for Stage ${stage + 1}: Add AuthProvider`);
+    setMessage(`Ready for Stage ${stage + 1}: Add OrganizationProvider`);
   };
   
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div style={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          fontFamily: 'system-ui',
-          backgroundColor: '#f8fafc'
-        }}>
+        <AuthProvider>
           <div style={{ 
-            textAlign: 'center', 
-            padding: '2rem',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            minHeight: '100vh', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            fontFamily: 'system-ui',
+            backgroundColor: '#f8fafc'
           }}>
-            <h1 style={{ color: '#1f2937', marginBottom: '1rem' }}>
-              Stage {stage}: {message}
-            </h1>
-            
-            <div style={{ marginBottom: '2rem' }}>
-              <button 
-                onClick={() => setMessage('QueryClient + Router + React hooks all working!')}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  marginRight: '10px'
-                }}
-              >
-                Test Current Stage
-              </button>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '2rem',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+              <h1 style={{ color: '#1f2937', marginBottom: '1rem' }}>
+                Stage {stage}: {message}
+              </h1>
               
-              {stage < 6 && (
+              <div style={{ marginBottom: '2rem' }}>
                 <button 
-                  onClick={nextStage}
+                  onClick={() => setMessage('AuthProvider + All previous stages working!')}
                   style={{
                     padding: '10px 20px',
                     fontSize: '16px',
-                    backgroundColor: '#10b981',
+                    backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    marginRight: '10px'
                   }}
                 >
-                  Next Stage →
+                  Test Current Stage
                 </button>
-              )}
-            </div>
-            
-            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              <p>✅ React hooks working</p>
-              <p>✅ QueryClient working</p>
-              <p>✅ BrowserRouter working</p>
-              <p style={{ marginTop: '1rem' }}>
-                If this works, we can safely add AuthProvider next.
-              </p>
+                
+                {stage < 6 && (
+                  <button 
+                    onClick={nextStage}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: '16px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Next Stage →
+                  </button>
+                )}
+              </div>
+              
+              <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                <p>✅ React hooks working</p>
+                <p>✅ QueryClient working</p>
+                <p>✅ BrowserRouter working</p>
+                <p>🧪 AuthProvider testing...</p>
+                <p style={{ marginTop: '1rem' }}>
+                  This stage tests if AuthProvider causes the context error.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
