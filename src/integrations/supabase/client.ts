@@ -6,21 +6,28 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://cjwgfoingscquolnfkhh.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo";
 
+// Validate environment
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error('Missing Supabase configuration. Please check your environment variables.');
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    // Use a fallback storage if localStorage is not available
+    storage: typeof window !== 'undefined' && window.localStorage ? localStorage : {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    },
     persistSession: true,
     autoRefreshToken: true,
     // Enhanced OAuth configuration with production domain support
     flowType: 'pkce',
     detectSessionInUrl: true,
-    debug: typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' || 
-      window.location.hostname.includes('127.0.0.1')
-    ),
+    debug: false, // Disable debug in production to prevent DOM manipulation issues
     // Ensure proper OAuth session handling
     storageKey: 'sb-auth-token',
   },
@@ -31,5 +38,39 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       'X-Environment': typeof window !== 'undefined' ? 
         (window.location.hostname.includes('lovable') ? 'production' : 'development') : 'server'
     }
+  },
+  // Add database configuration
+  db: {
+    schema: 'public',
+  },
+  // Disable realtime by default to prevent connection issues during initialization
+  realtime: {
+    params: {
+      eventsPerSecond: 2,
+    },
+  },
+});
+
+// Add error handling for Supabase operations
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    // Clear any cached data when user signs out
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.removeItem('currentOrganizationId');
+      } catch (error) {
+        console.warn('Could not clear localStorage on signout:', error);
+      }
+    }
   }
 });
+
+// Export a helper function to check if Supabase is ready
+export const isSupabaseReady = () => {
+  try {
+    return !!(supabase && typeof supabase.auth?.getSession === 'function');
+  } catch (error) {
+    console.error('Supabase readiness check failed:', error);
+    return false;
+  }
+};
