@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/auth/AuthProvider';
 import { safeStorage } from '@/lib/safe-storage';
@@ -38,6 +38,27 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   console.log('OrganizationProvider starting');
+  
+  // Check React availability first
+  if (typeof React === 'undefined' || !React.useState) {
+    console.error('React is not properly loaded in OrganizationProvider');
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'white',
+        fontFamily: 'system-ui'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2>Loading...</h2>
+          <p>Organization context is initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
   const { user } = useAuth();
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -130,7 +151,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    refreshOrganizations();
+    let mounted = true;
+    
+    if (mounted) {
+      refreshOrganizations();
+    }
+    
+    return () => {
+      mounted = false;
+    };
   }, [refreshOrganizations]);
 
   const handleSetCurrentOrganization = useCallback((org: Organization | null) => {
