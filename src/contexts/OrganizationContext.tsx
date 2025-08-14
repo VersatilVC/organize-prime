@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { safeStorage } from '@/lib/safe-storage';
 
 interface Organization {
@@ -65,7 +65,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
     try {
       // Get user's organizations through memberships
-      const { data: memberships } = await supabase
+      const { data: memberships, error } = await supabase
         .from('memberships')
         .select(`
           organization_id,
@@ -81,6 +81,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         `)
         .eq('user_id', user.id)
         .eq('status', 'active');
+
+      if (error) {
+        console.error('Error fetching organizations:', error);
+        setLoading(false);
+        return;
+      }
 
       const userOrgs = memberships?.map(m => m.organizations).filter(Boolean) as Organization[] || [];
       
