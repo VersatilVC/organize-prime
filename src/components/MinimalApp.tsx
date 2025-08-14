@@ -1,10 +1,21 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { IframeUtils } from '@/lib/iframe-utils';
 
 export function MinimalApp() {
+  const iframeContext = IframeUtils.getIframeContext();
+  
   const navigateTo = (path: string) => {
-    window.location.href = path;
+    console.log('Navigation attempt:', { path, iframeContext });
+    
+    if (iframeContext.isInIframe) {
+      console.log('Using iframe-aware navigation');
+      IframeUtils.openInParent(path);
+    } else {
+      console.log('Using standard navigation');
+      window.location.href = path;
+    }
   };
 
   return (
@@ -47,6 +58,17 @@ export function MinimalApp() {
                 <li>Current URL: {window.location.href}</li>
                 <li>React Context Available: {React.useContext ? 'Yes' : 'No'}</li>
                 <li>Environment: {import.meta.env.MODE}</li>
+              </ul>
+            </div>
+
+            <div className="mt-4 p-4 bg-secondary rounded-lg">
+              <h3 className="font-semibold mb-2">Iframe Context:</h3>
+              <ul className="text-sm space-y-1">
+                <li>Is in Iframe: <span className={iframeContext.isInIframe ? 'text-green-600' : 'text-gray-600'}>{iframeContext.isInIframe ? 'Yes' : 'No'}</span></li>
+                <li>Is Lovable Preview: <span className={iframeContext.isLovablePreview ? 'text-purple-600' : 'text-gray-600'}>{iframeContext.isLovablePreview ? 'Yes' : 'No'}</span></li>
+                <li>Current Origin: {iframeContext.currentOrigin}</li>
+                <li>Parent Origin: {iframeContext.parentOrigin || 'N/A'}</li>
+                <li>Navigation Method: <span className="font-mono">{iframeContext.isInIframe ? 'IframeUtils.openInParent()' : 'window.location.href'}</span></li>
               </ul>
             </div>
           </CardContent>
