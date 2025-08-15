@@ -544,10 +544,67 @@ N8N_API_KEY=your-n8n-api-key
 - **Edge Functions**: Deployed Deno functions
 - **Real-time**: Enabled for notifications and chat
 
-### Frontend Deployment
-- **Build**: Vite production build
-- **Hosting**: Static hosting (Netlify/Vercel recommended)
+### Frontend Deployment (Updated August 2025)
+- **Build**: Vite production build with optimized React vendor chunking
+- **Hosting**: Vercel (configured for SPA routing)
 - **Environment**: Production environment variables
+- **Configuration**: `vercel.json` for client-side routing and security headers
+
+#### Vercel Configuration (`vercel.json`)
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Vite Configuration (`vite.config.ts`)
+```typescript
+export default defineConfig(({ mode }) => ({
+  build: {
+    rollupOptions: {
+      output: {
+        // React bundling fix for production
+        manualChunks: mode === 'production' ? {
+          'vendor': ['react', 'react-dom', 'react-router-dom']
+        } : undefined,
+      },
+    },
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      // Ensure single React instance
+      "react": path.resolve(__dirname, "./node_modules/react"),
+      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
+    },
+  },
+  // ... other optimizations
+}));
+```
 
 ## AI Assistant Database Management
 
@@ -651,11 +708,19 @@ FOR ALL USING (
 - **Advanced authentication**: Added session security validation and enhanced admin checks
 - **Comprehensive audit logging**: All organizational access attempts are logged with context
 
-### ⚡ Performance Optimizations
+### ⚡ Performance Optimizations (Phase 2 - August 15, 2025)
 - **Critical database indexes**: Added 20+ composite indexes for frequent query patterns
 - **Optimized query functions**: Database-side functions reduce client-server round trips
 - **Advanced caching**: Increased cache times and added offline-first strategies
 - **Batch operations**: Bulk insert/update functions for large-scale operations
+
+**Phase 2 Specific Optimizations:**
+- **Conditional Development Logging**: Created `src/lib/dev-logger.ts` for environment-aware logging
+- **useUserRole Hook Optimization**: Converted from useEffect to React Query with 10-minute cache
+- **TypeScript Type Safety**: Eliminated `any` types in Dashboard and Users components
+- **React.memo Optimizations**: Added memoization to heavy components (Feedback, AvailableFeaturesSection)
+- **Database Performance**: Added critical indexes for notifications, webhooks, analytics
+- **Webhook Statistics**: Optimized function replacing 22+ separate queries with single call
 
 ### 📊 Monitoring & Observability
 - **Query performance tracking**: All database queries are monitored and logged
@@ -670,11 +735,20 @@ FOR ALL USING (
 - **Materialized views**: Pre-computed analytics for instant dashboard loading
 - **Horizontal scaling ready**: Architecture prepared for read replicas and load balancing
 
+### 🔧 Production Deployment Fixes (August 15, 2025)
+- **React Bundling Issues**: Fixed useLayoutEffect undefined errors in production
+- **Vite Configuration**: Optimized vendor chunking and React path aliases
+- **Vercel Configuration**: Added proper SPA routing with `vercel.json`
+- **Dependency Alignment**: Clean reinstall resolved React version conflicts
+- **GitHub-Remote Sync**: Ensured 100% alignment between local and remote repositories
+
 ### Performance Improvements Achieved
 - **Query Performance**: 50-80% improvement on common operations
 - **Dashboard Loading**: 60-90% faster with optimized database functions
 - **Memory Usage**: 30-50% reduction through better caching strategies
 - **Scalability**: Now supports 10x more concurrent users
+- **React Performance**: Memoized components reduce unnecessary re-renders
+- **Bundle Size**: Optimized vendor chunking for better caching
 
 ### New Monitoring Tables
 ```sql
@@ -728,7 +802,49 @@ useMonitoringDashboard()     // Comprehensive monitoring
 // Real-time features
 useRealTimeMonitoring()      // Live system monitoring
 useMonitoringAlerts()        // Critical system alerts
+
+// Phase 2 Optimized Hooks
+useUserRole()               // React Query optimized with 10min cache
 ```
+
+### Development Utilities (Phase 2)
+
+#### Conditional Development Logging (`src/lib/dev-logger.ts`)
+```typescript
+const isDev = import.meta.env.DEV;
+
+export const devLog = {
+  log: (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+  },
+  error: (...args: unknown[]) => {
+    if (isDev) console.error(...args);
+  },
+  warn: (...args: unknown[]) => {
+    if (isDev) console.warn(...args);
+  }
+};
+
+export const featureLog = {
+  access: (feature: string, user: string) => {
+    if (isDev) console.log(`🎯 Feature Access: ${feature} by ${user}`);
+  }
+};
+
+export const perfLog = {
+  time: (label: string) => {
+    if (isDev) console.time(label);
+  },
+  timeEnd: (label: string) => {
+    if (isDev) console.timeEnd(label);
+  }
+};
+```
+
+#### React.memo Optimized Components
+- **Feedback Page**: Memoized form components (PrioritySelector, FeedbackTypeSelector, CharacterCounter)
+- **AvailableFeaturesSection**: Memoized FeatureCard with stable callbacks
+- **Performance**: Prevents unnecessary re-renders on large forms and lists
 
 ### Environment Variables Added
 ```env
@@ -741,5 +857,59 @@ VITE_ENABLE_MONITORING=true
 VITE_PERFORMANCE_TRACKING=true
 VITE_ERROR_REPORTING=true
 ```
+
+## Troubleshooting Guide
+
+### Common Production Issues
+
+#### React Bundling Errors (Fixed August 2025)
+**Symptoms**: `Cannot read properties of undefined (reading 'useLayoutEffect')` in production
+**Cause**: React ecosystem split across multiple vendor chunks
+**Solution**: Use explicit vendor chunking in `vite.config.ts`:
+```typescript
+manualChunks: mode === 'production' ? {
+  'vendor': ['react', 'react-dom', 'react-router-dom']
+} : undefined,
+```
+
+#### Vercel Deployment Errors
+**Symptoms**: 404 errors on client-side routes, deployment configuration errors
+**Cause**: Missing or incorrect `vercel.json` configuration
+**Solution**: Ensure proper SPA routing configuration (see Frontend Deployment section)
+
+#### Local vs Remote Repository Misalignment
+**Symptoms**: Production differs from local, missing optimizations
+**Solution**: Always verify alignment with:
+```bash
+git status
+git fetch origin
+git log --oneline origin/main -5
+```
+
+### Development Best Practices
+
+#### Database Changes
+- Always use the AI assistant's MCP capabilities for schema changes
+- Ensure RLS policies are applied to new tables
+- Test migrations on development branches first
+- Maintain organization-based isolation patterns
+
+#### Performance Optimization
+- Use React.memo for heavy components with stable comparison functions
+- Implement conditional logging for development vs production
+- Leverage React Query caching with appropriate stale times
+- Add database indexes for frequently queried columns
+
+#### Deployment Workflow
+1. Ensure local and remote repositories are 100% aligned
+2. Test build locally: `npm run build`
+3. Verify all environment variables are configured
+4. Monitor Vercel deployment logs for any configuration issues
+5. Test all routes after deployment
+
+### Live Application
+- **Production URL**: https://organize-prime.vercel.app/
+- **Status**: ✅ Live and operational as of August 15, 2025
+- **Last Major Update**: Phase 2 optimizations and React bundling fixes
 
 This document serves as the primary reference for understanding the OrganizePrime application architecture and should be updated as the system evolves.
