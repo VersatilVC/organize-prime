@@ -24,80 +24,11 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   build: {
     rollupOptions: {
+      external: mode === 'production' ? [] : undefined,
       output: {
-        // Strategic chunk splitting for optimal caching and loading
-        manualChunks: mode === 'production' ? (id) => {
-          if (id.includes('node_modules')) {
-            // Keep React ecosystem together to prevent duplicate instances
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
-              return 'react-vendor';
-            }
-            
-            // UI libraries (Radix, Tailwind, Lucide)
-            if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('class-variance-authority')) {
-              return 'ui-lib';
-            }
-            
-            // Data fetching and state management
-            if (id.includes('@tanstack/react-query') || id.includes('zustand')) {
-              return 'data-lib';
-            }
-            
-            // Date/time utilities
-            if (id.includes('date-fns') || id.includes('moment')) {
-              return 'date-lib';
-            }
-            
-            // Form handling
-            if (id.includes('react-hook-form') || id.includes('zod')) {
-              return 'form-lib';
-            }
-            
-            // Supabase and auth
-            if (id.includes('@supabase') || id.includes('supabase')) {
-              return 'supabase-lib';
-            }
-            
-            // Analytics and monitoring
-            if (id.includes('analytics') || id.includes('sentry')) {
-              return 'analytics-lib';
-            }
-            
-            // Everything else
-            return 'vendor';
-          }
-          
-          // App-specific chunks
-          // Authentication modules
-          if (id.includes('src/auth/') || id.includes('src/contexts/AuthContext')) {
-            return 'auth';
-          }
-          
-          // Admin and system features
-          if (id.includes('src/components/admin/') || id.includes('src/pages/admin/') || id.includes('SystemSettings')) {
-            return 'admin';
-          }
-          
-          // Feature apps (knowledge-base, etc.)
-          if (id.includes('src/apps/')) {
-            const appMatch = id.match(/src\/apps\/([^\/]+)/);
-            if (appMatch) {
-              return `app-${appMatch[1]}`;
-            }
-            return 'features';
-          }
-          
-          // Analytics and reporting
-          if (id.includes('analytics') || id.includes('dashboard') || id.includes('Dashboard')) {
-            return 'analytics';
-          }
-          
-          // Settings and configuration
-          if (id.includes('settings') || id.includes('Settings') || id.includes('configuration')) {
-            return 'settings';
-          }
-          
-        } : undefined,
+        // Disable manual chunking to prevent React splitting issues
+        // Let Vite handle chunking automatically to avoid React duplication
+        manualChunks: undefined,
         
         // Optimize chunk file names for better caching
         chunkFileNames: (chunkInfo) => {
