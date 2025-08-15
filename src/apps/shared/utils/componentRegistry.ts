@@ -1,15 +1,21 @@
 import React from 'react';
 import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholderPage';
 
+// Lazy load the ManageKnowledgeBases component
+const ManageKnowledgeBases = React.lazy(() => import('@/features/knowledge-base/pages/ManageKnowledgeBases'));
+
 // Only implemented components - everything else gets placeholder
 export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
   'Dashboard', // KB Dashboard/Manage Knowledgebases page is implemented
-  'Chat'       // KB Chat page is implemented
+  'Chat',      // KB Chat page is implemented
+  'ManageKnowledgeBases' // New KB management page
   // Analytics, Files, Settings are NOT implemented - will show placeholders
 ]);
 
 // Registry with implemented components
-export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {};
+export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
+  'ManageKnowledgeBases': ManageKnowledgeBases,
+};
 
 export function getComponent(componentName: string): React.ComponentType<any> {
   const isDev = import.meta.env.DEV;
