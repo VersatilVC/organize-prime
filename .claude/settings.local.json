@@ -39,7 +39,8 @@
       "Bash(npm run build:*)",
       "Bash(find:*)",
       "Bash(mv:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": [],
