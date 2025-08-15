@@ -26,9 +26,10 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: mode === 'production' ? [] : undefined,
       output: {
-        // Disable manual chunking to prevent React splitting issues
-        // Let Vite handle chunking automatically to avoid React duplication
-        manualChunks: undefined,
+        // Force React to stay together in vendor chunk
+        manualChunks: mode === 'production' ? {
+          'vendor': ['react', 'react-dom', 'react-router-dom']
+        } : undefined,
         
         // Optimize chunk file names for better caching
         chunkFileNames: (chunkInfo) => {
@@ -62,6 +63,9 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Ensure single React instance
+      "react": path.resolve(__dirname, "./node_modules/react"),
+      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
     },
   },
   // Enhanced dependency optimization
