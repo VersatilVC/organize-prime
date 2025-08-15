@@ -7,6 +7,7 @@ import {
   useDeleteUserMutation, 
   UserWithMembership 
 } from '@/hooks/useUsersQuery';
+import type { UseMutationResult } from '@tanstack/react-query';
 import { 
   useInvitationsQuery, 
   useResendInvitationMutation, 
@@ -49,7 +50,11 @@ const UserRow = React.memo(({
   onSaveEdit: (userId: string) => void;
   onCancelEdit: () => void;
   onDeleteUser: (user: UserWithMembership) => void;
-  updateUserMutation: any;
+  updateUserMutation: UseMutationResult<
+    { userId: string; updates: { full_name?: string; username?: string; role?: string } },
+    Error,
+    { userId: string; updates: { full_name?: string; username?: string; role?: string } }
+  >;
 }) => {
   const getRoleBadgeVariant = useMemo(() => (userRole: string) => {
     switch (userRole) {
@@ -222,8 +227,8 @@ const InvitationRow = React.memo(({
   onResend: (invitation: Invitation) => void;
   onCancel: (invitation: Invitation) => void;
   onCopyLink: (invitation: Invitation) => void;
-  resendMutation: any;
-  cancelMutation: any;
+  resendMutation: UseMutationResult<unknown, Error, Invitation>;
+  cancelMutation: UseMutationResult<unknown, Error, string>;
 }) => {
   const getInvitationStatus = useCallback((inv: Invitation) => {
     if (inv.accepted_at) return 'Accepted';

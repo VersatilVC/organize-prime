@@ -28,7 +28,7 @@ const StatCard = React.memo(({
   title: string;
   value: number;
   description: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   loading: boolean;
 }) => (
   <Card>
@@ -69,7 +69,7 @@ const QuickActionButton = React.memo(({
   badge 
 }: {
   to: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   badge?: number;
 }) => (

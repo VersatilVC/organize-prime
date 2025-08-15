@@ -18,9 +18,11 @@ const isLocalhost = Boolean(
 /**
  * Register service worker with progressive enhancement features
  */
+const isDev = import.meta.env.DEV;
+
 export function registerServiceWorker(config: ServiceWorkerConfig = {}) {
   if (!('serviceWorker' in navigator)) {
-    console.log('Service Worker not supported');
+    if (isDev) console.log('Service Worker not supported');
     return;
   }
 
@@ -33,12 +35,14 @@ export function registerServiceWorker(config: ServiceWorkerConfig = {}) {
 
       // Add some additional logging to localhost, pointing developers to the
       // service worker/PWA documentation.
-      navigator.serviceWorker.ready.then(() => {
-        console.log(
-          'This web app is being served cache-first by a service ' +
-          'worker. To learn more, visit https://bit.ly/CRA-PWA'
-        );
-      });
+      if (isDev) {
+        navigator.serviceWorker.ready.then(() => {
+          console.log(
+            'This web app is being served cache-first by a service ' +
+            'worker. To learn more, visit https://bit.ly/CRA-PWA'
+          );
+        });
+      }
     } else {
       // Is not localhost. Just register service worker
       registerValidServiceWorker(swUrl, config);
@@ -47,7 +51,7 @@ export function registerServiceWorker(config: ServiceWorkerConfig = {}) {
 
   // Listen for online/offline events
   window.addEventListener('online', () => {
-    console.log('App is online');
+    if (isDev) console.log('App is online');
     config.onOnline?.();
     
     // Trigger background sync when coming back online
@@ -55,13 +59,13 @@ export function registerServiceWorker(config: ServiceWorkerConfig = {}) {
       navigator.serviceWorker.ready.then(registration => {
         return registration.sync.register('background-sync');
       }).catch(error => {
-        console.log('Background sync registration failed:', error);
+        if (isDev) console.log('Background sync registration failed:', error);
       });
     }
   });
 
   window.addEventListener('offline', () => {
-    console.log('App is offline');
+    if (isDev) console.log('App is offline');
     config.onOffline?.();
   });
 }
@@ -81,10 +85,12 @@ function registerValidServiceWorker(swUrl: string, config: ServiceWorkerConfig) 
               // At this point, the updated precached content has been fetched,
               // but the previous service worker will still serve the older
               // content until all client tabs are closed.
-              console.log(
-                'New content is available and will be used when all ' +
-                'tabs for this page are closed. See https://bit.ly/CRA-PWA.'
-              );
+              if (isDev) {
+                console.log(
+                  'New content is available and will be used when all ' +
+                  'tabs for this page are closed. See https://bit.ly/CRA-PWA.'
+                );
+              }
 
               // Execute callback
               if (config && config.onUpdate) {
@@ -94,7 +100,7 @@ function registerValidServiceWorker(swUrl: string, config: ServiceWorkerConfig) 
               // At this point, everything has been precached.
               // It's the perfect time to display a
               // "Content is cached for offline use." message.
-              console.log('Content is cached for offline use.');
+              if (isDev) console.log('Content is cached for offline use.');
 
               // Execute callback
               if (config && config.onSuccess) {
@@ -134,9 +140,11 @@ function checkValidServiceWorker(swUrl: string, config: ServiceWorkerConfig) {
       }
     })
     .catch(() => {
-      console.log(
-        'No internet connection found. App is running in offline mode.'
-      );
+      if (isDev) {
+        console.log(
+          'No internet connection found. App is running in offline mode.'
+        );
+      }
     });
 }
 
@@ -330,7 +338,7 @@ export class PWAInstallManager {
     });
 
     window.addEventListener('appinstalled', () => {
-      console.log('PWA was installed');
+      if (isDev) console.log('PWA was installed');
       this.deferredPrompt = null;
     });
   }

@@ -31,18 +31,19 @@ AppContent.displayName = 'AppContent';
 function App() {
   // Register service worker for progressive enhancement
   React.useEffect(() => {
+    const isDev = import.meta.env.DEV;
     registerServiceWorker({
       onUpdate: (registration) => {
-        console.log('Service worker updated. New content will be available after refresh.');
+        if (isDev) console.log('Service worker updated. New content will be available after refresh.');
       },
       onSuccess: (registration) => {
-        console.log('Service worker registered successfully.');
+        if (isDev) console.log('Service worker registered successfully.');
       },
       onOffline: () => {
-        console.log('App is working offline.');
+        if (isDev) console.log('App is working offline.');
       },
       onOnline: () => {
-        console.log('App is back online.');
+        if (isDev) console.log('App is back online.');
       }
     });
   }, []);

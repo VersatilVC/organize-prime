@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +89,120 @@ const priorityLevels = [
   },
 ];
 
+// Memoized components for performance optimization
+const FeedbackTypeSelector = React.memo(({ 
+  value, 
+  onChange, 
+  error 
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) => (
+  <RadioGroup
+    onValueChange={onChange}
+    value={value}
+    className="grid grid-cols-1 gap-3"
+  >
+    {feedbackTypes.map((type) => (
+      <div key={type.value} className="flex items-center space-x-2">
+        <RadioGroupItem value={type.value} id={type.value} />
+        <Label
+          htmlFor={type.value}
+          className="flex items-center space-x-2 cursor-pointer flex-1 p-3 border rounded-lg hover:bg-muted/50"
+        >
+          <type.icon className="h-5 w-5 text-primary" />
+          <div>
+            <div className="font-medium">{type.label}</div>
+            <div className="text-sm text-muted-foreground">{type.description}</div>
+          </div>
+        </Label>
+      </div>
+    ))}
+  </RadioGroup>
+), (prevProps, nextProps) =>
+  prevProps.value === nextProps.value &&
+  prevProps.error === nextProps.error
+);
+
+const PrioritySelector = React.memo(({ 
+  value, 
+  onChange,
+  error 
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) => (
+  <RadioGroup
+    onValueChange={onChange}
+    value={value}
+    className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+  >
+    {priorityLevels.map((priority) => (
+      <div key={priority.value} className="relative">
+        <RadioGroupItem 
+          value={priority.value} 
+          id={priority.value}
+          className="peer sr-only"
+        />
+        <Label
+          htmlFor={priority.value}
+          className="flex flex-col items-center justify-center p-4 border-2 border-muted rounded-lg cursor-pointer transition-colors hover:bg-muted/50 peer-checked:border-primary peer-checked:bg-primary/5"
+        >
+          <priority.icon className={`h-5 w-5 mb-2 ${priority.textColor}`} />
+          <span className="font-medium text-sm">{priority.label}</span>
+          <span className="text-xs text-muted-foreground text-center">{priority.description}</span>
+          <Badge 
+            variant="outline" 
+            className={`mt-2 text-xs ${priority.color} text-white border-none`}
+          >
+            {priority.label}
+          </Badge>
+        </Label>
+      </div>
+    ))}
+  </RadioGroup>
+), (prevProps, nextProps) =>
+  prevProps.value === nextProps.value &&
+  prevProps.error === nextProps.error
+);
+
+const CharacterCounter = React.memo(({ 
+  current, 
+  max, 
+  label 
+}: {
+  current: number;
+  max: number;
+  label: string;
+}) => {
+  const percentage = (current / max) * 100;
+  const isNearLimit = percentage > 80;
+  const isOverLimit = current > max;
+
+  return (
+    <div className="flex justify-between items-center text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-medium ${
+        isOverLimit ? 'text-destructive' : 
+        isNearLimit ? 'text-orange-500' : 
+        'text-muted-foreground'
+      }`}>
+        {current}/{max}
+      </span>
+    </div>
+  );
+}, (prevProps, nextProps) =>
+  prevProps.current === nextProps.current &&
+  prevProps.max === nextProps.max &&
+  prevProps.label === nextProps.label
+);
+
+FeedbackTypeSelector.displayName = 'FeedbackTypeSelector';
+PrioritySelector.displayName = 'PrioritySelector';
+CharacterCounter.displayName = 'CharacterCounter';
+
 export default function Feedback() {
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
@@ -113,7 +227,16 @@ export default function Feedback() {
   const watchedSubject = watch('subject') || '';
   const watchedDescription = watch('description') || '';
 
-  const onSubmit = async (data: FeedbackFormData) => {
+  // Stable callbacks to prevent re-renders
+  const handleFileUploaded = useCallback((filePath: string, fileName: string) => {
+    setUploadedFiles(prev => [...prev, filePath]);
+  }, []);
+
+  const handleFileRemoved = useCallback(() => {
+    setUploadedFiles([]);
+  }, []);
+
+  const onSubmit = useCallback(async (data: FeedbackFormData) => {
     if (!user || !currentOrganization) {
       toast({
         variant: 'destructive',
@@ -164,15 +287,7 @@ export default function Feedback() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleFileUploaded = (filePath: string, fileName: string) => {
-    setUploadedFiles(prev => [...prev, filePath]);
-  };
-
-  const handleFileRemoved = () => {
-    setUploadedFiles([]);
-  };
+  }, [user, currentOrganization, uploadedFiles, form]);
 
   return (
     <>
@@ -221,27 +336,11 @@ export default function Feedback() {
                             Feedback Type <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
+                            <FeedbackTypeSelector
                               value={field.value}
-                              className="grid grid-cols-1 gap-3"
-                            >
-                              {feedbackTypes.map((type) => (
-                                <div key={type.value} className="flex items-center space-x-2">
-                                  <RadioGroupItem value={type.value} id={type.value} />
-                                  <Label
-                                    htmlFor={type.value}
-                                    className="flex items-center space-x-2 cursor-pointer flex-1 p-3 border rounded-lg hover:bg-muted/50"
-                                  >
-                                    <type.icon className="h-5 w-5 text-primary" />
-                                    <div>
-                                      <div className="font-medium">{type.label}</div>
-                                      <div className="text-sm text-muted-foreground">{type.description}</div>
-                                    </div>
-                                  </Label>
-                                </div>
-                              ))}
-                            </RadioGroup>
+                              onChange={field.onChange}
+                              error={errors.type?.message}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -258,28 +357,11 @@ export default function Feedback() {
                             Priority <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
+                            <PrioritySelector
                               value={field.value}
-                              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                            >
-                              {priorityLevels.map((priority) => (
-                                <div key={priority.value} className="flex items-center space-x-2">
-                                  <RadioGroupItem value={priority.value} id={`priority-${priority.value}`} />
-                                  <Label
-                                    htmlFor={`priority-${priority.value}`}
-                                    className="flex items-center space-x-3 cursor-pointer flex-1 p-3 border rounded-lg hover:bg-muted/50"
-                                  >
-                                    <div className={`h-3 w-3 rounded-full ${priority.color}`} />
-                                    <priority.icon className={`h-4 w-4 ${priority.textColor}`} />
-                                    <div className="flex-1">
-                                      <div className="font-medium">{priority.label}</div>
-                                      <div className="text-sm text-muted-foreground">{priority.description}</div>
-                                    </div>
-                                  </Label>
-                                </div>
-                              ))}
-                            </RadioGroup>
+                              onChange={field.onChange}
+                              error={errors.priority?.message}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -330,9 +412,11 @@ export default function Feedback() {
                           </FormControl>
                           <div className="flex justify-between items-center">
                             <FormMessage />
-                            <span className="text-sm text-muted-foreground">
-                              {watchedSubject.length}/100
-                            </span>
+                            <CharacterCounter
+                              current={watchedSubject.length}
+                              max={100}
+                              label=""
+                            />
                           </div>
                         </FormItem>
                       )}
@@ -357,9 +441,11 @@ export default function Feedback() {
                           </FormControl>
                           <div className="flex justify-between items-center">
                             <FormMessage />
-                            <span className="text-sm text-muted-foreground">
-                              {watchedDescription.length}/1000
-                            </span>
+                            <CharacterCounter
+                              current={watchedDescription.length}
+                              max={1000}
+                              label=""
+                            />
                           </div>
                         </FormItem>
                       )}

@@ -1,72 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/auth/AuthProvider';
+import { useMemo } from 'react';
+import { devLog } from '@/lib/dev-logger';
 
 export type UserRole = 'super_admin' | 'admin' | 'user';
 
-interface UserProfile {
-  is_super_admin: boolean;
+interface UserRoleResult {
+  role: UserRole;
+  organizations: string[];
+  loading: boolean;
 }
 
-interface Membership {
-  role: string;
-  organization_id: string;
-  status: string;
-}
-
-export function useUserRole() {
+export function useUserRole(): UserRoleResult {
   const { user } = useAuth();
-  const [role, setRole] = useState<UserRole>('user');
-  const [organizations, setOrganizations] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setRole('user');
-      setOrganizations([]);
-      setLoading(false);
-      return;
-    }
+  const query = useQuery({
+    queryKey: ['user-role', user?.id],
+    queryFn: async () => {
+      if (!user?.id) {
+        return { role: 'user' as UserRole, organizations: [] };
+      }
 
-    const fetchUserRole = async () => {
       try {
-        // Check if user is super admin
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_super_admin')
-          .eq('id', user.id)
-          .maybeSingle();
+        // Single optimized query to get profile and memberships
+        const [profileResult, membershipsResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('is_super_admin')
+            .eq('id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('memberships')
+            .select('role, organization_id')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+        ]);
 
+        const profile = profileResult.data;
+        const memberships = membershipsResult.data || [];
+
+        // Super admin check
         if (profile?.is_super_admin) {
-          setRole('super_admin');
-          setLoading(false);
-          return;
+          return {
+            role: 'super_admin' as UserRole,
+            organizations: memberships.map(m => m.organization_id)
+          };
         }
 
-        // Get user memberships to check for admin roles
-        const { data: memberships } = await supabase
-          .from('memberships')
-          .select('role, organization_id, status')
-          .eq('user_id', user.id)
-          .eq('status', 'active');
+        // Admin check
+        const isAdmin = memberships.some(m => m.role === 'admin');
+        const role = isAdmin ? 'admin' : 'user';
 
-        const orgIds = memberships?.map(m => m.organization_id) || [];
-        setOrganizations(orgIds);
-
-        // Check if user is admin in any organization
-        const isAdmin = memberships?.some(m => m.role === 'admin');
-        const finalRole = isAdmin ? 'admin' : 'user';
-        setRole(finalRole);
+        return {
+          role: role as UserRole,
+          organizations: memberships.map(m => m.organization_id)
+        };
       } catch (error) {
-        console.error('Error fetching user role:', error);
-        setRole('user');
-      } finally {
-        setLoading(false);
+        devLog.error('Error fetching user role:', error);
+        return { role: 'user' as UserRole, organizations: [] };
       }
-    };
+    },
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1
+  });
 
-    fetchUserRole();
-  }, [user]);
-
-  return { role, organizations, loading };
+  // Memoized result to prevent unnecessary re-renders
+  return useMemo(() => ({
+    role: query.data?.role || 'user',
+    organizations: query.data?.organizations || [],
+    loading: query.isLoading
+  }), [query.data?.role, query.data?.organizations, query.isLoading]);
 }

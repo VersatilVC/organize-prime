@@ -12,14 +12,18 @@ export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {};
 
 export function getComponent(componentName: string): React.ComponentType<any> {
-  console.log('🔍 ComponentRegistry: Looking for component:', componentName);
-  console.log('🔍 ComponentRegistry: IMPLEMENTED_COMPONENTS:', Array.from(IMPLEMENTED_COMPONENTS));
+  const isDev = import.meta.env.DEV;
+  
+  if (isDev) {
+    console.log('🔍 ComponentRegistry: Looking for component:', componentName);
+    console.log('🔍 ComponentRegistry: IMPLEMENTED_COMPONENTS:', Array.from(IMPLEMENTED_COMPONENTS));
+  }
   
   // Always return placeholder unless explicitly marked as implemented
   if (!IMPLEMENTED_COMPONENTS.has(componentName)) {
-    console.log(`🔍 ComponentRegistry: Component "${componentName}" not implemented, using placeholder`);
+    if (isDev) console.log(`🔍 ComponentRegistry: Component "${componentName}" not implemented, using placeholder`);
     const PlaceholderComponent = () => {
-      console.log('🔍 ComponentRegistry: Rendering placeholder for:', componentName);
+      if (isDev) console.log('🔍 ComponentRegistry: Rendering placeholder for:', componentName);
       return React.createElement(KBPlaceholderPage, {
         component: componentName,
         title: componentName,
@@ -31,9 +35,9 @@ export function getComponent(componentName: string): React.ComponentType<any> {
   
   const Component = COMPONENT_REGISTRY[componentName];
   if (!Component) {
-    console.log(`🔍 ComponentRegistry: Component "${componentName}" marked as implemented but not found in registry, using placeholder`);
+    if (isDev) console.log(`🔍 ComponentRegistry: Component "${componentName}" marked as implemented but not found in registry, using placeholder`);
     const PlaceholderComponent = () => {
-      console.log('🔍 ComponentRegistry: Rendering fallback placeholder for:', componentName);
+      if (isDev) console.log('🔍 ComponentRegistry: Rendering fallback placeholder for:', componentName);
       return React.createElement(KBPlaceholderPage, {
         component: componentName,
         title: componentName,
@@ -43,7 +47,7 @@ export function getComponent(componentName: string): React.ComponentType<any> {
     return PlaceholderComponent;
   }
   
-  console.log('🔍 ComponentRegistry: Found implemented component:', componentName);
+  if (isDev) console.log('🔍 ComponentRegistry: Found implemented component:', componentName);
   return Component;
 }
 
