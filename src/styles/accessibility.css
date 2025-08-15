@@ -1,0 +1,351 @@
+/**
+ * Accessibility Enhancement Styles
+ * Ensures WCAG 2.1 AA compliance for focus, color contrast, and screen readers
+ */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Show screen reader content on focus */
+.sr-only.focus:focus,
+.sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Enhanced focus styles for better visibility */
+.focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Skip link styles */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 8px 16px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 9999;
+  font-weight: 500;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .border {
+    border-width: 2px;
+  }
+  
+  .focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [role="menuitem"]:focus-visible,
+  [role="tab"]:focus-visible {
+    outline: 3px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Still allow opacity transitions for accessibility */
+  .fade-in,
+  .fade-out {
+    transition-duration: 0.1s !important;
+  }
+}
+
+/* Better focus management for modals and dialogs */
+.dialog-overlay {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Ensure minimum touch target sizes for mobile */
+@media (pointer: coarse) {
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [role="menuitem"],
+  [role="tab"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Color contrast enhancements */
+.text-muted-foreground {
+  /* Ensure minimum 4.5:1 contrast ratio */
+  color: hsl(var(--muted-foreground));
+  opacity: 1;
+}
+
+/* Error states with proper color contrast */
+.error-text {
+  color: hsl(var(--destructive));
+  font-weight: 500;
+}
+
+.error-border {
+  border-color: hsl(var(--destructive));
+  border-width: 2px;
+}
+
+/* Success states */
+.success-text {
+  color: hsl(var(--success));
+  font-weight: 500;
+}
+
+.success-border {
+  border-color: hsl(var(--success));
+  border-width: 2px;
+}
+
+/* Warning states */
+.warning-text {
+  color: hsl(var(--warning));
+  font-weight: 500;
+}
+
+.warning-border {
+  border-color: hsl(var(--warning));
+  border-width: 2px;
+}
+
+/* Enhanced table accessibility */
+table {
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-weight: 600;
+}
+
+th,
+td {
+  border: 1px solid hsl(var(--border));
+  padding: 12px;
+}
+
+/* Focus management for tables */
+table:focus-within {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Form enhancement */
+label {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+input:invalid,
+select:invalid,
+textarea:invalid {
+  border-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 1px hsl(var(--destructive));
+}
+
+/* Required field indicators */
+.required::after {
+  content: " *";
+  color: hsl(var(--destructive));
+  font-weight: bold;
+}
+
+/* Loading states */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: none;
+  }
+}
+
+/* Announcement regions */
+[aria-live] {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Focus trap container */
+.focus-trap {
+  position: relative;
+}
+
+.focus-trap::before,
+.focus-trap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keyboard navigation hints */
+.keyboard-hint {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+/* Better button states */
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Enhanced dropdown/menu accessibility */
+[role="menu"],
+[role="menubar"],
+[role="listbox"] {
+  outline: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+}
+
+[role="menuitem"],
+[role="option"] {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+[role="menuitem"]:focus,
+[role="menuitem"]:hover,
+[role="option"]:focus,
+[role="option"]:hover {
+  background: hsl(var(--accent));
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+}
+
+[role="menuitem"][aria-selected="true"],
+[role="option"][aria-selected="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Progress indicators */
+[role="progressbar"] {
+  border-radius: 4px;
+  overflow: hidden;
+  background: hsl(var(--muted));
+}
+
+/* Alert and status styles */
+[role="alert"] {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive-foreground));
+}
+
+[role="status"] {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--primary));
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary-foreground));
+}
+
+/* Grid and data table enhancements */
+[role="grid"] {
+  border: 1px solid hsl(var(--border));
+}
+
+[role="gridcell"] {
+  padding: 8px 12px;
+  border-right: 1px solid hsl(var(--border));
+}
+
+[role="gridcell"]:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Tab interface enhancements */
+[role="tablist"] {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+[role="tab"] {
+  padding: 12px 16px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+[role="tab"]:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+}
+
+[role="tab"][aria-selected="true"] {
+  border-bottom-color: hsl(var(--primary));
+  background: hsl(var(--background));
+}
+
+[role="tabpanel"] {
+  padding: 16px;
+  outline: none;
+}
+
+[role="tabpanel"]:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+}

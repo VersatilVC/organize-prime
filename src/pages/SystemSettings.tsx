@@ -16,7 +16,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Loader2, Users, Building, Clock, Mail, Upload, Image, Settings } from 'lucide-react';
 import { useOptimizedForm, commonValidationRules } from '@/hooks/useOptimizedForm';
 import FeatureCategoryManagement from '@/components/settings/FeatureCategoryManagement';
@@ -387,18 +386,16 @@ export default function SystemSettings() {
 
   if (roleLoading || role !== 'super_admin') {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
     );
   }
 
   const isLoading = settingsLoading || statsLoading;
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-6 py-6 max-w-6xl">
         {/* Header */}
         <div className="mb-6">
@@ -747,6 +744,6 @@ export default function SystemSettings() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+    </>
   );
 }

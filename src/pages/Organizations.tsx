@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -260,37 +259,33 @@ export default function Organizations() {
 
   if (roleLoading) {
     return (
-      <AppLayout>
-        <div className="flex-1 p-6">
-          <div className="space-y-4 w-full max-w-md">
-            <div className="h-8 w-full animate-pulse rounded-md bg-muted" />
-            <div className="h-8 w-3/4 animate-pulse rounded-md bg-muted" />
-            <div className="h-8 w-1/2 animate-pulse rounded-md bg-muted" />
-          </div>
+      <div className="flex-1 p-6">
+        <div className="space-y-4 w-full max-w-md">
+          <div className="h-8 w-full animate-pulse rounded-md bg-muted" />
+          <div className="h-8 w-3/4 animate-pulse rounded-md bg-muted" />
+          <div className="h-8 w-1/2 animate-pulse rounded-md bg-muted" />
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   if (role !== 'super_admin') {
     return (
-      <AppLayout>
-        <div className="flex-1 p-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Access Denied</CardTitle>
-              <CardDescription>
-                You need super admin privileges to view this page.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </AppLayout>
+      <div className="flex-1 p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You need super admin privileges to view this page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -536,6 +531,6 @@ export default function Organizations() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AppLayout>
+    </>
   );
 }

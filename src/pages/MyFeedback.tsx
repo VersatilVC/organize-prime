@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,8 +113,8 @@ export default function MyFeedback() {
 
   if (loading) {
     return (
-      <AppLayout>
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      <>
+        <div className="container mx-auto p-4 sm:p-6 space-y-6">
           <div className="space-y-4">
             <Breadcrumb>
               <BreadcrumbList>
@@ -152,12 +151,12 @@ export default function MyFeedback() {
             ))}
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto p-6 space-y-6">
         <div className="space-y-4">
           <Breadcrumb>
@@ -268,6 +267,6 @@ export default function MyFeedback() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </>
   );
 }

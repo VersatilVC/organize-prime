@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -26,9 +26,123 @@ import { ThemeToggle } from './ThemeToggle';
 import { MobileNavTrigger } from './MobileNav';
 import { OrganizationSwitcher } from '../OrganizationSwitcher';
 
-export function AppHeader() {
+// Memoized role badge component to prevent re-calculations
+const RoleBadge = React.memo(({ role }: { role: string }) => {
+  const getRoleBadgeVariant = React.useCallback((role: string) => {
+    switch (role) {
+      case 'super_admin':
+        return 'destructive';
+      case 'admin':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  }, []);
+
+  const getRoleDisplayName = React.useCallback((role: string) => {
+    switch (role) {
+      case 'super_admin':
+        return 'Super Admin';
+      case 'admin':
+        return 'Admin';
+      default:
+        return 'User';
+    }
+  }, []);
+
+  return (
+    <Badge variant={getRoleBadgeVariant(role)} className="w-fit">
+      {getRoleDisplayName(role)}
+    </Badge>
+  );
+});
+
+RoleBadge.displayName = 'RoleBadge';
+
+// Memoized app logo component
+const AppLogo = React.memo(({ systemSettings, onHomeClick }: { systemSettings: any; onHomeClick: () => void }) => (
+  <button 
+    onClick={onHomeClick} 
+    className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md p-1 -m-1"
+    aria-label={`Go to homepage - ${systemSettings?.app_name || 'SaaS Platform'}`}
+    title={`Go to homepage - ${systemSettings?.app_name || 'SaaS Platform'}`}
+  >
+    {systemSettings?.app_logo_url ? (
+      <OptimizedImage
+        src={systemSettings.app_logo_url}
+        alt={`${systemSettings?.app_name || 'SaaS Platform'} logo`}
+        className="h-6 w-6"
+        aspectRatio="square"
+        sizes="24px"
+        priority
+        showSkeleton={false}
+      />
+    ) : (
+      <Icons.building 
+        className="h-6 w-6" 
+        aria-hidden="true"
+      />
+    )}
+    <span className="hidden font-bold sm:inline-block">
+      {systemSettings?.app_name || 'SaaS Platform'}
+    </span>
+  </button>
+));
+
+AppLogo.displayName = 'AppLogo';
+
+// Memoized user menu content
+const UserMenuContent = React.memo(({ profile, user, role, signOut }: {
+  profile: any;
+  user: any;
+  role: string;
+  signOut: () => void;
+}) => (
+  <DropdownMenuContent className="w-56" align="end" forceMount>
+    <DropdownMenuLabel className="font-normal">
+      <div className="flex flex-col space-y-1">
+        <p className="text-sm font-medium leading-none">
+          {profile?.full_name || user?.email}
+        </p>
+        {profile?.full_name && (
+          <p className="text-xs text-muted-foreground">{user?.email}</p>
+        )}
+        <RoleBadge role={role} />
+      </div>
+    </DropdownMenuLabel>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem 
+      onClick={() => window.location.href = '/settings/profile'}
+      aria-label="Go to profile settings"
+    >
+      <Icons.settings className="mr-2 h-4 w-4" aria-hidden="true" />
+      Profile Settings
+    </DropdownMenuItem>
+    {role === 'super_admin' && (
+      <DropdownMenuItem 
+        onClick={() => window.location.href = '/admin'}
+        aria-label="Go to system administration"
+      >
+        <Icons.shield className="mr-2 h-4 w-4" aria-hidden="true" />
+        System Admin
+      </DropdownMenuItem>
+    )}
+    <DropdownMenuSeparator />
+    <DropdownMenuItem 
+      onClick={signOut}
+      aria-label="Sign out of your account"
+    >
+      <Icons.logOut className="mr-2 h-4 w-4" aria-hidden="true" />
+      Log out
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+));
+
+UserMenuContent.displayName = 'UserMenuContent';
+
+export const AppHeader = React.memo(() => {
   const { user, signOut } = useAuth();
-  const { role } = useUserRole();
+  const { role } = useOptimizedUserRole();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch current user profile for avatar and display name
@@ -74,38 +188,29 @@ export function AppHeader() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  const handleSearch = (e: React.FormEvent) => {
+  // Memoize search handler to prevent unnecessary re-renders
+  const handleSearch = React.useCallback((e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement global search
     console.log('Searching for:', searchQuery);
-  };
+  }, [searchQuery]);
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'super_admin':
-        return 'destructive';
-      case 'admin':
-        return 'default';
-      default:
-        return 'secondary';
-    }
-  };
-
-  const getRoleDisplayName = (role: string) => {
-    switch (role) {
-      case 'super_admin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Admin';
-      default:
-        return 'User';
-    }
-  };
-
+  // Memoize avatar cache hook result
   const { src: avatarSrc } = useAvatarCache(profile?.avatar_url || undefined);
 
+  // Memoize navigation handlers to prevent re-renders
+  const navigationHandlers = React.useMemo(() => ({
+    home: () => window.location.href = '/',
+    profile: () => window.location.href = '/settings/profile',
+    admin: () => window.location.href = '/admin'
+  }), []);
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header 
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      role="banner"
+      aria-label="Main navigation"
+    >
       <div className="container flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-4">
           {/* Mobile nav trigger for small screens */}
@@ -114,24 +219,7 @@ export function AppHeader() {
           {/* Desktop sidebar trigger */}
           <SidebarTrigger className="hidden md:flex" />
           
-          <button onClick={() => window.location.href = '/'} className="flex items-center space-x-2">
-            {systemSettings?.app_logo_url ? (
-              <OptimizedImage
-                src={systemSettings.app_logo_url}
-                alt="App logo"
-                className="h-6 w-6"
-                aspectRatio="square"
-                sizes="24px"
-                priority
-                showSkeleton={false}
-              />
-            ) : (
-              <Icons.building className="h-6 w-6" />
-            )}
-            <span className="hidden font-bold sm:inline-block">
-              {systemSettings?.app_name || 'SaaS Platform'}
-            </span>
-          </button>
+          <AppLogo systemSettings={systemSettings} onHomeClick={navigationHandlers.home} />
           
           {/* Organization switcher */}
           <OrganizationSwitcher />
@@ -144,12 +232,14 @@ export function AppHeader() {
         <div className="flex items-center gap-2">
           {/* Advanced Search */}
           <AdvancedSearchDialog>
-            <Button variant="outline" size="sm" className="hidden sm:flex">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-            <Button variant="outline" size="sm" className="sm:hidden">
-              <Search className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="sm"
+              aria-label="Open advanced search dialog"
+              title="Search across the platform (Keyboard shortcut: /)"
+            >
+              <Search className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+              <span className="hidden sm:inline">Search</span>
             </Button>
           </AdvancedSearchDialog>
           
@@ -162,49 +252,35 @@ export function AppHeader() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button 
+                variant="ghost" 
+                className="relative h-8 w-8 rounded-full focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label={`User menu for ${profile?.full_name || user?.email}`}
+                aria-haspopup="menu"
+                aria-expanded={false}
+              >
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={avatarSrc || undefined} alt={profile?.full_name || user?.email} />
-                  <AvatarFallback>
+                  <AvatarImage 
+                    src={avatarSrc || undefined} 
+                    alt={`${profile?.full_name || user?.email} profile picture`} 
+                  />
+                  <AvatarFallback aria-label={`${profile?.full_name || user?.email} initials`}>
                     {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {profile?.full_name || user?.email}
-                  </p>
-                  {profile?.full_name && (
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  )}
-                  <Badge variant={getRoleBadgeVariant(role)} className="w-fit">
-                    {getRoleDisplayName(role)}
-                  </Badge>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => window.location.href = '/settings/profile'}>
-                <Icons.settings className="mr-2 h-4 w-4" />
-                Profile Settings
-              </DropdownMenuItem>
-              {role === 'super_admin' && (
-                <DropdownMenuItem onClick={() => window.location.href = '/admin'}>
-                  <Icons.shield className="mr-2 h-4 w-4" />
-                  System Admin
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
-                <Icons.logOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+            <UserMenuContent 
+              profile={profile} 
+              user={user} 
+              role={role} 
+              signOut={signOut} 
+            />
           </DropdownMenu>
         </div>
       </div>
     </header>
   );
-}
+});
+
+AppHeader.displayName = 'AppHeader';

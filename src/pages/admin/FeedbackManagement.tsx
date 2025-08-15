@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -314,17 +313,15 @@ export default function FeedbackManagement() {
 
   if (roleLoading) {
     return (
-      <AppLayout>
-        <div className="container mx-auto p-6">
-          <Skeleton className="h-8 w-64 mb-6" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
+      <div className="container mx-auto p-6">
+        <Skeleton className="h-8 w-64 mb-6" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         </div>
-      </AppLayout>
+        <Skeleton className="h-96" />
+      </div>
     );
   }
 
@@ -333,7 +330,7 @@ export default function FeedbackManagement() {
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto p-6 space-y-6">
         <div className="space-y-4">
           <Breadcrumb>
@@ -814,6 +811,6 @@ export default function FeedbackManagement() {
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
+    </>
   );
 }

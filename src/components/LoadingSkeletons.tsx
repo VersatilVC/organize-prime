@@ -1,5 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+interface LoadingSkeletonProps {
+  className?: string;
+  rows?: number;
+  showHeader?: boolean;
+}
 
 export function PageLoadingSpinner() {
   return (
@@ -184,4 +191,148 @@ export function DialogLoadingSkeleton() {
       </div>
     </div>
   );
+}
+
+// New standardized loading components
+export function ListLoadingSkeleton({ className, rows = 5, showHeader = true }: LoadingSkeletonProps) {
+  return (
+    <div className={cn("space-y-4", className)}>
+      {showHeader && (
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      )}
+      <div className="space-y-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex items-center space-x-4 p-4 rounded-lg border">
+            <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+            <Skeleton className="h-8 w-8 flex-shrink-0" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CardGridLoadingSkeleton({ className, count = 4 }: { className?: string; count?: number }) {
+  return (
+    <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-4", className)}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16 mb-2" />
+            <Skeleton className="h-3 w-32" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+export function FormLoadingSkeleton({ className, fields = 4 }: { className?: string; fields?: number }) {
+  return (
+    <div className={cn("space-y-6", className)}>
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+      
+      <div className="space-y-4">
+        {Array.from({ length: fields }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ))}
+      </div>
+      
+      <div className="flex justify-end space-x-2">
+        <Skeleton className="h-10 w-20" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
+export function SidebarLoadingSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("space-y-4 p-4", className)}>
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-3 w-32" />
+      </div>
+      
+      <div className="space-y-1">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center space-x-3 p-2">
+            <Skeleton className="h-4 w-4 flex-shrink-0" />
+            <Skeleton className="h-4 flex-1" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function InlineLoadingSpinner({ size = "sm", className }: { size?: "sm" | "md" | "lg"; className?: string }) {
+  const sizeClasses = {
+    sm: "h-4 w-4",
+    md: "h-6 w-6",
+    lg: "h-8 w-8"
+  };
+  
+  return (
+    <div className={cn("flex items-center justify-center", className)}>
+      <div className={cn("animate-spin rounded-full border-2 border-primary border-t-transparent", sizeClasses[size])} />
+    </div>
+  );
+}
+
+// Centralized loading state wrapper
+export function LoadingStateWrapper({ 
+  isLoading, 
+  error, 
+  children, 
+  loadingComponent,
+  errorComponent,
+  className 
+}: {
+  isLoading: boolean;
+  error?: Error | null;
+  children: React.ReactNode;
+  loadingComponent?: React.ReactNode;
+  errorComponent?: React.ReactNode;
+  className?: string;
+}) {
+  if (error) {
+    return (
+      <div className={cn("flex items-center justify-center p-8", className)}>
+        {errorComponent || (
+          <div className="text-center space-y-2">
+            <p className="text-destructive font-medium">Something went wrong</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  if (isLoading) {
+    return (
+      <div className={className}>
+        {loadingComponent || <ComponentLoadingSkeleton />}
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
 }

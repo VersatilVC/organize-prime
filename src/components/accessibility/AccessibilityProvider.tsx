@@ -182,7 +182,7 @@ export function useKeyboardNavigation() {
       },
       'g s': () => {
         // Go to settings
-        window.location.href = '/settings';
+        window.location.href = '/settings/profile';
       },
       'escape': () => {
         // Close modals/menus

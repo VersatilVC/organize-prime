@@ -30,7 +30,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { AppLayout } from '@/components/layout/AppLayout';
 
 interface Notification {
   id: string;
@@ -501,8 +500,6 @@ function NotificationsContent() {
 
 export default function Notifications() {
   return (
-    <AppLayout>
-      <NotificationsContent />
-    </AppLayout>
+    <NotificationsContent />
   );
 }

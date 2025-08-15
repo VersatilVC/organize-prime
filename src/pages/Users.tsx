@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { 
   useUsersQuery, 
@@ -13,7 +13,6 @@ import {
   useCancelInvitationMutation, 
   Invitation 
 } from '@/hooks/useInvitationsQuery';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -319,7 +318,7 @@ const InvitationRow = React.memo(({
 InvitationRow.displayName = 'InvitationRow';
 
 export default function Users() {
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, loading: roleLoading } = useOptimizedUserRole();
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   
@@ -349,7 +348,7 @@ export default function Users() {
     role: 'user'
   });
 
-  // Optimized queries
+  // Optimized queries with early data enabled when role is available
   const { 
     data: usersData, 
     isLoading: usersLoading, 
@@ -466,39 +465,47 @@ export default function Users() {
   const totalPages = useMemo(() => Math.ceil(totalUsers / usersPageSize), [totalUsers, usersPageSize]);
   const totalInvitationPages = useMemo(() => Math.ceil(totalInvitations / invitationsPageSize), [totalInvitations, invitationsPageSize]);
 
-  if (roleLoading) {
+  // Progressive loading: Show basic UI structure immediately, even while role is loading
+  const showProgressiveUI = role && !roleLoading;
+  
+  if (roleLoading && !role) {
     return (
-      <AppLayout>
-        <div className="flex-1 p-6">
-          <div className="space-y-4 w-full max-w-md">
-            <div className="h-8 w-full animate-pulse rounded-md bg-muted" />
-            <div className="h-8 w-3/4 animate-pulse rounded-md bg-muted" />
-            <div className="h-8 w-1/2 animate-pulse rounded-md bg-muted" />
+      <div className="flex-1 space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
+            <div className="h-5 w-64 animate-pulse rounded-md bg-muted mt-2" />
           </div>
+          <div className="h-10 w-28 animate-pulse rounded-md bg-muted" />
         </div>
-      </AppLayout>
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-64 animate-pulse rounded-md bg-muted" />
+          </div>
+          <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
     );
   }
 
   if (role !== 'admin' && role !== 'super_admin') {
     return (
-      <AppLayout>
-        <div className="flex-1 p-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Access Denied</CardTitle>
-              <CardDescription>
-                You need admin privileges to view this page.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </AppLayout>
+      <div className="flex-1 p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You need admin privileges to view this page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -564,7 +571,7 @@ export default function Users() {
             </div>
             <Card>
               <CardContent className="p-0">
-                {usersLoading ? (
+                {usersLoading && users.length === 0 ? (
                   <div className="p-6 text-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-2 text-muted-foreground">Loading users...</p>
@@ -674,7 +681,7 @@ export default function Users() {
             </div>
             <Card>
               <CardContent className="p-0">
-                {invitationsLoading ? (
+                {invitationsLoading && invitations.length === 0 ? (
                   <div className="p-6 text-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-2 text-muted-foreground">Loading invitations...</p>
@@ -766,6 +773,6 @@ export default function Users() {
           }}
         />
       </div>
-    </AppLayout>
+    </>
   );
 }

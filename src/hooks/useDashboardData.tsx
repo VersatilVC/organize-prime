@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from './useUserRole';
+import { useOptimizedUserRole } from './database/useOptimizedUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useEffect, useRef } from 'react';
+import { fetchUserDashboardData } from '@/lib/database-optimization';
 
 interface DashboardStats {
   organizations: number;
@@ -47,7 +48,7 @@ const getDashboardStats = async (organizationId: string, userId: string, isSuper
 
 export function useDashboardData(): DashboardStats {
   const { user } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, loading: roleLoading } = useOptimizedUserRole();
   const { currentOrganization, loading: orgLoading } = useOrganization();
   const isMountedRef = useRef(true);
 
@@ -68,64 +69,28 @@ export function useDashboardData(): DashboardStats {
         throw new Error('Component unmounted');
       }
       
-      // Use optimized RPC function
-      const optimizedStats = await getDashboardStats(
-        currentOrganization?.id || '', 
-        user.id, 
-        role === 'super_admin'
+      // Use the new optimized batch query system
+      const dashboardData = await fetchUserDashboardData(
+        user.id,
+        currentOrganization?.id || null,
+        role
       );
 
-      // Get additional counts that aren't in the optimized function
-      let organizationsCount = 0;
-      let notificationsCount = 0;
-
-      if (role === 'super_admin') {
-        const [orgsResult, notificationsResult] = await Promise.all([
-          supabase.from('organizations').select('*', { count: 'exact', head: true }),
-          supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('read', false),
-        ]);
-
-        organizationsCount = orgsResult.count || 0;
-        notificationsCount = notificationsResult.count || 0;
-
-      } else if (role === 'admin' && currentOrganization) {
-        const [notificationsResult] = await Promise.all([
-          supabase.from('notifications').select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('read', false),
-        ]);
-
-        organizationsCount = 1;
-        notificationsCount = notificationsResult.count || 0;
-
-      } else {
-        const [orgsResult, notificationsResult] = await Promise.all([
-          supabase.from('memberships').select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('status', 'active'),
-          supabase.from('notifications').select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('read', false),
-        ]);
-
-        organizationsCount = orgsResult.count || 0;
-        notificationsCount = notificationsResult.count || 0;
-      }
-
       return {
-        organizations: organizationsCount,
-        users: optimizedStats?.totalUsers || 0,
-        notifications: notificationsCount,
-        feedback: optimizedStats?.totalFeedback || 0,
+        organizations: dashboardData.organizations,
+        users: dashboardData.users,
+        notifications: dashboardData.notifications,
+        feedback: dashboardData.feedback,
       };
     },
     enabled: !!user && !roleLoading && !orgLoading && (role !== 'admin' || !!currentOrganization) && isMountedRef.current,
-    staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
-    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // 15 minutes garbage collection
+    retry: 1, // Reduce retries for faster sidebar
     retryDelay: 1000,
     refetchOnWindowFocus: false,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    refetchOnMount: false, // Don't refetch on mount for faster sidebar
+    refetchInterval: false, // Don't poll automatically
   });
 
   return {

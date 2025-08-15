@@ -26,11 +26,17 @@ interface InviteUserDialogProps {
   };
 }
 
-export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizationOverride }: InviteUserDialogProps) {
+export const InviteUserDialog = React.memo(({ open, onOpenChange, onInviteSent, organizationOverride }: InviteUserDialogProps) => {
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
-  const targetOrganization = organizationOverride || currentOrganization;
   const { toast } = useToast();
+  
+  // Memoize target organization to prevent unnecessary recalculations
+  const targetOrganization = React.useMemo(() => 
+    organizationOverride || currentOrganization, 
+    [organizationOverride, currentOrganization]
+  );
+  
   const [loading, setLoading] = useState(false);
   const [invitationLink, setInvitationLink] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -41,11 +47,12 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
     message: ''
   });
 
-  const generateToken = () => {
+  // Memoize token generation function
+  const generateToken = React.useCallback(() => {
     return Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +184,24 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
     }
   };
 
-  const handleCopyLink = async () => {
+
+  // Memoize form reset data to prevent object recreation
+  const initialFormData = React.useMemo(() => ({
+    email: '',
+    role: 'user',
+    department: '',
+    position: '',
+    message: ''
+  }), []);
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleClose = React.useCallback(() => {
+    setFormData(initialFormData);
+    setInvitationLink(null);
+    onOpenChange(false);
+  }, [initialFormData, onOpenChange]);
+
+  const handleCopyLink = React.useCallback(async () => {
     if (invitationLink) {
       try {
         await navigator.clipboard.writeText(invitationLink);
@@ -185,27 +209,15 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
           title: "Copied",
           description: "Invitation link copied to clipboard",
         });
-      } catch (error) {
+      } catch (err) {
         toast({
           title: "Error",
-          description: "Failed to copy link",
+          description: "Failed to copy link to clipboard",
           variant: "destructive",
         });
       }
     }
-  };
-
-  const handleClose = () => {
-    setFormData({
-      email: '',
-      role: 'user',
-      department: '',
-      position: '',
-      message: ''
-    });
-    setInvitationLink(null);
-    onOpenChange(false);
-  };
+  }, [invitationLink, toast]);
 
   if (invitationLink) {
     return (
@@ -231,8 +243,10 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
                   variant="outline"
                   size="sm"
                   onClick={handleCopyLink}
+                  aria-label="Copy invitation link to clipboard"
+                  title="Copy invitation link"
                 >
-                  <Icons.copy className="h-4 w-4" />
+                  <Icons.copy className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -262,7 +276,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <Label htmlFor="email">Email Address *</Label>
             <Input
@@ -272,7 +286,12 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               placeholder="user@example.com"
               required
+              aria-describedby="email-help"
+              aria-invalid={formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)}
             />
+            <div id="email-help" className="sr-only">
+              Enter a valid email address for the person you want to invite
+            </div>
           </div>
 
           <div>
@@ -331,15 +350,19 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              aria-describedby={loading ? "sending-status" : undefined}
+            >
               {loading ? (
                 <>
-                  <Icons.clock className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
+                  <Icons.clock className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+                  <span id="sending-status">Sending invitation...</span>
                 </>
               ) : (
                 <>
-                  <Icons.mail className="h-4 w-4 mr-2" />
+                  <Icons.mail className="h-4 w-4 mr-2" aria-hidden="true" />
                   Send Invitation
                 </>
               )}
@@ -349,4 +372,6 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent, organizatio
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+InviteUserDialog.displayName = 'InviteUserDialog';

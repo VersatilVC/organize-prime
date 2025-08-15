@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
@@ -97,7 +97,7 @@ QuickActionButton.displayName = 'QuickActionButton';
 export default function Dashboard() {
   // usePagePerformance('Dashboard'); // Temporarily disabled
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { role } = useOptimizedUserRole();
   const { currentOrganization, organizations } = useOrganization();
   const { organizations: orgCount, users, notifications, feedback, loading } = useDashboardData();
   const queryClient = useQueryClient();

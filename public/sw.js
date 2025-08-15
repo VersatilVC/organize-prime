@@ -128,6 +128,37 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(request));
 });
 
+// Progressive enhancement based on connection
+function getConnectionStrategy() {
+  // Access connection info if available
+  if ('connection' in navigator) {
+    const connection = navigator.connection;
+    return {
+      effectiveType: connection.effectiveType,
+      saveData: connection.saveData,
+      downlink: connection.downlink
+    };
+  }
+  return { effectiveType: '4g', saveData: false, downlink: 10 };
+}
+
+// Enhanced caching based on network conditions
+function shouldCacheResource(request, connectionInfo) {
+  const url = new URL(request.url);
+  
+  // Always cache critical resources
+  if (STATIC_ASSETS.some(asset => url.pathname.includes(asset))) {
+    return true;
+  }
+  
+  // Reduce caching on slow connections or data saver mode
+  if (connectionInfo.saveData || connectionInfo.effectiveType === 'slow-2g') {
+    return false;
+  }
+  
+  return true;
+}
+
 // Background sync for failed requests
 self.addEventListener('sync', (event) => {
   if (event.tag === 'background-sync') {
@@ -136,9 +167,67 @@ self.addEventListener('sync', (event) => {
 });
 
 async function doBackgroundSync() {
-  // Handle any failed requests that were queued
-  // This would typically retry failed API calls
-  console.log('Background sync triggered');
+  try {
+    // Handle any offline mutations that were queued
+    const offlineQueue = await getOfflineQueue();
+    
+    for (const item of offlineQueue) {
+      try {
+        await fetch(item.url, {
+          method: item.method,
+          headers: item.headers,
+          body: item.body
+        });
+        
+        // Remove from queue after successful sync
+        await removeFromOfflineQueue(item.id);
+        
+        // Notify clients of successful sync
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'SYNC_SUCCESS',
+              id: item.id
+            });
+          });
+        });
+      } catch (error) {
+        console.log('Failed to sync offline request:', error);
+      }
+    }
+  } catch (error) {
+    console.log('Background sync error:', error);
+  }
+}
+
+// Offline queue management (simplified - in real app would use IndexedDB)
+async function getOfflineQueue() {
+  try {
+    const cache = await caches.open('offline-queue');
+    const requests = await cache.keys();
+    const queue = [];
+    
+    for (const request of requests) {
+      const response = await cache.match(request);
+      if (response) {
+        const data = await response.json();
+        queue.push(data);
+      }
+    }
+    
+    return queue;
+  } catch {
+    return [];
+  }
+}
+
+async function removeFromOfflineQueue(id) {
+  try {
+    const cache = await caches.open('offline-queue');
+    await cache.delete(`/offline-queue/${id}`);
+  } catch (error) {
+    console.log('Failed to remove from offline queue:', error);
+  }
 }
 
 // Handle push notifications (if needed)

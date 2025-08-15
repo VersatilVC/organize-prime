@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/hooks/use-toast';
 import { SystemFeature } from '@/types/features';
+import { fetchOrganizationFeatures, clearQueryCache } from '@/lib/database-optimization';
 
 export interface OrganizationFeatureWithSystem {
   id: string;
@@ -55,45 +56,14 @@ export function useOrganizationFeatures(organizationId?: string) {
         return [];
       }
 
-      console.log('🔍 useOrganizationFeatures: Fetching features for org:', orgId);
+      // Use optimized batch fetching with caching
+      const filteredFeatures = await fetchOrganizationFeatures(orgId);
 
-      // Step 1: Get globally enabled system features
-      const { data: systemConfigs, error: systemError } = await supabase
-        .from('system_feature_configs')
-        .select('feature_slug')
-        .eq('is_enabled_globally', true);
-
-      if (systemError) {
-        console.error('❌ useOrganizationFeatures: Error fetching system configs:', systemError);
-        throw new Error('Failed to fetch system feature configs');
+      // Get system features with navigation config in a separate optimized query
+      if (filteredFeatures.length === 0) {
+        return [];
       }
 
-      const enabledSystemFeatures = new Set(systemConfigs?.map(s => s.feature_slug) || []);
-      console.log('🔍 useOrganizationFeatures: Globally enabled features:', enabledSystemFeatures);
-
-      // Step 2: Get organization feature configs that are enabled at both levels
-      const { data: orgConfigs, error: orgError } = await supabase
-        .from('organization_feature_configs')
-        .select('id, organization_id, feature_slug, is_enabled, is_user_accessible, org_menu_order, created_at, updated_at')
-        .eq('organization_id', orgId)
-        .eq('is_enabled', true)
-        .eq('is_user_accessible', true);
-
-      if (orgError) {
-        console.error('❌ useOrganizationFeatures: Error fetching org configs:', orgError);
-        throw new Error('Failed to fetch organization feature configs');
-      }
-
-      console.log('🔍 useOrganizationFeatures: Raw org configs:', orgConfigs);
-
-      // Step 3: Filter to only include features enabled at system level
-      const filteredFeatures = (orgConfigs || []).filter(config => 
-        enabledSystemFeatures.has(config.feature_slug)
-      );
-
-      console.log('🔍 useOrganizationFeatures: Filtered features (system + org enabled):', filteredFeatures);
-
-      // Step 4: Get system features with navigation config from system_feature_configs (single source of truth)
       const { data: systemFeatures, error: featuresError } = await supabase
         .from('system_feature_configs')
         .select('feature_slug, display_name, description, icon_name, color_hex, navigation_config')
@@ -105,8 +75,6 @@ export function useOrganizationFeatures(organizationId?: string) {
       }
 
       const systemFeaturesMap = new Map(systemFeatures?.map(f => [f.feature_slug, f]) || []);
-      console.log('🔍 useOrganizationFeatures: System features with navigation:', systemFeaturesMap);
-      console.log('🔍 useOrganizationFeatures: Raw systemFeatures:', systemFeatures);
 
       const finalFeatures = filteredFeatures.map((item: any) => {
         const slug = item.feature_slug as string;
@@ -116,12 +84,6 @@ export function useOrganizationFeatures(organizationId?: string) {
         const navigationConfig = typeof systemFeature?.navigation_config === 'string' 
           ? JSON.parse(systemFeature.navigation_config)
           : systemFeature?.navigation_config || { pages: [] };
-        
-        console.log(`🔍 Processing feature ${slug}:`, {
-          systemFeature,
-          navigation_config: navigationConfig,
-          pages: navigationConfig?.pages
-        });
         
         return {
           id: item.id,
@@ -150,27 +112,30 @@ export function useOrganizationFeatures(organizationId?: string) {
         };
       });
 
-      console.log('🔍 useOrganizationFeatures: Final transformed features:', finalFeatures);
       return finalFeatures;
     },
     enabled: !!orgId,
     retry: (failureCount, error) => {
-      // Retry up to 3 times for network errors
-      if (failureCount < 3 && error?.message?.includes('network')) {
+      // Retry up to 2 times for network errors only
+      if (failureCount < 2 && error?.message?.includes('network')) {
         return true;
       }
       return false;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 0, // Force refresh to get latest navigation config
-    gcTime: 0, // Disable cache completely to force fresh data
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+    staleTime: 15 * 60 * 1000, // Cache for 15 minutes - features rarely change
+    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    refetchOnWindowFocus: false, // Don't refetch when window gets focus
+    refetchOnMount: false, // Don't refetch on every mount
+    refetchOnReconnect: false, // Don't refetch on network reconnect
+    refetchInterval: false, // Don't poll
   });
 }
 
 export function useFeatureNavigationSections(organizationId?: string): FeatureNavigationSection[] {
   const { data: features = [] } = useOrganizationFeatures(organizationId);
 
-  console.log('🔍 useFeatureNavigationSections: Processing features for navigation:', features);
+  // console.log('🔍 useFeatureNavigationSections: Processing features for navigation:', features);
 
   const sections = features
     .map(feature => {
@@ -194,7 +159,7 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
           
           // Convert first letter to lowercase for camelCase  
           const normalized = iconName.charAt(0).toLowerCase() + iconName.slice(1);
-          console.log('🔍 Icon normalization:', iconName, '->', normalized);
+          // console.log('🔍 Icon normalization:', iconName, '->', normalized);
           return normalized;
         };
         
@@ -214,12 +179,12 @@ export function useFeatureNavigationSections(organizationId?: string): FeatureNa
         items: navigationItems
       } as FeatureNavigationSection;
 
-      console.log('🔍 useFeatureNavigationSections: Created section:', section);
+      // console.log('🔍 useFeatureNavigationSections: Created section:', section);
       return section;
     })
     .filter(Boolean) as FeatureNavigationSection[];
 
-  console.log('🔍 useFeatureNavigationSections: Final navigation sections:', sections);
+  // console.log('🔍 useFeatureNavigationSections: Final navigation sections:', sections);
   return sections;
 }
 

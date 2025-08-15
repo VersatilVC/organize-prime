@@ -126,7 +126,10 @@ export function useOrganizationFeatureConfigs() {
     queryKey,
     queryFn: () => fetchOrganizationFeatureConfigs(currentOrganization?.id || ''),
     enabled: !!currentOrganization?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - feature configs change rarely
+    gcTime: 30 * 60 * 1000, // 30 minutes in cache
+    refetchOnWindowFocus: false, // Don't refetch on focus
+    refetchOnMount: false, // Don't refetch on every mount
   });
 
   const updateMutation = useMutation({

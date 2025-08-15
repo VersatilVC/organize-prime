@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx @anthropic-ai/mcp-server-supabase:*)",
+      "WebSearch",
+      "WebFetch(domain:supabase.com)",
+      "Bash(claude config set mcp.servers.supabase.command npx)",
+      "Bash(claude config --help)",
+      "Bash(claude config list)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(claude mcp add supabase:*)",
+      "Bash(claude mcp:*)",
+      "Bash(chmod:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(rm:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

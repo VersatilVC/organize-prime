@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useUserRole } from './useUserRole';
+import { useOptimizedUserRole } from './database/useOptimizedUserRole';
 import { useToast } from './use-toast';
 
 export interface UserWithMembership {
@@ -33,7 +33,7 @@ interface UseUsersQueryOptions {
 export function useUsersQuery({ page = 0, pageSize = 50, search }: UseUsersQueryOptions = {}) {
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, loading: roleLoading } = useOptimizedUserRole();
 
   return useQuery({
     queryKey: ['users', user?.id, currentOrganization?.id, role, page, pageSize, search],
@@ -70,8 +70,13 @@ export function useUsersQuery({ page = 0, pageSize = 50, search }: UseUsersQuery
       return { users, totalCount };
     },
     enabled: !!user && !roleLoading && (role === 'admin' || role === 'super_admin'),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    retry: 2,
+    staleTime: 10 * 60 * 1000, // 10 minutes - users rarely change
+    gcTime: 30 * 60 * 1000, // 30 minutes in cache
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    retry: 1,
   });
 }
 
@@ -80,7 +85,7 @@ export function useUpdateUserMutation() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
-  const { role } = useUserRole();
+  const { role } = useOptimizedUserRole();
 
   return useMutation({
     mutationFn: async ({ 
@@ -188,7 +193,7 @@ export function useDeleteUserMutation() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
-  const { role } = useUserRole();
+  const { role } = useOptimizedUserRole();
 
   return useMutation({
     mutationFn: async (userId: string) => {

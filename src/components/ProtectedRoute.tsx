@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { Skeleton } from '@/components/ui/skeleton';
 import { logger } from '@/lib/secure-logger';
 
@@ -12,16 +12,8 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRouteProps) {
   const { user, loading: authLoading } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, loading: roleLoading } = useOptimizedUserRole();
   const location = useLocation();
-
-  // State monitoring for debugging
-  React.useEffect(() => {
-    logger.debug('ProtectedRoute state check', {
-      component: 'ProtectedRoute',
-      action: 'permission_check'
-    });
-  }, [user, authLoading, roleLoading, role, location.pathname, requiredRole]);
 
   // Add timeout to prevent infinite loading
   const [timeoutReached, setTimeoutReached] = React.useState(false);

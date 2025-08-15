@@ -2,9 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Production-ready configuration that works in all environments
-const SUPABASE_URL = "https://cjwgfoingscquolnfkhh.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo";
+// Secure configuration using environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://cjwgfoingscquolnfkhh.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo";
 
 // Validate environment
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {

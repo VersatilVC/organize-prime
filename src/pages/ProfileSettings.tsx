@@ -13,7 +13,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Upload, Loader2, User, Bell } from 'lucide-react';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { useAvatarCache } from '@/hooks/useImageCache';
@@ -198,16 +197,14 @@ export default function ProfileSettings() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-6 py-6 max-w-4xl">
         {/* Header */}
         <div className="mb-6">
@@ -396,6 +393,6 @@ export default function ProfileSettings() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+    </>
   );
 }

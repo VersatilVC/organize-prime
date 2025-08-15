@@ -15,7 +15,6 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Upload, Loader2, Building } from 'lucide-react';
 import { CompanyFeatureManagement } from '@/components/admin/CompanyFeatureManagement';
 import { InstalledAppsManagement } from '@/components/admin/InstalledAppsManagement';
@@ -213,39 +212,35 @@ export default function CompanySettings() {
 
   if (role !== 'admin' && role !== 'super_admin') {
     return (
-      <AppLayout>
-        <div className="container mx-auto py-6">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-center text-muted-foreground">
-                You don't have permission to access company settings.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              You don't have permission to access company settings.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="container mx-auto py-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="ml-2">Loading company settings...</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading company settings...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto py-6 space-y-6">
         <div>
           <Breadcrumb>
@@ -527,6 +522,6 @@ export default function CompanySettings() {
           </Button>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }

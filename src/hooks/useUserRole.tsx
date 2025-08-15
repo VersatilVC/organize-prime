@@ -21,9 +21,7 @@ export function useUserRole() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔍 useUserRole: Effect triggered', { user: !!user, userId: user?.id });
     if (!user) {
-      console.log('🔍 useUserRole: No user, setting defaults');
       setRole('user');
       setOrganizations([]);
       setLoading(false);
@@ -31,7 +29,6 @@ export function useUserRole() {
     }
 
     const fetchUserRole = async () => {
-      console.log('🔍 useUserRole: Starting fetchUserRole for user:', user.id);
       try {
         // Check if user is super admin
         const { data: profile } = await supabase
@@ -41,7 +38,6 @@ export function useUserRole() {
           .maybeSingle();
 
         if (profile?.is_super_admin) {
-          console.log('🔍 useUserRole: User is super admin');
           setRole('super_admin');
           setLoading(false);
           return;
@@ -60,13 +56,11 @@ export function useUserRole() {
         // Check if user is admin in any organization
         const isAdmin = memberships?.some(m => m.role === 'admin');
         const finalRole = isAdmin ? 'admin' : 'user';
-        console.log('🔍 useUserRole: Final role determined:', { finalRole, membershipCount: memberships?.length });
         setRole(finalRole);
       } catch (error) {
-        console.error('🔍 useUserRole: Error fetching user role:', error);
+        console.error('Error fetching user role:', error);
         setRole('user');
       } finally {
-        console.log('🔍 useUserRole: Setting loading to false');
         setLoading(false);
       }
     };

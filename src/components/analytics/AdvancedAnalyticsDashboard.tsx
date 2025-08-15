@@ -19,6 +19,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface AnalyticsData {
   totalUsers: number;
@@ -39,48 +41,93 @@ interface AdvancedAnalyticsDashboardProps {
 export function AdvancedAnalyticsDashboard({ className }: AdvancedAnalyticsDashboardProps) {
   const [dateRange, setDateRange] = useState('7');
   const [refreshing, setRefreshing] = useState(false);
+  const { role } = useOptimizedUserRole();
+  const { currentOrganization } = useOrganization();
 
   const { data: analyticsData, isLoading, refetch } = useQuery({
-    queryKey: ['advanced-analytics', dateRange],
+    queryKey: ['advanced-analytics', dateRange, role, currentOrganization?.id],
     queryFn: async (): Promise<AnalyticsData> => {
       const endDate = endOfDay(new Date());
       const startDate = startOfDay(subDays(endDate, parseInt(dateRange)));
 
-      // Get total counts
-      const [usersResult, orgsResult, feedbackResult] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('organizations').select('id', { count: 'exact', head: true }),
-        supabase.from('feedback').select('id', { count: 'exact', head: true })
-      ]);
+      // SECURITY FIX: Organization-scoped queries based on user role
+      let usersResult, orgsResult, feedbackResult;
+      
+      if (role === 'super_admin') {
+        // Super admin can see all data
+        [usersResult, orgsResult, feedbackResult] = await Promise.all([
+          supabase.from('profiles').select('id', { count: 'exact', head: true }),
+          supabase.from('organizations').select('id', { count: 'exact', head: true }),
+          supabase.from('feedback').select('id', { count: 'exact', head: true })
+        ]);
+      } else if (role === 'admin' && currentOrganization?.id) {
+        // Organization admin can only see their org data
+        [usersResult, orgsResult, feedbackResult] = await Promise.all([
+          supabase.from('memberships')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', currentOrganization.id)
+            .eq('status', 'active'),
+          Promise.resolve({ count: 1 }), // Current organization only
+          supabase.from('feedback')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', currentOrganization.id)
+        ]);
+      } else {
+        // Regular users have no access to analytics
+        throw new Error('Insufficient permissions to view analytics');
+      }
 
-      // Get recent activity
-      const { data: recentUsers } = await supabase
-        .from('profiles')
-        .select('id, created_at')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
-
-      // Get previous period for growth calculation
-      const prevStartDate = startOfDay(subDays(startDate, parseInt(dateRange)));
-      const { data: prevUsers } = await supabase
-        .from('profiles')
-        .select('id')
-        .gte('created_at', prevStartDate.toISOString())
-        .lt('created_at', startDate.toISOString());
-
-      // Get feedback by status
-      const { data: feedbackByStatus } = await supabase
-        .from('feedback')
-        .select('status')
-        .gte('created_at', startDate.toISOString());
-
-      // Get top organizations by user count
-      const { data: orgMemberships } = await supabase
-        .from('memberships')
-        .select(`
-          organization_id,
-          organizations!inner(name)
-        `);
+      // Get recent activity - organization scoped
+      let recentUsers, prevUsers, feedbackByStatus, orgMemberships;
+      
+      if (role === 'super_admin') {
+        // Super admin gets global data
+        const [recentUsersRes, prevUsersRes, feedbackRes, membershipsRes] = await Promise.all([
+          supabase.from('profiles')
+            .select('id, created_at')
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', endDate.toISOString()),
+          supabase.from('profiles')
+            .select('id')
+            .gte('created_at', subDays(startDate, parseInt(dateRange)).toISOString())
+            .lt('created_at', startDate.toISOString()),
+          supabase.from('feedback')
+            .select('status')
+            .gte('created_at', startDate.toISOString()),
+          supabase.from('memberships')
+            .select(`organization_id, organizations!inner(name)`)
+        ]);
+        
+        recentUsers = recentUsersRes.data;
+        prevUsers = prevUsersRes.data;
+        feedbackByStatus = feedbackRes.data;
+        orgMemberships = membershipsRes.data;
+      } else if (role === 'admin' && currentOrganization?.id) {
+        // Organization admin gets org-scoped data
+        const [recentUsersRes, prevUsersRes, feedbackRes] = await Promise.all([
+          supabase.from('memberships')
+            .select('id, created_at')
+            .eq('organization_id', currentOrganization.id)
+            .eq('status', 'active')
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', endDate.toISOString()),
+          supabase.from('memberships')
+            .select('id')
+            .eq('organization_id', currentOrganization.id)
+            .eq('status', 'active')
+            .gte('created_at', subDays(startDate, parseInt(dateRange)).toISOString())
+            .lt('created_at', startDate.toISOString()),
+          supabase.from('feedback')
+            .select('status')
+            .eq('organization_id', currentOrganization.id)
+            .gte('created_at', startDate.toISOString())
+        ]);
+        
+        recentUsers = recentUsersRes.data;
+        prevUsers = prevUsersRes.data;
+        feedbackByStatus = feedbackRes.data;
+        orgMemberships = []; // Single organization context
+      }
 
       // Process data
       const userGrowth = prevUsers ? 

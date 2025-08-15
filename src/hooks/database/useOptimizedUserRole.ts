@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useMemo } from 'react';
+import * as React from 'react';
 
 interface UserRoleData {
   role: string;
@@ -82,10 +83,17 @@ export function useOptimizedUserRole() {
       };
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes - role changes are infrequent
-    gcTime: 15 * 60 * 1000, // 15 minutes
-    refetchOnWindowFocus: false, // Don't refetch on window focus for roles
-    retry: 3
+    staleTime: 15 * 60 * 1000, // 15 minutes - roles rarely change
+    gcTime: 60 * 60 * 1000, // 1 hour - keep in cache longer for faster loads
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on every component mount
+    refetchOnReconnect: false, // Don't refetch on network reconnect
+    refetchInterval: false, // Don't refetch periodically
+    retry: 1, // Reduce retries to prevent loops
+    initialData: () => {
+      // Return cached data immediately if available
+      return undefined;
+    }
   });
 
   // Memoized helper functions
@@ -105,10 +113,21 @@ export function useOptimizedUserRole() {
     return query.data?.role === 'super_admin';
   }, [query.data?.role]);
 
+  // Create stable fallbacks to prevent role switching
+  const stableRole = React.useMemo(() => {
+    if (query.isLoading && !query.data) return 'user'; // Loading state
+    return query.data?.role || 'user';
+  }, [query.data?.role, query.isLoading]);
+
+  const stableIsSuperAdmin = React.useMemo(() => {
+    if (query.isLoading && !query.data) return false;
+    return query.data?.isSuperAdmin || false;
+  }, [query.data?.isSuperAdmin, query.isLoading]);
+
   return {
     ...query,
-    role: query.data?.role || 'user',
-    isSuperAdmin: query.data?.isSuperAdmin || false,
+    role: stableRole,
+    isSuperAdmin: stableIsSuperAdmin,
     isOrgAdmin: query.data?.isOrgAdmin || false,
     permissions: query.data?.permissions || [],
     hasPermission,

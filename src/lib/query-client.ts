@@ -42,37 +42,57 @@ export const queryKeys = {
   organizationFiles: (orgId: string) => [...queryKeys.files, orgId] as const,
 } as const;
 
-// Cache time configurations based on data volatility
+// Cache time configurations based on data volatility - HEAVILY OPTIMIZED FOR PERFORMANCE
 export const cacheConfig = {
-  // Static data - rarely changes
+  // Static data - rarely changes (user profiles, system configs)
   static: {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (was cacheTime)
+    staleTime: 30 * 60 * 1000, // 30 minutes - significantly increased
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours - keep in cache much longer
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    networkMode: 'offlineFirst', // Prefer cache when available
   },
   
-  // Semi-static data - changes occasionally
+  // Semi-static data - changes occasionally (organization settings, features)
   semiStatic: {
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 20 * 60 * 1000, // 20 minutes - doubled for better performance
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    networkMode: 'offlineFirst',
   },
   
-  // Dynamic data - changes frequently
+  // Dynamic data - changes frequently (user lists, dashboard stats)
   dynamic: {
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - increased significantly
+    gcTime: 20 * 60 * 1000, // 20 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   },
   
-  // Real-time data - changes very frequently
+  // Real-time data - changes very frequently (notifications, active users)
   realtime: {
-    staleTime: 10 * 1000, // 10 seconds
-    gcTime: 2 * 60 * 1000, // 2 minutes
-    refetchInterval: 30 * 1000, // Background refetch every 30 seconds
+    staleTime: 60 * 1000, // 1 minute - doubled
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 2 * 60 * 1000, // Background refetch every 2 minutes (reduced frequency)
+    refetchOnWindowFocus: true, // Only real-time data refetches on focus
   },
   
-  // Search results - cache briefly
+  // Search results - cache aggressively
   search: {
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - much longer cache for search results
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+  },
+  
+  // New: Heavy computation results (analytics, reports)
+  computation: {
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    networkMode: 'offlineFirst',
   },
 } as const;
 

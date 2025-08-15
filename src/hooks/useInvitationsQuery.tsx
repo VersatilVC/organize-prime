@@ -65,8 +65,13 @@ export function useInvitationsQuery({ page = 0, pageSize = 50 }: UseInvitationsQ
       return { invitations, totalCount };
     },
     enabled: !!user && !!currentOrganization,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    retry: 2,
+    staleTime: 10 * 60 * 1000, // 10 minutes - invitations rarely change
+    gcTime: 30 * 60 * 1000, // 30 minutes in cache
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    retry: 1,
   });
 }
 

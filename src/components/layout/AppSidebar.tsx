@@ -174,6 +174,12 @@ const getAllSidebarSections = (
 
 // Hook for managing section collapse state
 const useSidebarSectionState = (sections: SidebarSection[]) => {
+  // Memoize sections keys to prevent unnecessary recalculations
+  const sectionKeys = React.useMemo(() => 
+    sections.map(s => s.key).join(','), 
+    [sections]
+  );
+
   // Initialize state from localStorage and sections
   const initializeState = React.useCallback(() => {
     const state: Record<string, boolean> = {};
@@ -198,14 +204,14 @@ const useSidebarSectionState = (sections: SidebarSection[]) => {
     });
     
     return state;
-  }, [sections]);
+  }, [sectionKeys]); // Use stable sectionKeys instead of sections
 
-  const [collapsedSections, setCollapsedSections] = React.useState(initializeState);
+  const [collapsedSections, setCollapsedSections] = React.useState(() => initializeState());
 
-  // Update state when sections change
+  // Update state when sections keys change (only when sections actually change)
   React.useEffect(() => {
     setCollapsedSections(initializeState());
-  }, [initializeState]);
+  }, [sectionKeys]); // Use sectionKeys instead of initializeState
 
   // Listen for custom toggle events
   React.useEffect(() => {
@@ -215,7 +221,7 @@ const useSidebarSectionState = (sections: SidebarSection[]) => {
 
     window.addEventListener('sidebar-toggle', handleToggle);
     return () => window.removeEventListener('sidebar-toggle', handleToggle);
-  }, [initializeState]);
+  }, [sectionKeys]); // Use sectionKeys instead of initializeState
 
   const toggleSection = React.useCallback((sectionKey: string) => {
     setCollapsedSections(prev => {
@@ -295,32 +301,37 @@ const NavigationItem = React.memo(({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isItemActive}>
-        <button 
-          onClick={handleClick}
-          className={`w-full flex items-center gap-2 px-2 py-1.5 text-left ${
-            isItemActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
-          }`}
-          onMouseEnter={handleHover}
-        >
-          <IconComponent className="h-4 w-4" />
-          <span>{item.name}</span>
-          {/* Show feature-specific badge if available */}
-          {item.badge && item.badge > 0 && (
-            <Badge 
-              variant={item.badge > 10 ? "destructive" : "secondary"} 
-              className="ml-auto h-5 px-1.5 text-xs"
-            >
-              {item.badge}
-            </Badge>
-          )}
-          {/* Show feedback count badge for feedback-related items */}
-          {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedbackCount > 0 && (
-            <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs">
-              {feedbackCount}
-            </Badge>
-          )}
-        </button>
+      <SidebarMenuButton 
+        onClick={handleClick}
+        isActive={isItemActive}
+        onMouseEnter={handleHover}
+        aria-label={`Navigate to ${item.name}${isItemActive ? ' (current page)' : ''}`}
+        aria-current={isItemActive ? 'page' : undefined}
+        title={`Navigate to ${item.name}`}
+        className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      >
+        <IconComponent className="h-4 w-4" aria-hidden="true" />
+        <span>{item.name}</span>
+        {/* Show feature-specific badge if available */}
+        {item.badge && item.badge > 0 && (
+          <Badge 
+            variant={item.badge > 10 ? "destructive" : "secondary"} 
+            className="ml-auto h-5 px-1.5 text-xs"
+            aria-label={`${item.badge} notifications`}
+          >
+            {item.badge}
+          </Badge>
+        )}
+        {/* Show feedback count badge for feedback-related items */}
+        {(item.href === '/admin/feedback' || item.href === '/feedback/manage') && feedbackCount > 0 && (
+          <Badge 
+            variant="destructive" 
+            className="ml-auto h-5 px-1.5 text-xs"
+            aria-label={`${feedbackCount} unread feedback items`}
+          >
+            {feedbackCount}
+          </Badge>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -359,9 +370,16 @@ const SidebarSectionComponent = React.memo(({
   if (!section.collapsible) {
     return (
       <SidebarGroup>
-        <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+        <SidebarGroupLabel 
+          id={`sidebar-label-${section.key}`}
+        >
+          {section.title}
+        </SidebarGroupLabel>
         <SidebarGroupContent>
-          <SidebarMenu>
+          <SidebarMenu 
+            role="group"
+            aria-labelledby={`sidebar-label-${section.key}`}
+          >
             {filteredItems.map((item) => (
               <NavigationItem
                 key={item.href}
@@ -379,14 +397,26 @@ const SidebarSectionComponent = React.memo(({
     <Collapsible open={!isCollapsed} onOpenChange={() => toggleSection(section.key)}>
       <SidebarGroup>
         <SidebarGroupLabel asChild>
-          <CollapsibleTrigger className="flex w-full items-center justify-between">
+          <CollapsibleTrigger 
+            className="flex w-full items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+            aria-expanded={!isCollapsed}
+            aria-controls={`sidebar-section-${section.key}`}
+            aria-label={`Toggle ${section.title} section`}
+          >
             {section.title}
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isCollapsed ? 
+              <ChevronRight className="h-4 w-4" aria-hidden="true" /> : 
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            }
           </CollapsibleTrigger>
         </SidebarGroupLabel>
         <CollapsibleContent>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu 
+              id={`sidebar-section-${section.key}`}
+              role="group"
+              aria-labelledby={`sidebar-label-${section.key}`}
+            >
               {filteredItems.map((item) => (
                 <NavigationItem
                   key={item.href}
@@ -406,43 +436,66 @@ SidebarSectionComponent.displayName = 'SidebarSectionComponent';
 
 // Main AppSidebar component
 export function AppSidebar() {
-  const { role } = useOptimizedUserRole();
+  // Only load the essential role data immediately
+  const { role, loading: roleLoading } = useOptimizedUserRole();
+  
+  // Load heavy data lazily after role is available
   const dashboardData = useDashboardData();
   const organizationFeatureConfigs = useOrganizationFeatureConfigs();
   const featureNavigationSections = useFeatureNavigationSections();
 
+  // Render basic navigation immediately, even while feature data loads
+  const baseSections = React.useMemo(() => {
+    if (roleLoading || !role) return [];
+    
+    // Return basic sections immediately without waiting for features
+    return baseSidebarSections(role).filter(section => {
+      if (section.requiresRole) {
+        const roleRank: Record<string, number> = { user: 1, admin: 2, super_admin: 3 };
+        const required = roleRank[section.requiresRole] ?? 1;
+        const actual = roleRank[role] ?? 1;
+        return actual >= required;
+      }
+      return section.items.length > 0;
+    });
+  }, [role, roleLoading]);
+
+  // Add feature sections when they're loaded (non-blocking)
   const allSections = React.useMemo(() => {
-    if (!role || !organizationFeatureConfigs.configs) return [];
+    if (roleLoading || !role) return [];
     
-    console.log('🔍 AppSidebar: Building sections with role:', role);
+    // Start with base sections
+    let sections = [...baseSections];
     
-    const sections = getAllSidebarSections(
-      role, 
-      organizationFeatureConfigs.configs, 
-      featureNavigationSections
-    );
-    
-    console.log('🔍 AppSidebar: Final sections:', sections.map(s => ({
-      title: s.title,
-      itemCount: s.items.length
-    })));
+    // Only add feature sections if they're loaded
+    if (organizationFeatureConfigs?.configs && featureNavigationSections) {
+      const featureSections = createFeatureSections(featureNavigationSections);
+      
+      // Insert feature sections after management
+      const managementIndex = sections.findIndex(s => s.key === 'management');
+      if (managementIndex >= 0) {
+        sections.splice(managementIndex + 1, 0, ...featureSections);
+      } else {
+        sections.push(...featureSections);
+      }
+    }
     
     return sections;
-  }, [role, organizationFeatureConfigs.configs, featureNavigationSections]);
+  }, [baseSections, organizationFeatureConfigs?.configs, featureNavigationSections]);
 
   const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
-  // Feedback count for badges
+  // Feedback count for badges (non-blocking)
   const feedback = dashboardData?.feedback || 0;
 
-  // Loading states
-  const roleLoading = !role;
-  const configsLoading = !organizationFeatureConfigs;
-
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar 
+      collapsible="icon"
+      role="navigation"
+      aria-label="Main navigation sidebar"
+    >
       <SidebarContent className="space-y-1">
-        {roleLoading || configsLoading ? (
+        {roleLoading ? (
           // Show loading skeleton while role is being determined
           <div className="space-y-4 p-4">
             <div className="animate-pulse space-y-2">

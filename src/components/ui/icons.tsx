@@ -72,6 +72,7 @@ import {
   Library,
   Radar,
   Package,
+  Accessibility,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -151,6 +152,7 @@ export const Icons = {
   library: Library,
   radar: Radar,
   package: Package,
+  accessibility: Accessibility,
   google: (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" {...props}>
       <path

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,7 +175,7 @@ export default function Feedback() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         <div className="space-y-4">
           <Breadcrumb>
@@ -413,6 +412,6 @@ export default function Feedback() {
           </Card>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }
