@@ -24,13 +24,20 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   build: {
     rollupOptions: {
+      external: (id) => {
+        // Don't bundle React in development to prevent dual package hazard
+        if (process.env.NODE_ENV === 'development' && id.includes('react')) {
+          return false;
+        }
+        return false;
+      },
       output: {
         // Strategic chunk splitting for optimal caching and loading
         manualChunks: mode === 'production' ? (id) => {
           if (id.includes('node_modules')) {
-            // Core React ecosystem
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-core';
+            // Keep React ecosystem together to prevent duplicate instances
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
+              return 'react-vendor';
             }
             
             // UI libraries (Radix, Tailwind, Lucide)
@@ -138,6 +145,9 @@ export default defineConfig(({ mode }) => ({
     include: [
       'react',
       'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
       'react-router-dom',
       '@tanstack/react-query',
       '@radix-ui/react-dialog',
@@ -159,5 +169,9 @@ export default defineConfig(({ mode }) => ({
   // Fix ESM/CommonJS compatibility issues
   ssr: {
     noExternal: ['@supabase/supabase-js'],
+  },
+  // Ensure React consistency across the app
+  define: {
+    global: 'globalThis',
   },
 }));
