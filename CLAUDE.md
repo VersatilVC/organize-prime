@@ -549,11 +549,46 @@ N8N_API_KEY=your-n8n-api-key
 - **Hosting**: Static hosting (Netlify/Vercel recommended)
 - **Environment**: Production environment variables
 
+## AI Assistant Database Management
+
+The AI assistant has direct access to the Supabase database through MCP (Model Context Protocol) capabilities and can:
+
+### Available Database Operations
+- **Execute SQL queries**: Direct read/write access via `mcp__supabase__execute_sql`
+- **Apply migrations**: Create and apply database migrations via `mcp__supabase__apply_migration`
+- **Manage tables**: List, inspect, and modify table structures
+- **Branch management**: Create, merge, and manage Supabase development branches
+- **Monitor performance**: Access logs, advisors, and health monitoring
+- **Deploy Edge Functions**: Create and deploy Deno-based serverless functions
+
+### When to Use Direct Database Access
+The AI assistant can directly handle:
+- Creating new tables, indexes, or database functions
+- Adding or modifying RLS policies
+- Applying schema changes and migrations
+- Fixing database constraint issues
+- Optimizing query performance
+- Creating or updating stored procedures
+- Managing database permissions and security
+
+### Database Change Workflow
+1. **Analysis**: AI examines existing schema and identifies requirements
+2. **Migration Creation**: Generates appropriate SQL migrations with proper naming
+3. **Security Validation**: Ensures RLS policies maintain organization isolation
+4. **Performance Optimization**: Adds necessary indexes and constraints
+5. **Verification**: Tests changes and validates functionality
+
+### Important Notes
+- All changes maintain the multi-tenant architecture with organization-based isolation
+- RLS policies are automatically applied to new tables following the established patterns
+- Migrations are properly named and timestamped for version control
+- Database changes are immediately available without requiring manual intervention
+
 ## Common Development Patterns
 
 ### Adding a New Feature
-1. Create migration for any new tables
-2. Add RLS policies for organization isolation
+1. **AI can directly**: Create migration for any new tables
+2. **AI can directly**: Add RLS policies for organization isolation
 3. Update TypeScript types (auto-generated from Supabase)
 4. Create custom hooks for data access
 5. Implement UI components

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { N8NWebhookService, WebhookCall } from '@/services/N8NWebhookService';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useUserData } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 
 /**
@@ -11,7 +11,7 @@ import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 export const useWebhookCall = (featureSlug: string, webhookName: string) => {
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
-  const { user } = useUserData();
+  const { user } = useAuth();
   const { data: userRole } = useOptimizedUserRole();
 
   const callWebhook = useMutation({
@@ -102,7 +102,7 @@ export const useWebhookTest = () => {
  */
 export const useBatchWebhookCall = (featureSlug: string) => {
   const { currentOrganization } = useOrganization();
-  const { user } = useUserData();
+  const { user } = useAuth();
   const { data: userRole } = useOptimizedUserRole();
 
   const batchCall = useMutation({

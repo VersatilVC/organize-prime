@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useCallback } from 'react';
 import { QueryInvalidationManager, advancedCacheConfig, queryKeys } from '@/lib/advanced-query-client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useMemoryLeakPrevention } from './useAdvancedPerformance';
 

@@ -489,7 +489,8 @@ export default function Users() {
     );
   }
 
-  if (role !== 'admin' && role !== 'super_admin') {
+  // Wait for role to load before checking access
+  if (!roleLoading && role !== 'admin' && role !== 'super_admin') {
     return (
       <div className="flex-1 p-6">
         <Card>

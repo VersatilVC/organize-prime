@@ -58,8 +58,9 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
       setTimeout(() => {
         onComplete?.();
       }, 2000);
-    } catch (error: any) {
-      setError(error.message || 'Failed to reset password');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

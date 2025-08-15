@@ -1,79 +1,124 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from './useUserRole';
+import { useAuth } from '@/auth/AuthProvider';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { queryKeys } from '@/lib/optimized-query-client';
 
-interface DashboardData {
-  stats: {
-    totalUsers: number;
-    activeUsers: number;
-    pendingInvitations: number;
-    totalFeedback: number;
-  };
-  recent_activity: Array<{
-    id: string;
-    action: string;
-    resource_type: string;
-    created_at: string;
-    user_name: string;
-    details: any;
-  }>;
-  notifications: {
-    unread_count: number;
-    latest: Array<{
-      id: string;
-      title: string;
-      message: string;
-      created_at: string;
-      type: string;
-    }>;
-  };
-  quick_stats: {
-    files_uploaded_today: number;
-    feedback_pending: number;
-    active_users_week: number;
-    storage_used_mb: number;
-  };
-  generated_at: string;
-}
-
+// Optimized dashboard hook with parallel data loading
 export function useOptimizedDashboard() {
   const { user } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
-  const { currentOrganization, loading: orgLoading } = useOrganization();
+  const { role } = useUserRole();
+  const { currentOrganization } = useOrganization();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard-data-batch', user?.id, role, currentOrganization?.id],
-    queryFn: async (): Promise<DashboardData> => {
-      if (!user) throw new Error('User not authenticated');
+  // Parallel queries for maximum performance
+  const results = useQueries({
+    queries: [
+      // Core dashboard stats (highest priority)
+      {
+        queryKey: queryKeys.dashboardCore(user?.id || '', role),
+        queryFn: async () => {
+          if (!user?.id) return null;
+          
+          const { data, error } = await supabase.rpc('get_dashboard_stats', {
+            p_user_id: user.id,
+            p_organization_id: currentOrganization?.id || null,
+            p_role: role || null
+          });
+          
+          if (error) throw error;
+          return typeof data === 'string' ? JSON.parse(data) : data;
+        },
+        enabled: !!user?.id && !!role,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+      },
       
-      const { data, error } = await supabase.rpc('get_dashboard_data_batch', {
-        p_user_id: user.id,
-        p_organization_id: currentOrganization?.id || '',
-        p_is_super_admin: role === 'super_admin'
-      });
-
-      if (error) throw error;
+      // Notifications (medium priority)
+      {
+        queryKey: queryKeys.dashboardNotifications(user?.id || ''),
+        queryFn: async () => {
+          if (!user) return [];
+          
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('id, title, message, type, read, created_at')
+            .eq('user_id', user.id)
+            .eq('read', false)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          
+          if (error) throw error;
+          return data || [];
+        },
+        enabled: !!user,
+        staleTime: 30 * 1000, // 30 seconds
+      },
       
-      return typeof data === 'string' ? JSON.parse(data) : data;
-    },
-    enabled: !!user && !roleLoading && !orgLoading && (role !== 'admin' || !!currentOrganization),
-    staleTime: 1 * 60 * 1000, // 1 minute cache for dashboard data
-    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-    retry: 2,
-    retryDelay: 1000,
-    refetchOnWindowFocus: false,
-    refetchInterval: 3 * 60 * 1000, // Refetch every 3 minutes
+      // Organization stats (lower priority)
+      {
+        queryKey: queryKeys.dashboardStats(currentOrganization?.id),
+        queryFn: async () => {
+          if (!currentOrganization?.id || !user?.id) return null;
+          
+          const { data, error } = await supabase.rpc('get_organization_users', {
+            p_organization_id: currentOrganization.id,
+            p_requesting_user_id: user.id,
+            p_include_emails: false
+          });
+          
+          if (error) throw error;
+          return data;
+        },
+        enabled: !!currentOrganization?.id && !!user?.id,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+    ],
   });
 
-  return {
-    data,
-    isLoading: isLoading || roleLoading || orgLoading,
-    error,
-    stats: data?.stats,
-    recentActivity: data?.recent_activity || [],
-    notifications: data?.notifications,
-    quickStats: data?.quick_stats,
-  };
+  const [coreStatsQuery, notificationsQuery, orgStatsQuery] = results;
+
+  // Memoize derived data to prevent unnecessary recalculations
+  const derivedData = useMemo(() => {
+    const coreStats = coreStatsQuery.data;
+    const notifications = notificationsQuery.data || [];
+    const orgStats = orgStatsQuery.data;
+
+    return {
+      // Core metrics
+      stats: coreStats,
+      
+      // Notification data
+      notifications,
+      unreadCount: notifications.length,
+      
+      // Organization data
+      organizationStats: orgStats,
+      
+      // Loading states
+      isCoreLoading: coreStatsQuery.isLoading,
+      isNotificationsLoading: notificationsQuery.isLoading,
+      isOrgStatsLoading: orgStatsQuery.isLoading,
+      
+      // Overall loading state (only core is required)
+      isLoading: coreStatsQuery.isLoading,
+      
+      // Error states
+      hasError: coreStatsQuery.isError || notificationsQuery.isError || orgStatsQuery.isError,
+      errors: {
+        core: coreStatsQuery.error,
+        notifications: notificationsQuery.error,
+        org: orgStatsQuery.error,
+      },
+      
+      // Data readiness flags
+      isCoreReady: !coreStatsQuery.isLoading && !!coreStats,
+      isNotificationsReady: !notificationsQuery.isLoading,
+      isOrgStatsReady: !orgStatsQuery.isLoading,
+      isFullyLoaded: results.every(query => !query.isLoading),
+    };
+  }, [results, coreStatsQuery.data, notificationsQuery.data, orgStatsQuery.data]);
+
+  return derivedData;
 }

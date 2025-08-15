@@ -216,9 +216,12 @@ const deepMerge = <T>(target: T, source: DeepPartial<T>): T => {
   for (const key in source) {
     if (source[key] !== undefined) {
       if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
-        result[key] = deepMerge(result[key] as any, source[key] as any);
+        result[key] = deepMerge(
+          result[key] as T[typeof key], 
+          source[key] as DeepPartial<T[typeof key]>
+        );
       } else {
-        result[key] = source[key] as any;
+        result[key] = source[key] as T[typeof key];
       }
     }
   }
@@ -273,7 +276,7 @@ const validateConfig = (): void => {
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: AppConfig;
-  private listeners: Map<string, ((value: any) => void)[]> = new Map();
+  private listeners: Map<string, ((value: unknown) => void)[]> = new Map();
   
   private constructor() {
     this.config = { ...config };
@@ -288,18 +291,18 @@ export class ConfigManager {
   }
   
   // Get configuration value with dot notation support
-  get<T = any>(path: string): T {
-    return path.split('.').reduce((obj, key) => obj?.[key], this.config as any);
+  get<T = unknown>(path: string): T {
+    return path.split('.').reduce((obj, key) => obj?.[key], this.config as Record<string, unknown>) as T;
   }
   
   // Set configuration value with dot notation support
-  set(path: string, value: any): void {
+  set(path: string, value: unknown): void {
     const keys = path.split('.');
     const lastKey = keys.pop()!;
     const target = keys.reduce((obj, key) => {
       if (!obj[key]) obj[key] = {};
       return obj[key];
-    }, this.config as any);
+    }, this.config as Record<string, unknown>);
     
     const oldValue = target[lastKey];
     target[lastKey] = value;
@@ -309,7 +312,7 @@ export class ConfigManager {
   }
   
   // Subscribe to configuration changes
-  subscribe(path: string, callback: (value: any) => void): () => void {
+  subscribe(path: string, callback: (value: unknown) => void): () => void {
     if (!this.listeners.has(path)) {
       this.listeners.set(path, []);
     }
@@ -329,7 +332,7 @@ export class ConfigManager {
   }
   
   // Notify configuration change listeners
-  private notifyListeners(path: string, newValue: any, oldValue: any): void {
+  private notifyListeners(path: string, newValue: unknown, oldValue: unknown): void {
     const listeners = this.listeners.get(path);
     if (listeners) {
       listeners.forEach(callback => callback(newValue));

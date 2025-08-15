@@ -214,18 +214,4 @@ AuthDiagnostics.debugCurrentOAuthFlow(); // Full debug info`;
   }
 }
 
-// Global debug function for easy console access
-if (typeof window !== 'undefined') {
-  (window as any).debugOAuth = () => {
-    return AuthDiagnostics.debugCurrentOAuthFlow();
-  };
-  
-  (window as any).fixOAuth = () => {
-    return AuthDiagnostics.fixCommonIssues();
-  };
-  
-  (window as any).clearOAuth = () => {
-    AuthDiagnostics.clearOAuthState();
-    console.log('🧹 OAuth state cleared. Try signing in again.');
-  };
-}
+// Development debug functions removed for production

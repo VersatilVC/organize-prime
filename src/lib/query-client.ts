@@ -108,11 +108,11 @@ export const createOptimizedQueryClient = () => {
         placeholderData: (prev) => prev as unknown,
         
         retry: (failureCount, error: any) => {
-          // Don't retry on 404 or authentication errors
-          if (error?.status === 404 || error?.status === 401 || error?.status === 403) {
+          // Don't retry on client errors (4xx) or authentication errors
+          if (error?.status === 400 || error?.status === 401 || error?.status === 403 || error?.status === 404 || error?.statusCode === 400) {
             return false;
           }
-          // Retry up to 3 times for other errors
+          // Retry up to 3 times for server errors (5xx) and network errors
           return failureCount < 3;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),

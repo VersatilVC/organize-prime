@@ -246,7 +246,7 @@ export const mockHooks = {
       uploadAvatar: vi.fn()
     };
 
-    return vi.spyOn(require('@/contexts/AuthContext'), 'useAuth')
+    return vi.spyOn(require('@/auth/AuthProvider'), 'useAuth')
       .mockReturnValue({ ...defaultMock, ...mockData });
   },
 

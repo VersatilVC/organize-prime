@@ -8,7 +8,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Icons } from '@/components/ui/icons';
 
 import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { useOrganizationFeatureConfigs } from '@/hooks/useOrganizationFeatureConfigs';
 import { useFeatureNavigationSections } from '@/hooks/database/useOrganizationFeatures';
 import { prefetchByPath } from '@/lib/route-prefetch';
@@ -440,7 +440,7 @@ export function AppSidebar() {
   const { role, loading: roleLoading } = useOptimizedUserRole();
   
   // Load heavy data lazily after role is available
-  const dashboardData = useDashboardData();
+  const dashboardData = useOptimizedDashboard();
   const organizationFeatureConfigs = useOrganizationFeatureConfigs();
   const featureNavigationSections = useFeatureNavigationSections();
 
@@ -486,7 +486,7 @@ export function AppSidebar() {
   const { collapsedSections, toggleSection } = useSidebarSectionState(allSections);
 
   // Feedback count for badges (non-blocking)
-  const feedback = dashboardData?.feedback || 0;
+  const feedback = dashboardData?.stats?.totalFeedback || 0;
 
   return (
     <Sidebar 

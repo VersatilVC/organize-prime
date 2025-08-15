@@ -1,46 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { cacheConfig, queryKeys } from '@/lib/query-client';
 import { useToast } from '@/hooks/use-toast';
 
-// ===== OPTIMIZED DASHBOARD HOOK =====
-
-export function useOptimizedDashboard() {
-  const { user } = useAuth();
-  const { currentOrganization } = useOrganization();
-  const { toast } = useToast();
-
-  return useQuery({
-    queryKey: queryKeys.dashboardStats(user?.id || '', currentOrganization?.id),
-    queryFn: async () => {
-      if (!user?.id || !currentOrganization?.id) {
-        throw new Error('User or organization not available');
-      }
-
-      const { data, error } = await supabase.rpc('get_dashboard_data_optimized', {
-        p_user_id: user.id,
-        p_organization_id: currentOrganization.id,
-        p_is_super_admin: false // Will be determined server-side
-      });
-
-      if (error) {
-        toast({
-          title: 'Dashboard Error',
-          description: 'Failed to load dashboard data',
-          variant: 'destructive',
-        });
-        throw error;
-      }
-
-      return data;
-    },
-    enabled: !!(user?.id && currentOrganization?.id),
-    ...cacheConfig.dynamic,
-    staleTime: 3 * 60 * 1000, // 3 minutes for dashboard
-  });
-}
 
 // ===== OPTIMIZED USER LIST HOOK =====
 

@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { useOrganizationSetup } from '@/hooks/useOrganizationSetup';
 import { OrganizationSetup } from '@/components/OrganizationSetup';
@@ -99,7 +99,18 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { role } = useOptimizedUserRole();
   const { currentOrganization, organizations } = useOrganization();
-  const { organizations: orgCount, users, notifications, feedback, loading } = useDashboardData();
+  const { 
+    stats, 
+    notifications: notificationsList, 
+    unreadCount: notifications, 
+    isLoading 
+  } = useOptimizedDashboard();
+  
+  // Extract data from the new hook structure
+  const orgCount = organizations.length; // Use organizations from useOrganization
+  const users = stats?.totalUsers || 0;
+  const feedback = stats?.totalFeedback || 0;
+  const loading = isLoading;
   const queryClient = useQueryClient();
   
   // Check for automatic organization creation (business domains)
@@ -152,7 +163,7 @@ export default function Dashboard() {
   };
 
   // Memoized stats calculation to prevent recalculation on every render
-  const stats = useMemo(() => {
+  const dashboardStats = useMemo(() => {
     if (role === 'super_admin') {
       return [
         {
@@ -323,7 +334,7 @@ export default function Dashboard() {
 
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {stats.map((stat) => (
+              {dashboardStats.map((stat) => (
                 <StatCard
                   key={stat.title}
                   title={stat.title}

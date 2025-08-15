@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useUserData } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import type { ContentProject, CreateProjectForm, UpdateProjectForm } from '../types/contentCreationTypes';
 
 export const useContentProjects = () => {
@@ -60,7 +60,7 @@ export const useContentProject = (projectId: string) => {
 export const useCreateContentProject = () => {
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
-  const { user } = useUserData();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (projectData: CreateProjectForm) => {

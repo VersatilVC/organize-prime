@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useOptimizedDashboardV2 } from '@/hooks/useOptimizedDashboardV2';
+import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { useOrganizationSetup } from '@/hooks/useOrganizationSetup';
 import { OrganizationSetup } from '@/components/OrganizationSetup';
@@ -54,7 +54,7 @@ export default function SimpleDashboard() {
   const { user } = useAuth();
   const { role } = useUserRole();
   const { currentOrganization, organizations } = useOrganization();
-  const { stats, isLoading, isCoreReady, isFullyLoaded, notifications } = useOptimizedDashboardV2();
+  const { stats, isLoading, isCoreReady, isFullyLoaded, notifications } = useOptimizedDashboard();
   
   // Check for automatic organization creation (business domains)
   useOrganizationCreation();

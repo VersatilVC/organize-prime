@@ -215,7 +215,22 @@ export function skipWaitingAndReload() {
  * Get network status information
  */
 export function getNetworkStatus() {
-  const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  // Network Information API types
+  interface NetworkInformation {
+    effectiveType?: '2g' | '3g' | '4g' | 'slow-2g';
+    downlink?: number;
+    rtt?: number;
+    saveData?: boolean;
+  }
+  
+  interface NavigatorNetworkInformation extends Navigator {
+    connection?: NetworkInformation;
+    mozConnection?: NetworkInformation;
+    webkitConnection?: NetworkInformation;
+  }
+  
+  const nav = navigator as NavigatorNetworkInformation;
+  const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
   
   return {
     online: navigator.onLine,
@@ -251,7 +266,7 @@ export function addToOfflineQueue(data: {
  * Listen for service worker messages
  */
 export function listenForServiceWorkerMessages(
-  callback: (message: any) => void
+  callback: (message: unknown) => void
 ) {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
@@ -263,7 +278,7 @@ export function listenForServiceWorkerMessages(
 /**
  * Send message to service worker
  */
-export function sendMessageToServiceWorker(message: any) {
+export function sendMessageToServiceWorker(message: unknown) {
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage(message);
   }
@@ -284,7 +299,7 @@ export function getDeviceCapabilities() {
     hasGeolocation: 'geolocation' in navigator,
     hasCamera: 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices,
     hasInstallPrompt: 'BeforeInstallPromptEvent' in window,
-    deviceMemory: (navigator as any).deviceMemory || 4,
+    deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4,
     hardwareConcurrency: navigator.hardwareConcurrency || 4,
     maxTouchPoints: navigator.maxTouchPoints || 0,
     connectionType: getNetworkStatus().effectiveType
@@ -295,7 +310,7 @@ export function getDeviceCapabilities() {
  * Install prompt management for PWA
  */
 export class PWAInstallManager {
-  private deferredPrompt: any = null;
+  private deferredPrompt: Event | null = null;
   private installCallback?: () => void;
 
   constructor(onInstallAvailable?: () => void) {
@@ -343,7 +358,7 @@ export class PWAInstallManager {
 
   isStandalone(): boolean {
     return window.matchMedia('(display-mode: standalone)').matches ||
-           (window.navigator as any).standalone === true;
+           (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   }
 }
 

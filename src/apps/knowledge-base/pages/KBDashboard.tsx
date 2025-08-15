@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardLineChart, DashboardBarChart, DashboardPieChart } from '@/components/LazyComponents';
 import { ChartLoadingSkeleton } from '@/components/LoadingSkeletons';
 import { NotificationBell } from '@/components/NotificationBell';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { useKBContext } from '../context/KBContext';
 import { KBPermissionGuard } from '../components/shared/KBPermissionGuard';

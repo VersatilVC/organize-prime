@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useUserData } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import type { ContentItem, CreateContentItemForm, UpdateContentItemForm } from '../types/contentCreationTypes';
 
 export const useContentLibrary = (projectId?: string) => {
@@ -45,7 +45,7 @@ export const useContentItem = (itemId: string) => {
 export const useCreateContentItem = () => {
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
-  const { user } = useUserData();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (itemData: CreateContentItemForm) => {

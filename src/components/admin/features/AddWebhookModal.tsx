@@ -1,400 +1,261 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Webhook, 
-  TestTube,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Code,
-  Clock,
-  RotateCcw
-} from 'lucide-react';
+import { useFeatureWebhooks } from '@/hooks/useFeatureWebhooks';
+import { validateWebhookUrl } from '@/lib/webhook-testing';
+import type { SystemFeature } from '@/types/features';
+import { Loader2, Webhook } from 'lucide-react';
 
 interface AddWebhookModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trigger?: React.ReactNode;
+  feature: SystemFeature;
 }
 
-const httpMethods = ['POST', 'PUT', 'GET', 'PATCH'];
-
-const features = [
-  { id: '1', name: 'Knowledge Base', slug: 'knowledge-base' },
-  { id: '2', name: 'Content Creation', slug: 'content-creation' },
-  { id: '3', name: 'Market Intelligence', slug: 'market-intel' },
-];
-
-export function AddWebhookModal({ open, onOpenChange, trigger }: AddWebhookModalProps) {
+export function AddWebhookModal({ open, onOpenChange, feature }: AddWebhookModalProps) {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
-  const [testResponse, setTestResponse] = useState<string>('');
+  const { createWebhook, isCreating } = useFeatureWebhooks(feature.id);
   
   const [formData, setFormData] = useState({
-    featureId: '',
     name: '',
+    url: '',
     description: '',
-    endpointUrl: '',
-    method: 'POST',
-    timeoutSeconds: 30,
-    retryAttempts: 3,
-    headers: '{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-token"\n}'
+    event_types: ['webhook.test'],
+    timeout_seconds: 30,
+    retry_attempts: 3,
+    is_active: true
   });
 
-  const handleTestWebhook = async () => {
-    if (!formData.endpointUrl) {
-      toast({
-        title: 'Missing URL',
-        description: 'Please enter an endpoint URL to test',
-        variant: 'destructive',
-      });
-      return;
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      url: '',
+      description: '',
+      event_types: ['webhook.test'],
+      timeout_seconds: 30,
+      retry_attempts: 3,
+      is_active: true
+    });
+    setErrors({});
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Webhook name is required';
     }
 
-    setTestStatus('testing');
-    setTestResponse('');
-    
-    try {
-      // Simulate webhook test
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock response
-      const mockResponse = {
-        status: 200,
-        message: 'OK',
-        response_time: '245ms',
-        timestamp: new Date().toISOString()
-      };
-      
-      setTestResponse(JSON.stringify(mockResponse, null, 2));
-      setTestStatus('success');
-      
-      toast({
-        title: 'Test Successful',
-        description: 'Webhook endpoint responded successfully',
-      });
-    } catch (error) {
-      setTestStatus('failed');
-      setTestResponse(JSON.stringify({ 
-        error: 'Connection failed',
-        message: 'Could not connect to endpoint'
-      }, null, 2));
-      
-      toast({
-        title: 'Test Failed',
-        description: 'Could not connect to webhook endpoint',
-        variant: 'destructive',
-      });
+    if (!formData.url.trim()) {
+      newErrors.url = 'Webhook URL is required';
+    } else {
+      const urlValidation = validateWebhookUrl(formData.url);
+      if (!urlValidation.isValid) {
+        newErrors.url = urlValidation.error || 'Invalid URL';
+      }
     }
+
+    if (formData.timeout_seconds < 5 || formData.timeout_seconds > 300) {
+      newErrors.timeout_seconds = 'Timeout must be between 5 and 300 seconds';
+    }
+
+    if (formData.retry_attempts < 0 || formData.retry_attempts > 10) {
+      newErrors.retry_attempts = 'Retry attempts must be between 0 and 10';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    console.log('🔍 AddWebhookModal: Form submitted');
+
+    if (!validateForm()) {
+      console.log('❌ Form validation failed');
+      return;
+    }
+
+    console.log('✅ Form validation passed, creating webhook:', formData);
 
     try {
-      // Validate headers JSON
-      JSON.parse(formData.headers);
-      
-      // Implementation for creating webhook
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Webhook Created',
-        description: `${formData.name} has been created successfully`,
+      const result = await createWebhook({
+        ...formData,
+        feature_id: feature.id
       });
       
-      // Reset form
-      setFormData({
-        featureId: '',
-        name: '',
-        description: '',
-        endpointUrl: '',
-        method: 'POST',
-        timeoutSeconds: 30,
-        retryAttempts: 3,
-        headers: '{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer your-token"\n}'
-      });
-      setTestStatus('idle');
-      setTestResponse('');
-      
+      console.log('✅ Webhook created successfully:', result);
       onOpenChange(false);
+      resetForm();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create webhook. Please check your configuration.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+      console.error('❌ Error creating webhook:', error);
+      // Error handled by hook, but let's also show it here for debugging
     }
   };
 
-  const isValid = formData.featureId && formData.name && formData.endpointUrl;
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      resetForm();
+    }
+    onOpenChange(isOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Webhook className="h-5 w-5" />
-            Add New Webhook
+            Add Webhook for {feature.display_name}
           </DialogTitle>
           <DialogDescription>
-            Create a new webhook endpoint for feature integration
+            Configure a new N8N webhook endpoint for this feature
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Configuration Panel */}
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Basic Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="feature">Feature *</Label>
-                    <Select
-                      value={formData.featureId}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, featureId: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a feature" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {features.map((feature) => (
-                          <SelectItem key={feature.id} value={feature.id}>
-                            {feature.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Webhook Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Process Document"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Describe what this webhook does..."
-                      rows={3}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Endpoint Configuration */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Endpoint Configuration</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="url">Endpoint URL *</Label>
-                    <Input
-                      id="url"
-                      type="url"
-                      value={formData.endpointUrl}
-                      onChange={(e) => setFormData(prev => ({ ...prev, endpointUrl: e.target.value }))}
-                      placeholder="https://api.example.com/webhook"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="method">HTTP Method</Label>
-                      <Select
-                        value={formData.method}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, method: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {httpMethods.map((method) => (
-                            <SelectItem key={method} value={method}>
-                              {method}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="timeout">Timeout (seconds)</Label>
-                      <Input
-                        id="timeout"
-                        type="number"
-                        min="5"
-                        max="300"
-                        value={formData.timeoutSeconds}
-                        onChange={(e) => setFormData(prev => ({ ...prev, timeoutSeconds: parseInt(e.target.value) }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="retries">Retry Attempts</Label>
-                    <Input
-                      id="retries"
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={formData.retryAttempts}
-                      onChange={(e) => setFormData(prev => ({ ...prev, retryAttempts: parseInt(e.target.value) }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="headers">Headers (JSON)</Label>
-                    <Textarea
-                      id="headers"
-                      value={formData.headers}
-                      onChange={(e) => setFormData(prev => ({ ...prev, headers: e.target.value }))}
-                      className="font-mono text-sm"
-                      rows={6}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Webhook Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Process Document"
+                className={errors.name ? 'border-destructive' : ''}
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
             </div>
 
-            {/* Test Panel */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TestTube className="h-4 w-4" />
-                    Test Webhook
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleTestWebhook}
-                    disabled={!formData.endpointUrl || testStatus === 'testing'}
-                    className="w-full"
-                  >
-                    {testStatus === 'testing' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    <TestTube className="h-4 w-4 mr-2" />
-                    {testStatus === 'testing' ? 'Testing...' : 'Test Endpoint'}
-                  </Button>
+            <div className="space-y-2">
+              <Label htmlFor="feature">Feature</Label>
+              <Input
+                id="feature"
+                value={feature.display_name}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Webhook will be associated with this feature
+              </p>
+            </div>
+          </div>
 
-                  {testStatus !== 'idle' && (
-                    <Card className="mt-4">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-2">
-                          {testStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                          {testStatus === 'failed' && <XCircle className="h-4 w-4 text-red-500" />}
-                          {testStatus === 'testing' && <Clock className="h-4 w-4 text-yellow-500" />}
-                          <span className="font-medium">
-                            {testStatus === 'success' && 'Test Successful'}
-                            {testStatus === 'failed' && 'Test Failed'}
-                            {testStatus === 'testing' && 'Testing...'}
-                          </span>
-                        </div>
-                      </CardHeader>
-                      {testResponse && (
-                        <CardContent className="pt-0">
-                          <div className="space-y-2">
-                            <Label>Response</Label>
-                            <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-40">
-                              {testResponse}
-                            </pre>
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
-                  )}
-                </CardContent>
-              </Card>
+          <div className="space-y-2">
+            <Label htmlFor="url">Webhook URL *</Label>
+            <Input
+              id="url"
+              value={formData.url}
+              onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+              placeholder="https://n8n.example.com/webhook/..."
+              className={errors.url ? 'border-destructive' : ''}
+            />
+            {errors.url && (
+              <p className="text-sm text-destructive">{errors.url}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Use HTTPS URLs for production environments
+            </p>
+          </div>
 
-              {/* Preview */}
-              {formData.name && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Preview</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{formData.name}</h3>
-                        <Badge variant="outline">{formData.method}</Badge>
-                      </div>
-                      
-                      {formData.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {formData.description}
-                        </p>
-                      )}
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">URL:</span>
-                          <span className="truncate ml-2">{formData.endpointUrl || 'Not set'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Timeout:</span>
-                          <span>{formData.timeoutSeconds}s</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Retries:</span>
-                          <span>{formData.retryAttempts}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Describe what this webhook does..."
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="timeout">Timeout (seconds)</Label>
+              <Input
+                id="timeout"
+                type="number"
+                min="5"
+                max="300"
+                value={formData.timeout_seconds}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  timeout_seconds: parseInt(e.target.value) || 30 
+                }))}
+                className={errors.timeout_seconds ? 'border-destructive' : ''}
+              />
+              {errors.timeout_seconds && (
+                <p className="text-sm text-destructive">{errors.timeout_seconds}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="retry">Retry Attempts</Label>
+              <Input
+                id="retry"
+                type="number"
+                min="0"
+                max="10"
+                value={formData.retry_attempts}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  retry_attempts: parseInt(e.target.value) || 3 
+                }))}
+                className={errors.retry_attempts ? 'border-destructive' : ''}
+              />
+              {errors.retry_attempts && (
+                <p className="text-sm text-destructive">{errors.retry_attempts}</p>
               )}
             </div>
           </div>
 
-          {/* Actions */}
-          <Separator />
-          <div className="flex justify-end gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+            />
+            <Label htmlFor="active">Enable webhook immediately</Label>
+          </div>
+
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+            <h4 className="font-medium text-sm">Event Types</h4>
+            <p className="text-xs text-muted-foreground">
+              This webhook will be triggered for the following events related to the <strong>{feature.display_name}</strong> feature:
+            </p>
+            <div className="flex flex-wrap gap-1 mt-2">
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">
+                webhook.test
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-muted text-muted-foreground">
+                feature.{feature.slug}.* (coming soon)
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isCreating}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={!isValid || isLoading}
-            >
-              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button type="submit" disabled={isCreating}>
+              {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Create Webhook
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

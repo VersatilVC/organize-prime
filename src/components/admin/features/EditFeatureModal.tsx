@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
 import { useFeatureValidation } from '@/hooks/database/useFeatureValidation';
 import { FeaturePageManager } from './FeaturePageManager';
+import { FeatureWebhookManager } from './FeatureWebhookManager';
 import { Icons } from '@/components/ui/icons';
 import { 
   Package, 
@@ -168,6 +169,11 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         }
       });
       
+      toast({
+        title: 'Success',
+        description: `Feature "${formData.displayName}" updated successfully`,
+      });
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating feature:', error);
@@ -180,12 +186,17 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
     if (currentStep === 1 && isValid) {
       setCurrentStep(2);
       console.log('Moving to step 2');
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+      console.log('Moving to step 3');
     }
   };
 
   const handlePrevStep = () => {
     if (currentStep === 2) {
       setCurrentStep(1);
+    } else if (currentStep === 3) {
+      setCurrentStep(2);
     }
   };
 
@@ -199,12 +210,14 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Edit Feature - Step {currentStep} of 2
+            Edit Feature - Step {currentStep} of 3
           </DialogTitle>
           <DialogDescription>
             {currentStep === 1 
               ? 'Update the feature configuration and settings'
-              : 'Manage the pages and routes for your feature'
+              : currentStep === 2
+              ? 'Manage the pages and routes for your feature'
+              : 'Configure N8N webhooks for feature automation'
             }
           </DialogDescription>
         </DialogHeader>
@@ -375,10 +388,16 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
             </div>
           )}
 
+          {currentStep === 3 && feature && (
+            <div className="space-y-4">
+              <FeatureWebhookManager feature={feature} />
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-between gap-2">
             <div>
-              {currentStep === 2 && (
+              {(currentStep === 2 || currentStep === 3) && (
                 <Button 
                   type="button" 
                   variant="outline"
@@ -405,6 +424,13 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
                   disabled={!isValid}
                 >
                   Next: Manage Pages
+                </Button>
+              ) : currentStep === 2 ? (
+                <Button 
+                  type="button" 
+                  onClick={handleNextStep}
+                >
+                  Next: Manage Webhooks
                 </Button>
               ) : (
                 <Button 

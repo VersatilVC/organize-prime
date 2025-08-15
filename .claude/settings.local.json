@@ -16,9 +16,32 @@
       "Bash(rm:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(touch:*)",
+      "Bash(npx supabase:*)",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(npx tsc:*)",
+      "mcp__supabase__apply_migration",
+      "Bash(for file in \"src/apps/knowledge-base/pages/KBDashboard.tsx\" \"src/apps/shared/components/AppLayout.tsx\" \"src/apps/shared/hooks/useAppConfig.ts\" \"src/apps/shared/hooks/useN8NIntegration.ts\" \"src/components/auth/AuthLoadingWrapper.tsx\")",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)",
+      "Bash(for file in \"src/components/layout/AppHeader.tsx\" \"src/components/layout/MobileHeader.tsx\" \"src/components/NotificationPreferences.tsx\" \"src/components/notifications/NotificationHistory.tsx\" \"src/components/notifications/NotificationTemplatesManager.tsx\")",
+      "Bash(do echo \"=== Processing $file ===\")",
+      "Bash(if [ -f \"$file\" ])",
+      "Bash(echo:*)",
+      "Bash(else echo \"File not found: $file\")",
+      "Bash(fi)",
+      "Bash(for file in \"src/components/notifications/SendAnnouncementForm.tsx\" \"src/components/OrganizationSetup.tsx\" \"src/components/ProtectedRoute.tsx\" \"src/components/ui/file-upload.tsx\")",
+      "Bash(for:*)",
+      "Bash(grep:*)",
+      "Bash(npm run build:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "acceptEdits"
   }
 }

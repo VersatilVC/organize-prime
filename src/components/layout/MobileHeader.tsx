@@ -3,7 +3,7 @@ import { Menu, X, Bell, User } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { AppSidebar } from './AppSidebar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { NotificationBell } from '@/components/NotificationBell';
 
 export const MobileHeader = () => {

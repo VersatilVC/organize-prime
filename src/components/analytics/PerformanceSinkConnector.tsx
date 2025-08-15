@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useUserData } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/AuthProvider';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { AppAnalyticsService } from '@/apps/shared/services/AppAnalyticsService';
 import { PerformanceMonitor } from '@/lib/performance';
@@ -8,7 +8,7 @@ import { getAnalyticsConfig } from '@/config/app-config';
 
 // Bridges PerformanceMonitor -> Supabase analytics sink
 export function PerformanceSinkConnector() {
-  const { user } = useUserData();
+  const { user } = useAuth();
   const { currentOrganization } = useOrganizationData();
 
   useEffect(() => {
