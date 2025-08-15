@@ -24,13 +24,6 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   build: {
     rollupOptions: {
-      external: (id) => {
-        // Don't bundle React in development to prevent dual package hazard
-        if (process.env.NODE_ENV === 'development' && id.includes('react')) {
-          return false;
-        }
-        return false;
-      },
       output: {
         // Strategic chunk splitting for optimal caching and loading
         manualChunks: mode === 'production' ? (id) => {
@@ -145,9 +138,6 @@ export default defineConfig(({ mode }) => ({
     include: [
       'react',
       'react-dom',
-      'react-dom/client',
-      'react/jsx-runtime',
-      'react/jsx-dev-runtime',
       'react-router-dom',
       '@tanstack/react-query',
       '@radix-ui/react-dialog',
