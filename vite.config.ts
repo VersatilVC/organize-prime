@@ -52,10 +52,10 @@ export default defineConfig(({ mode }) => ({
             return 'content-feature';
           }
           
-          // Admin-specific functionality
-          if (id.includes('/admin/') || id.includes('/components/admin/')) {
-            return 'admin-feature';
-          }
+          // Admin-specific functionality - temporarily disabled for debugging
+          // if (id.includes('/admin/') || id.includes('/components/admin/')) {
+          //   return 'admin-feature';
+          // }
           
           // Utilities and helpers
           if (id.includes('/lib/') || id.includes('/utils/') || id.includes('/hooks/')) {
