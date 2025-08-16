@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useFeatureWebhooks } from '@/hooks/useFeatureWebhooks';
-import { validateWebhookUrl } from '@/lib/webhook-testing';
+// import { validateWebhookUrl } from '@/lib/webhook-testing';
 import type { SystemFeature } from '@/types/features';
 import { Loader2, Webhook } from 'lucide-react';
 
@@ -56,9 +56,15 @@ export function AddWebhookModal({ open, onOpenChange, feature }: AddWebhookModal
     if (!formData.url.trim()) {
       newErrors.url = 'Webhook URL is required';
     } else {
-      const urlValidation = validateWebhookUrl(formData.url);
-      if (!urlValidation.isValid) {
-        newErrors.url = urlValidation.error || 'Invalid URL';
+      // Simple URL validation fallback
+      try {
+        new URL(formData.url);
+        // Must be HTTP or HTTPS
+        if (!formData.url.startsWith('http://') && !formData.url.startsWith('https://')) {
+          newErrors.url = 'URL must use HTTP or HTTPS protocol';
+        }
+      } catch {
+        newErrors.url = 'Invalid URL format';
       }
     }
 

@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFeatureWebhooks } from '@/hooks/useFeatureWebhooks';
 import { useWebhookLogs } from '@/hooks/useWebhookLogs';
 import { useWebhookStats } from '@/hooks/useWebhookStats';
-import { testWebhookWithLogging, validateWebhookUrl } from '@/lib/webhook-testing';
+// import { testWebhookWithLogging, validateWebhookUrl } from '@/lib/webhook-testing';
 import { WebhookRealTimeMonitor } from './WebhookRealTimeMonitor';
 import { 
   Webhook, 
@@ -274,12 +274,22 @@ export function WebhookManagement() {
       return;
     }
 
-    // Validate URL format
-    const urlValidation = validateWebhookUrl(formData.url);
-    if (!urlValidation.isValid) {
+    // Simple URL validation fallback
+    try {
+      new URL(formData.url);
+      // Must be HTTP or HTTPS
+      if (!formData.url.startsWith('http://') && !formData.url.startsWith('https://')) {
+        toast({
+          title: 'Invalid URL',
+          description: 'URL must use HTTP or HTTPS protocol',
+          variant: 'destructive'
+        });
+        return;
+      }
+    } catch {
       toast({
         title: 'Invalid URL',
-        description: urlValidation.error,
+        description: 'Invalid URL format',
         variant: 'destructive'
       });
       return;
@@ -299,11 +309,21 @@ export function WebhookManagement() {
 
     // Validate URL format if changed
     if (formData.url !== selectedWebhook.url) {
-      const urlValidation = validateWebhookUrl(formData.url);
-      if (!urlValidation.isValid) {
+      try {
+        new URL(formData.url);
+        // Must be HTTP or HTTPS
+        if (!formData.url.startsWith('http://') && !formData.url.startsWith('https://')) {
+          toast({
+            title: 'Invalid URL',
+            description: 'URL must use HTTP or HTTPS protocol',
+            variant: 'destructive'
+          });
+          return;
+        }
+      } catch {
         toast({
           title: 'Invalid URL',
-          description: urlValidation.error,
+          description: 'Invalid URL format',
           variant: 'destructive'
         });
         return;
