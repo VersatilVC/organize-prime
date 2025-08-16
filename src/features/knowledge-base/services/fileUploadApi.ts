@@ -216,15 +216,27 @@ export async function deleteKBFile(fileId: string): Promise<void> {
       console.warn('Failed to delete processing logs:', logsError);
     }
 
-    // Step 2: Delete vectors (if vector table exists)
+    // Step 2: Delete vectors from organization-specific vector table
     try {
-      const { error: vectorError } = await supabase
-        .from('kb_document_vectors')
-        .delete()
-        .eq('file_id', fileId);
+      // Get organization's vector table name from kb_configurations
+      const { data: kbConfig, error: kbError } = await supabase
+        .from('kb_configurations')
+        .select('vector_table_name')
+        .eq('organization_id', file.organization_id)
+        .single();
 
-      if (vectorError && !vectorError.message.includes('does not exist')) {
-        console.warn('Failed to delete vectors:', vectorError);
+      if (kbConfig?.vector_table_name) {
+        // Delete vectors by file_id in metadata using RPC function
+        const { error: vectorError } = await supabase.rpc('delete_vectors_by_file_id', {
+          table_name: kbConfig.vector_table_name,
+          file_id: fileId
+        });
+
+        if (vectorError) {
+          console.warn('Failed to delete vectors from table:', kbConfig.vector_table_name, vectorError);
+        } else {
+          console.log(`✅ Deleted vectors from ${kbConfig.vector_table_name} for file ${fileId}`);
+        }
       }
     } catch (vectorErr) {
       console.warn('Vector cleanup skipped:', vectorErr);
