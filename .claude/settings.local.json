@@ -40,7 +40,9 @@
       "Bash(find:*)",
       "Bash(mv:*)",
       "Bash(npm ls:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": [],

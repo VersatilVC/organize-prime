@@ -41,8 +41,8 @@ const predefinedColors = [
 ];
 
 const iconOptions = [
-  'Package', 'FileText', 'BarChart3', 'Users', 'Settings',
-  'Zap', 'Database', 'Globe', 'MessageSquare', 'Calendar'
+  'package', 'fileText', 'barChart', 'users', 'settings',
+  'zap', 'database', 'messageSquare', 'calendar'
 ];
 
 export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModalProps) {
@@ -56,7 +56,7 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
     slug: '',
     description: '',
     category: '',
-    iconName: 'Package',
+    iconName: 'package',
     colorHex: '#3b82f6'
   });
 
@@ -115,7 +115,7 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
         slug: '',
         description: '',
         category: '',
-        iconName: 'Package',
+        iconName: 'package',
         colorHex: '#3b82f6'
       });
       setPages([]);
@@ -228,7 +228,7 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
                 <Label>Icon</Label>
                 <div className="grid grid-cols-5 gap-2">
                   {iconOptions.map((icon) => {
-                    const IconComponent = Icons[icon as keyof typeof Icons] || Package;
+                    const IconComponent = Icons[icon as keyof typeof Icons] || Icons.package;
                     return (
                       <Button
                         key={icon}
@@ -286,7 +286,7 @@ export function AddFeatureModal({ open, onOpenChange, trigger }: AddFeatureModal
                         style={{ backgroundColor: formData.colorHex }}
                       >
                         {(() => {
-                          const IconComponent = Icons[formData.iconName as keyof typeof Icons] || Package;
+                          const IconComponent = Icons[formData.iconName as keyof typeof Icons] || Icons.package;
                           return <IconComponent className="h-5 w-5" />;
                         })()}
                       </div>
