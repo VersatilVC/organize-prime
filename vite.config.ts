@@ -43,10 +43,10 @@ export default defineConfig(({ mode }) => ({
             return 'data-vendor';
           }
           
-          // Feature-specific chunks
-          if (id.includes('/features/knowledge-base/')) {
-            return 'kb-feature';
-          }
+          // Feature-specific chunks - temporarily disabled for debugging
+          // if (id.includes('/features/knowledge-base/')) {
+          //   return 'kb-feature';
+          // }
           
           if (id.includes('/features/content-creation/')) {
             return 'content-feature';
