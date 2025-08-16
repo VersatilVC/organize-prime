@@ -13,7 +13,6 @@ export interface KBFile {
   status: 'pending' | 'processing' | 'completed' | 'error';
   processing_error?: string;
   chunk_count: number;
-  vector_count: number;
   uploaded_by: string;
   created_at: string;
   updated_at: string;
@@ -95,7 +94,6 @@ export async function uploadFileToKB(
         mime_type: file.type,
         status: 'pending',
         chunk_count: 0,
-        vector_count: 0,
         uploaded_by: (await supabase.auth.getUser()).data.user?.id
       })
       .select(`
@@ -350,7 +348,6 @@ export async function resetFileForRetry(fileId: string): Promise<void> {
         status: 'pending',
         processing_error: null,
         chunk_count: 0,
-        vector_count: 0,
         updated_at: new Date().toISOString()
       })
       .eq('id', fileId);
@@ -442,7 +439,7 @@ export async function getKBAnalytics(organizationId: string): Promise<{
   totalFiles: number;
   completedFiles: number;
   errorFiles: number;
-  totalVectors: number;
+  totalChunks: number;
   totalStorage: number;
   successRate: number;
 }[]> {
@@ -453,7 +450,7 @@ export async function getKBAnalytics(organizationId: string): Promise<{
         kb_id,
         status,
         file_size,
-        vector_count,
+        chunk_count,
         kb_configuration:kb_configurations(name, display_name)
       `)
       .eq('organization_id', organizationId);
@@ -474,7 +471,7 @@ export async function getKBAnalytics(organizationId: string): Promise<{
           totalFiles: 0,
           completedFiles: 0,
           errorFiles: 0,
-          totalVectors: 0,
+          totalChunks: 0,
           totalStorage: 0,
         });
       }
@@ -482,7 +479,7 @@ export async function getKBAnalytics(organizationId: string): Promise<{
       const kb = kbMap.get(kbId);
       kb.totalFiles++;
       kb.totalStorage += file.file_size || 0;
-      kb.totalVectors += file.vector_count || 0;
+      kb.totalChunks += file.chunk_count || 0;
       
       if (file.status === 'completed') kb.completedFiles++;
       if (file.status === 'error') kb.errorFiles++;
