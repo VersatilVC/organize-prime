@@ -7,7 +7,6 @@ import { FileUploadArea } from '../components/FileUploadArea';
 import { FileList } from '../components/FileList';
 import { FileStats } from '../components/FileStats';
 import { FileAnalytics } from '../components/FileAnalytics';
-import { WebhookStatus } from '../components/WebhookStatus';
 import { FileManagementErrorBoundary } from '../components/FileManagementErrorBoundary';
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -83,15 +82,8 @@ export default function ManageFiles() {
         </div>
       </div>
 
-      {/* Statistics and Webhook Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <FileStats />
-        </div>
-        <div>
-          <WebhookStatus />
-        </div>
-      </div>
+      {/* Statistics */}
+      <FileStats />
 
       {/* Main Content */}
       <Tabs defaultValue="upload" className="space-y-6">
@@ -161,16 +153,6 @@ export default function ManageFiles() {
 
         <TabsContent value="monitoring" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Detailed Webhook Status */}
-            <div className="lg:col-span-2">
-              <FileManagementErrorBoundary 
-                fallbackTitle="Webhook Monitoring Error"
-                fallbackDescription="Unable to monitor webhook status."
-              >
-                <WebhookStatus />
-              </FileManagementErrorBoundary>
-            </div>
-            
             {/* Recent Processing Activity */}
             <Card>
               <CardHeader>
@@ -208,9 +190,6 @@ export default function ManageFiles() {
                 </div>
               </CardContent>
             </Card>
-            
-            {/* N8N Webhook Status */}
-            <WebhookStatus />
           </div>
         </TabsContent>
       </Tabs>
