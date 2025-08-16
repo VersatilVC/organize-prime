@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessage } from './ChatMessage';
-import { ChatInput } from './ChatInput';
+import { EnhancedChatInput } from './EnhancedChatInput';
 import { useActiveSession, useChatSessions } from '../hooks/useChatSessions';
 import { useChatInterface, useConversationExport } from '../hooks/useChatInterface';
 import { useKnowledgeBases } from '../../hooks/useKnowledgeBases';
@@ -23,14 +23,28 @@ export function ChatLayout({ className }: ChatLayoutProps) {
 
   const { session: activeSession, isLoading: isSessionLoading } = useActiveSession(activeSessionId);
   const { data: knowledgeBases } = useKnowledgeBases();
+  const { createConversation, isCreating } = useChatSessions();
 
   const handleSessionSelect = (sessionId: string) => {
     setActiveSessionId(sessionId);
   };
 
   const handleNewChat = () => {
-    // This will be handled by the sidebar's create conversation
-    // The new session ID will be passed to handleSessionSelect
+    console.log('📝 Creating new chat conversation...');
+    createConversation(
+      { title: 'New Chat', kbIds: [] },
+      {
+        onSuccess: (conversationId) => {
+          console.log('✅ New conversation created:', conversationId);
+          if (conversationId) {
+            setActiveSessionId(conversationId);
+          }
+        },
+        onError: (error) => {
+          console.error('❌ Failed to create new chat:', error);
+        }
+      }
+    );
   };
 
   return (
@@ -167,6 +181,7 @@ function ChatInterface({
         onClearConversation={handleClearConversation}
         onToggleSidebar={onToggleSidebar}
         isSidebarCollapsed={isSidebarCollapsed}
+        messages={messages}
       />
 
       {/* Messages Area */}
@@ -211,11 +226,13 @@ function ChatInterface({
       </ScrollArea>
 
       {/* Chat Input */}
-      <ChatInput
+      <EnhancedChatInput
+        conversationId={session?.id || ''}
         onSendMessage={handleSendMessage}
         disabled={!session}
         isProcessing={isProcessing}
         placeholder="Ask a question about your knowledge base..."
+        selectedKbIds={selectedKbIds}
       />
     </div>
   );

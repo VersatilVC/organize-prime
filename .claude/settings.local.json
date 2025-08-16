@@ -43,7 +43,8 @@
       "Bash(git fetch:*)",
       "Bash(npm run test:unit:*)",
       "Bash(npm run:*)",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "mcp__supabase__list_edge_functions"
     ],
     "deny": [],
     "ask": [],

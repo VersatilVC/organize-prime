@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ChatWebhookService } from './ChatWebhookService';
 
 export interface MessageSource {
   document_name: string;
@@ -103,6 +104,25 @@ export class ChatMessageService {
    */
   static async sendChatMessage(params: SendChatParams): Promise<string> {
     try {
+      // Get conversation details and current user
+      const { data: conversation, error: convError } = await supabase
+        .from('kb_conversations')
+        .select('organization_id, user_id, kb_ids')
+        .eq('id', params.conversationId)
+        .single();
+
+      if (convError) {
+        throw new Error(`Failed to get conversation details: ${convError.message}`);
+      }
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get conversation history for context
+      const conversationHistory = await this.getConversationMessages(params.conversationId);
+
       // First, add the user message
       const userMessageId = await this.addMessage({
         conversationId: params.conversationId,
@@ -125,63 +145,23 @@ export class ChatMessageService {
         }
       });
 
-      // Update assistant message to processing status
-      await this.updateMessageStatus(assistantMessageId, 'processing');
-
-      // Trigger N8N webhook for AI processing
+      // Use the new webhook service to process the message
       try {
-        const webhookPayload = {
-          event_type: 'chat_message_sent',
-          conversation_id: params.conversationId,
-          message_id: assistantMessageId,
-          user_message: params.message,
-          selected_kb_ids: params.selectedKbIds || [],
-          model_config: params.modelConfig || { model: 'gpt-4', temperature: 0.7 },
-          timestamp: new Date().toISOString()
-        };
-
-        // Get organization info for webhook
-        const { data: conversation, error: convError } = await supabase
-          .from('kb_conversations')
-          .select('organization_id, kb_ids')
-          .eq('id', params.conversationId)
-          .single();
-
-        if (convError) {
-          throw new Error(`Failed to get conversation details: ${convError.message}`);
-        }
-
-        // Call the webhook processing edge function
-        const { data: webhookResult, error: webhookError } = await supabase.functions.invoke(
-          'exec-n8n-webhook',
-          {
-            body: {
-              webhookUrl: `${process.env.N8N_BASE_URL || ''}/webhook/kb-chat-processing`,
-              method: 'POST',
-              payload: webhookPayload,
-              organizationId: conversation.organization_id,
-              webhookId: 'kb-chat-processing'
-            }
-          }
+        await ChatWebhookService.sendChatMessage(
+          params.conversationId,
+          assistantMessageId,
+          params.message,
+          conversation.organization_id,
+          user.id,
+          params.selectedKbIds || conversation.kb_ids || [],
+          conversationHistory,
+          params.modelConfig || { model: 'gpt-4', temperature: 0.7 }
         );
 
-        if (webhookError) {
-          console.warn('Webhook processing failed:', webhookError);
-          await this.updateMessage(assistantMessageId, {
-            content: 'Sorry, I encountered an error processing your message. Please try again.',
-            processing_status: 'error',
-            error_message: 'Webhook processing failed'
-          });
-        }
-
-        console.log('✅ Chat message sent and processing triggered');
+        console.log('✅ Chat message sent for processing');
       } catch (webhookError) {
-        console.warn('Webhook processing failed:', webhookError);
-        await this.updateMessage(assistantMessageId, {
-          content: 'Sorry, I encountered an error processing your message. Please try again.',
-          processing_status: 'error',
-          error_message: webhookError instanceof Error ? webhookError.message : 'Unknown error'
-        });
+        console.error('Webhook processing failed:', webhookError);
+        // Error handling is done within ChatWebhookService
       }
 
       return userMessageId;

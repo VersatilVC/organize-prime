@@ -199,12 +199,54 @@ export function useChatInterface(conversationId: string) {
           queryKey: messageQueryKeys.conversation(conversationId)
         });
 
-        // Auto-scroll to bottom for new messages
-        if (payload.eventType === 'INSERT') {
+        // Auto-scroll to bottom for new messages or when processing completes
+        if (payload.eventType === 'INSERT' || 
+            (payload.eventType === 'UPDATE' && payload.new?.processing_status === 'completed')) {
           setTimeout(() => {
             scrollToBottom();
           }, 100);
         }
+      })
+      // Listen for webhook response broadcasts
+      .on('broadcast', { event: 'message_updated' }, (payload) => {
+        console.log('Webhook message update:', payload);
+        
+        // Optimistically update the message in cache
+        const messageId = payload.payload.message_id;
+        const previousMessages = queryClient.getQueryData<ChatMessage[]>(
+          messageQueryKeys.conversation(conversationId)
+        );
+
+        if (previousMessages && messageId) {
+          const updatedMessages = previousMessages.map(msg =>
+            msg.id === messageId
+              ? {
+                  ...msg,
+                  content: payload.payload.content || msg.content,
+                  processing_status: payload.payload.status || msg.processing_status,
+                  error_message: payload.payload.error || undefined,
+                  updated_at: new Date().toISOString()
+                }
+              : msg
+          );
+          
+          queryClient.setQueryData(
+            messageQueryKeys.conversation(conversationId),
+            updatedMessages
+          );
+
+          // Auto-scroll when processing completes
+          if (payload.payload.status === 'completed') {
+            setTimeout(() => {
+              scrollToBottom();
+            }, 100);
+          }
+        }
+
+        // Also invalidate to ensure fresh data
+        queryClient.invalidateQueries({
+          queryKey: messageQueryKeys.conversation(conversationId)
+        });
       })
       .subscribe();
 
@@ -296,7 +338,7 @@ export function useChatInterface(conversationId: string) {
 export function useConversationExport() {
   const { toast } = useToast();
 
-  const exportConversation = useCallback(async (messages: ChatMessage[], title: string) => {
+  const quickExportJSON = useCallback(async (messages: ChatMessage[], title: string) => {
     try {
       const exportData = {
         title,
@@ -338,5 +380,8 @@ export function useConversationExport() {
     }
   }, [toast]);
 
-  return { exportConversation };
+  return { 
+    exportConversation: quickExportJSON, // Keep backward compatibility
+    quickExportJSON 
+  };
 }

@@ -9,7 +9,9 @@ import {
   X,
   MessageSquare,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Webhook,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +42,9 @@ import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useKnowledgeBases } from '../../hooks/useKnowledgeBases';
+import { useWebhookConfig } from '../hooks/useWebhookConfig';
+import { SmartKBSelector } from './SmartKBSelector';
+import { ExportConversationDialog } from './ExportConversationDialog';
 import type { ChatSession } from '../services/ChatSessionService';
 
 interface ChatHeaderProps {
@@ -53,6 +58,7 @@ interface ChatHeaderProps {
   onToggleSidebar?: () => void;
   isSidebarCollapsed?: boolean;
   className?: string;
+  messages?: any[]; // For export functionality
 }
 
 export function ChatHeader({
@@ -65,10 +71,12 @@ export function ChatHeader({
   onClearConversation,
   onToggleSidebar,
   isSidebarCollapsed = false,
-  className
+  className,
+  messages = []
 }: ChatHeaderProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(session.title);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const { data: knowledgeBases } = useKnowledgeBases();
 
   const handleTitleSubmit = () => {
@@ -151,11 +159,12 @@ export function ChatHeader({
           </div>
 
           {/* Knowledge Base Selector */}
-          <KnowledgeBaseSelector
-            knowledgeBases={knowledgeBases || []}
+          <SmartKBSelector
             selectedKbIds={selectedKbIds}
-            onKbToggle={handleKbToggle}
-            getSelectedKbNames={getSelectedKbNames}
+            onSelectionChange={onKbSelectionChange}
+            className="w-auto"
+            enableSmartSuggestions={false} // Keep header simple
+            showStatusIndicators={true}
           />
         </div>
 
@@ -180,6 +189,15 @@ export function ChatHeader({
           />
         </div>
       </div>
+
+      {/* Export Dialog */}
+      <ExportConversationDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        messages={messages}
+        conversationTitle={session.title}
+        conversationId={session.id}
+      />
     </div>
   );
 }
@@ -280,6 +298,7 @@ function ChatSettingsMenu({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempModel, setTempModel] = useState(session.model_config?.model || 'gpt-4');
   const [tempTemperature, setTempTemperature] = useState([session.model_config?.temperature || 0.7]);
+  const { status: webhookStatus, isTesting, testWebhook } = useWebhookConfig();
 
   const handleModelConfigSave = () => {
     onModelConfigChange({
@@ -287,6 +306,25 @@ function ChatSettingsMenu({
       temperature: tempTemperature[0]
     });
     setIsSettingsOpen(false);
+  };
+
+  const handleTestWebhook = async () => {
+    try {
+      await testWebhook();
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  };
+
+  const getWebhookStatusBadge = () => {
+    switch (webhookStatus) {
+      case 'active':
+        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+      case 'disabled':
+        return <Badge variant="secondary">Disabled</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
   };
 
   return (
@@ -347,7 +385,36 @@ function ChatSettingsMenu({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={onExportConversation}>
+        {/* Webhook Status Section */}
+        <div className="p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Webhook Status</Label>
+            {getWebhookStatusBadge()}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTestWebhook}
+            disabled={isTesting}
+            className="w-full"
+          >
+            {isTesting ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Testing...
+              </>
+            ) : (
+              <>
+                <Webhook className="h-4 w-4 mr-2" />
+                Test Connection
+              </>
+            )}
+          </Button>
+        </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
           <Download className="h-4 w-4 mr-2" />
           Export Conversation
         </DropdownMenuItem>
