@@ -202,10 +202,6 @@ export default function ManageFiles() {
                     <span className="text-sm text-green-600">Operational</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">N8N Integration</span>
-                    <span className="text-sm text-green-600">Healthy</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Storage Backend</span>
                     <span className="text-sm text-green-600">Connected</span>
                   </div>

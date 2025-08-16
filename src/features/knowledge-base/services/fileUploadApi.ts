@@ -111,7 +111,7 @@ export async function uploadFileToKB(
       throw new Error(`Failed to save file record: ${dbError.message}`);
     }
 
-    // Trigger N8N webhook for file processing using the enhanced service
+    // Trigger file processing webhook if configured
     try {
       await KBFileProcessingService.triggerFileProcessing({
         fileId: fileRecord.id,
@@ -123,9 +123,21 @@ export async function uploadFileToKB(
         fileSize: file.size,
         uploadedBy: fileRecord.uploaded_by
       });
+      console.log('✅ File processing webhook triggered successfully');
     } catch (webhookError) {
-      console.warn('Webhook trigger failed, but file uploaded successfully:', webhookError);
-      // The file status will be updated to 'error' by the processing service
+      console.warn('File processing webhook not configured or failed:', webhookError);
+      
+      // Update file status to indicate manual processing needed
+      await supabase
+        .from('kb_files')
+        .update({
+          processing_status: 'pending',
+          processing_error: 'File processing webhook not configured. File uploaded successfully but requires manual processing.',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', fileRecord.id);
+        
+      console.log('📋 File uploaded successfully, but automatic processing is not available. Manual processing may be required.');
     }
 
     return fileRecord as KBFile;

@@ -47,11 +47,11 @@ export class KBFileProcessingService {
       // Get webhook configuration
       const webhookConfig = await this.getWebhookConfig();
       if (!webhookConfig) {
-        throw new Error('N8N webhook not configured');
+        throw new Error('File processing webhook not configured. Please contact your administrator to set up automatic file processing.');
       }
 
       if (!webhookConfig.is_active) {
-        throw new Error('N8N webhook is disabled');
+        throw new Error('File processing webhook is disabled. Please contact your administrator to enable automatic processing.');
       }
 
       // Update file status to processing
