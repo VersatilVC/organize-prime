@@ -11,8 +11,6 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Wifi,
-  WifiOff
 } from 'lucide-react';
 import {
   Table,
@@ -87,12 +85,7 @@ export function FileList({ selectedKbId, showProcessingOnly = false, className }
   
   // Real-time file status updates
   const { 
-    fileStatuses, 
-    isConnected, 
-    connectionError, 
-    lastUpdateTime,
-    getFileStatus,
-    retryConnection
+    getFileStatus
   } = useKBFileStatus(currentOrganization?.id);
 
   // Filter files based on search term, status, and processing state
@@ -230,30 +223,7 @@ export function FileList({ selectedKbId, showProcessingOnly = false, className }
     <Card className={className}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle>Files ({filesData?.totalCount || 0})</CardTitle>
-            
-            {/* Real-time connection status */}
-            <div className="flex items-center gap-2">
-              {isConnected ? (
-                <div className="flex items-center gap-1 text-green-600">
-                  <Wifi className="h-4 w-4" />
-                  <span className="text-xs">Live</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 text-red-600 cursor-pointer" onClick={retryConnection}>
-                  <WifiOff className="h-4 w-4" />
-                  <span className="text-xs">Offline</span>
-                </div>
-              )}
-              
-              {lastUpdateTime && (
-                <span className="text-xs text-muted-foreground">
-                  Updated {format(lastUpdateTime, 'HH:mm:ss')}
-                </span>
-              )}
-            </div>
-          </div>
+          <CardTitle>Files ({filesData?.totalCount || 0})</CardTitle>
           
           {/* Filters */}
           <div className="flex items-center space-x-2">
@@ -364,7 +334,7 @@ export function FileList({ selectedKbId, showProcessingOnly = false, className }
                       <div className="space-y-1">
                         {file.status === 'completed' && (
                           <div className="text-xs text-muted-foreground">
-                            {file.chunk_count} chunks, {file.vector_count} vectors
+                            {file.chunk_count} chunks
                           </div>
                         )}
                         {file.status === 'error' && file.processing_error && (
