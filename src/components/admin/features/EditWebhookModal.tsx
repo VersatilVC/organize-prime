@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useFeatureWebhooks } from '@/hooks/useFeatureWebhooks';
+import { useFeatureWebhooks } from '@/hooks/database/useFeatureWebhooks';
 // import { validateWebhookUrl } from '@/lib/webhook-testing';
 import type { SystemFeature } from '@/types/features';
 import { Loader2, Edit, TestTube } from 'lucide-react';

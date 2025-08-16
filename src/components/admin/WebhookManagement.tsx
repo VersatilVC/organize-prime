@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFeatureWebhooks } from '@/hooks/useFeatureWebhooks';
+import { useFeatureWebhooks } from '@/hooks/database/useFeatureWebhooks';
 import { useWebhookLogs } from '@/hooks/useWebhookLogs';
 import { useWebhookStats } from '@/hooks/useWebhookStats';
 // import { testWebhookWithLogging, validateWebhookUrl } from '@/lib/webhook-testing';
