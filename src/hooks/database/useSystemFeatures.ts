@@ -10,7 +10,8 @@ export function useSystemFeatures() {
   const { data: features = [], isLoading, error } = useQuery({
     queryKey: ['system-features'],
     queryFn: async (): Promise<SystemFeature[]> => {
-      console.log('🔍 useSystemFeatures: Fetching system features from database');
+      // Reduced logging to prevent flashing
+      // console.log('🔍 useSystemFeatures: Fetching system features from database');
       const { data, error } = await supabase
         .from('system_feature_configs')
         .select('*')

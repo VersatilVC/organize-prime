@@ -6,7 +6,7 @@ import './index.css'
 try {
   const root = createRoot(document.getElementById('root')!)
   
-  console.log('Loading OrganizePrime app...');
+  console.log('🚀 OrganizePrime v3.0 - Optimized Loading [Cache Cleared]');
   root.render(
     <StrictMode>
       <App />

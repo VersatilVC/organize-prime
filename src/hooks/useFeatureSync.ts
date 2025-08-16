@@ -10,7 +10,8 @@ export function useFeatureSync() {
 
   useEffect(() => {
     const syncFeatures = async () => {
-      console.log('🔄 Feature sync: Auto-sync disabled to prevent navigation conflicts');
+      // Reduced logging to prevent flashing
+      // console.log('🔄 Feature sync: Auto-sync disabled to prevent navigation conflicts');
       // Sync is disabled to prevent conflicts with manually configured navigation items
       // This ensures that the manually configured "Manage Knowledgebases" page
       // doesn't get overwritten or conflict with auto-generated navigation

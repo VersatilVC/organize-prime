@@ -105,7 +105,10 @@ export const createOptimizedQueryClient = () => {
         gcTime: cacheConfig.dynamic.gcTime,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
+        refetchOnReconnect: false,
         placeholderData: (prev) => prev as unknown,
+        // Prevent flashing by keeping old data during background refetches
+        keepPreviousData: true,
         
         retry: (failureCount, error: any) => {
           // Don't retry on client errors (4xx) or authentication errors

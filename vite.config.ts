@@ -7,7 +7,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: "localhost",
     port: 8080,
   },
   plugins: [
@@ -26,9 +26,46 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: mode === 'production' ? [] : undefined,
       output: {
-        // Force React to stay together in vendor chunk
-        manualChunks: mode === 'production' ? {
-          'vendor': ['react', 'react-dom', 'react-router-dom']
+        // Optimized manual chunks for faster loading
+        manualChunks: mode === 'production' ? (id) => {
+          // Core React libraries
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            return 'react-vendor';
+          }
+          
+          // UI Component libraries
+          if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('tailwind')) {
+            return 'ui-vendor';
+          }
+          
+          // Data fetching and state management
+          if (id.includes('@tanstack') || id.includes('@supabase') || id.includes('query')) {
+            return 'data-vendor';
+          }
+          
+          // Feature-specific chunks
+          if (id.includes('/features/knowledge-base/')) {
+            return 'kb-feature';
+          }
+          
+          if (id.includes('/features/content-creation/')) {
+            return 'content-feature';
+          }
+          
+          // Admin-specific functionality
+          if (id.includes('/admin/') || id.includes('/components/admin/')) {
+            return 'admin-feature';
+          }
+          
+          // Utilities and helpers
+          if (id.includes('/lib/') || id.includes('/utils/') || id.includes('/hooks/')) {
+            return 'utils';
+          }
+          
+          // Node modules that aren't categorized above
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         } : undefined,
         
         // Optimize chunk file names for better caching

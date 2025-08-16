@@ -18,15 +18,9 @@ const AuthLoadingSpinner = () => (
   </div>
 );
 
-const Index = () => {
-  console.log('Index component rendering - Preview URL check');
-  
-  // Performance monitoring temporarily disabled
-  // try {
-  //   usePagePerformance('Home');
-  // } catch (error) {
-  //   console.warn('Performance monitoring failed:', error);
-  // }
+const Index = React.memo(() => {
+  // Reduced logging to prevent spam
+  // console.log('Index component rendering - Preview URL check');
   
   // Safely try to get auth context, handle if provider not ready
   let user = null;
@@ -36,7 +30,8 @@ const Index = () => {
     const auth = useAuth();
     user = auth.user;
     loading = auth.loading;
-    console.log('Auth state:', { user: !!user, loading });
+    // Reduced logging to prevent spam
+    // console.log('Auth state:', { user: !!user, loading });
   } catch (error) {
     console.warn('Auth context not available yet, showing loading state:', error);
     return <AuthLoadingSpinner />;
@@ -107,6 +102,6 @@ const Index = () => {
       <Dashboard />
     </AppLayout>
   );
-};
+});
 
 export default Index;

@@ -11,15 +11,6 @@ interface FeatureProviderProps {
 export function FeatureProvider({ children, slug }: FeatureProviderProps) {
   const featureData = useFeatureData(slug);
 
-  // Only log when slug is provided to reduce console noise
-  if (slug) {
-    console.log('🔍 FeatureProvider: Providing context for slug:', slug, 'Data:', {
-      feature: featureData.feature ? { slug: featureData.feature.slug, isInstalled: featureData.feature.isInstalled } : null,
-      isLoading: featureData.isLoading,
-      hasAccess: featureData.hasAccess
-    });
-  }
-
   return (
     <FeatureContext.Provider value={featureData}>
       {children}

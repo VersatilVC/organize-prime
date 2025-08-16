@@ -89,13 +89,11 @@ const createAppSections = (installedApps: any[]) => {
 // Create feature sections
 const createFeatureSections = (featureNavigationSections: any[]) => {
   return featureNavigationSections.map(section => {
-    // Guardrail: only expose supported KB links until config is cleaned
+    // Filter out invalid items but allow all valid knowledge base routes
     const filteredItems = Array.isArray(section.items)
       ? section.items.filter((item: any) => {
           if (typeof item?.href !== 'string') return false;
-          if (item.href.startsWith('/features/knowledge-base/')) {
-            return item.href.endsWith('/manage-knowledgebases') || item.href.endsWith('/ai-chat');
-          }
+          // Allow all properly formatted routes
           return true;
         })
       : [];

@@ -13,24 +13,25 @@ interface KBAuthorizeRouteProps {
 export function KBAuthorizeRoute({ permissions = [], children, component }: KBAuthorizeRouteProps) {
   const perms = useKBPermissions();
 
-  logger.debug('KB authorization check', {
-    component: 'KBAuthorizeRoute',
-    action: 'permission_check'
-  });
+  // Reduced logging to prevent flashing
+  // logger.debug('KB authorization check', {
+  //   component: 'KBAuthorizeRoute',
+  //   action: 'permission_check'
+  // });
 
   // Allow access to placeholder pages regardless of permissions
   const isPlaceholderPage = component && !IMPLEMENTED_COMPONENTS.has(component);
   if (isPlaceholderPage) {
-    logger.debug('Allowing placeholder page access');
+    // logger.debug('Allowing placeholder page access');
     return <>{children}</>;
   }
 
   const hasAll = permissions.every((p) => perms[p]);
   if (!hasAll) {
-    logger.debug('Insufficient permissions for KB route');
+    // logger.debug('Insufficient permissions for KB route');
     return <Navigate to="/" replace />;
   }
   
-  logger.debug('KB route access granted');
+  // logger.debug('KB route access granted');
   return <>{children}</>;
 }

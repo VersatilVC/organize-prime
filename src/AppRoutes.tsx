@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { LoadingScreen, LayoutLoadingScreen } from '@/components/ui/loading-screen';
 
 // Lazy load components for optimal bundle splitting
 const Index = React.lazy(() => import('@/pages/Index'));
@@ -19,28 +20,12 @@ const Notifications = React.lazy(() => import('@/pages/Notifications'));
 const Billing = React.lazy(() => import('@/pages/Billing'));
 const Help = React.lazy(() => import('@/pages/Help'));
 const FeedbackManagement = React.lazy(() => import('@/pages/admin/FeedbackManagement'));
+const FeatureRouter = React.lazy(() => import('@/components/FeatureRouter').then(module => ({ default: module.FeatureRouter })));
 const NotFound = React.lazy(() => import('@/pages/NotFound'));
 
-// Loading fallback component
-const RouteLoadingFallback: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="flex flex-col items-center space-y-4">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <p className="text-sm text-muted-foreground">Loading...</p>
-    </div>
-  </div>
-);
-
-// Layout loading fallback for protected routes
-const LayoutLoadingFallback: React.FC = () => (
-  <div className="flex-1 p-6">
-    <div className="space-y-4 w-full max-w-4xl">
-      <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
-      <div className="h-4 w-96 animate-pulse rounded-md bg-muted" />
-      <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
-    </div>
-  </div>
-);
+// Use the new optimized loading components
+const RouteLoadingFallback: React.FC = () => <LoadingScreen message="Loading page..." />;
+const LayoutLoadingFallback: React.FC = () => <LayoutLoadingScreen />;
 
 export function AppRoutes() {
   return (
@@ -220,6 +205,18 @@ export function AppRoutes() {
                   <Help />
                 </React.Suspense>
               </AppLayout>
+            </AuthGuard>
+          } 
+        />
+
+        {/* Feature routes - dynamic feature system */}
+        <Route 
+          path="/features/:slug/*" 
+          element={
+            <AuthGuard>
+              <React.Suspense fallback={<LayoutLoadingFallback />}>
+                <FeatureRouter />
+              </React.Suspense>
             </AuthGuard>
           } 
         />

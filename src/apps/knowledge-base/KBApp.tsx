@@ -13,11 +13,6 @@ import { logger } from '@/lib/secure-logger';
 
 // Dynamic route component that renders based on database configuration
 function DynamicRoute({ route }: { route: any }) {
-  logger.debug('Rendering dynamic route', { 
-    component: 'DynamicRoute',
-    action: 'route_render'
-  });
-  
   const Component = getComponent(route.component);
   const isAdminRoute = route.permissions?.includes('admin') || route.permissions?.includes('super_admin');
   
@@ -37,8 +32,6 @@ function DynamicRoute({ route }: { route: any }) {
     kbPermissions.push('can_chat');
   }
   
-  logger.debug('KB permissions mapped');
-  
   const wrapped = (
     <KBAuthorizeRoute permissions={kbPermissions} component={route.component}>
       {element}
@@ -55,10 +48,11 @@ function DynamicRoute({ route }: { route: any }) {
 export default function KBApp() {
   const { routes, isLoading } = useFeatureRoutes('knowledge-base');
   
-  logger.debug('KB App mounted', { 
-    component: 'KBApp',
-    action: 'mount'
-  });
+  // Reduced logging to prevent flashing
+  // logger.debug('KB App mounted', { 
+  //   component: 'KBApp',
+  //   action: 'mount'
+  // });
   
   // Auto-sync feature pages if they don't exist
   useFeatureSync();
@@ -66,7 +60,6 @@ export default function KBApp() {
   // Find default route for redirect - normalize route paths
   const defaultRoute = React.useMemo(() => {
     const defaultPageRoute = routes.find(r => r.isDefault);
-    logger.debug('Finding default route');
     if (defaultPageRoute) {
       // Handle both /apps/ and /features/ prefixes and normalize
       let normalizedRoute = defaultPageRoute.path;
@@ -77,12 +70,10 @@ export default function KBApp() {
       } else if (normalizedRoute.startsWith('/knowledge-base/')) {
         normalizedRoute = normalizedRoute.replace('/knowledge-base/', '');
       }
-      logger.debug('Using default route');
       return normalizedRoute;
     }
     const fallbackRoute = routes.length > 0 ? 
       routes[0].path.replace(/^\/(apps|features)\/knowledge-base\//, '') : 'dashboard';
-    logger.debug('Using fallback route');
     return fallbackRoute;
   }, [routes]);
 
@@ -90,8 +81,10 @@ export default function KBApp() {
     return (
       <AppLayout>
         <KBLayout>
-          <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading...</div>
+          <div className="space-y-4">
+            <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
+            <div className="h-4 w-96 animate-pulse rounded-md bg-muted" />
+            <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
           </div>
         </KBLayout>
       </AppLayout>
@@ -114,7 +107,6 @@ export default function KBApp() {
               } else if (routePath.startsWith('/knowledge-base/')) {
                 routePath = routePath.replace('/knowledge-base/', '');
               }
-              logger.debug('Creating KB route');
               return (
                 <Route
                   key={route.path}

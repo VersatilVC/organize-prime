@@ -14,7 +14,8 @@ export function useFeatureRoutes(featureSlug: string) {
     if (!feature) return [];
     
     const pages = feature.system_feature.navigation_config?.pages || [];
-    console.log('🔍 useFeatureRoutes: Processing pages for feature:', featureSlug, pages);
+    // Reduced logging to prevent UI flashing
+    // console.log('🔍 useFeatureRoutes: Processing pages for feature:', featureSlug, pages);
     
     const processedRoutes = pages
       .map((page: any) => {
@@ -41,7 +42,7 @@ export function useFeatureRoutes(featureSlug: string) {
       console.warn('🚨 Route validation errors for feature:', featureSlug, validation.errors);
     }
 
-    console.log('✅ useFeatureRoutes: Processed routes for:', featureSlug, processedRoutes);
+    // console.log('✅ useFeatureRoutes: Processed routes for:', featureSlug, processedRoutes);
     return processedRoutes;
   }, [features, featureSlug]);
 

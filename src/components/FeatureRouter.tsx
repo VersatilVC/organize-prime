@@ -1,9 +1,11 @@
-import React, { Suspense } from 'react';
-import { Routes, Route, useParams } from 'react-router-dom';
-import { FeatureProvider, useFeatureContext } from '@/contexts/FeatureContext';
+import React, { Suspense, memo } from 'react';
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
+import { usePerformanceMonitor } from '@/hooks/usePerformanceMonitor';
+import { useStableLoading } from '@/hooks/useLoadingState';
+import { FeatureProvider } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
 import { AppLayout } from './layout/AppLayout';
-import { useOrganizationFeatures } from '@/hooks/database/useOrganizationFeatures';
+import { usePermissions } from '@/contexts/PermissionContext';
 import NotFound from '@/pages/NotFound';
 import { EmptyState } from '@/components/composition/EmptyState';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,15 +30,18 @@ interface FeatureRouteParams extends Record<string, string> {
   slug: string;
 }
 
-function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slug: string }) {
-  const { data: organizationFeatures = [], isLoading, error } = useOrganizationFeatures();
+const FeatureAccessCheck = memo(function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slug: string }) {
+  const { hasFeatureAccess, isLoading } = usePermissions();
+  const navigate = useNavigate();
+  
+  // Use stable loading to prevent flashing
+  const stableLoading = useStableLoading(isLoading, 200);
+  
+  // Monitor performance of feature access check
+  usePerformanceMonitor('FeatureAccessCheck');
 
-  logger.debug('Feature access check', {
-    component: 'FeatureAccessCheck',
-    feature: slug
-  });
-
-  if (isLoading) {
+  // Show stable loading state - prevents flashing on quick loads
+  if (stableLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -47,25 +52,10 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
     );
   }
 
-  if (error) {
-    logger.error('Error loading features', error);
-    return (
-      <EmptyState
-        icon={AlertTriangle}
-        title="Error Loading Feature"
-        description="We encountered an error while loading this feature. Please try again."
-        action={{
-          label: "Retry",
-          onClick: () => window.location.reload()
-        }}
-      />
-    );
-  }
+  // Use cached permission result - no database queries here
+  const hasAccess = hasFeatureAccess(slug);
 
-  const feature = organizationFeatures.find(f => f.system_feature.slug === slug);
-
-  if (!feature) {
-    logger.debug('Feature not found or enabled', { component: 'FeatureAccessCheck', feature: slug });
+  if (!hasAccess) {
     return (
       <EmptyState
         icon={Lock}
@@ -73,82 +63,76 @@ function FeatureAccessCheck({ children, slug }: { children: React.ReactNode; slu
         description={`The ${slug.replace('-', ' ')} feature is not enabled for your organization.`}
         action={{
           label: "Browse Features",
-          onClick: () => window.location.href = "/features"
+          onClick: () => navigate("/features")
         }}
       />
     );
   }
 
-  // Feature access granted
-  logger.debug('Feature access granted', { component: 'FeatureAccessCheck', feature: slug });
-
+  // Feature access granted - render immediately
   return <>{children}</>;
-}
+});
 
-function FeatureRoutes() {
+const FeatureRoutes = memo(function FeatureRoutes() {
   const { slug } = useParams<FeatureRouteParams>();
   
-  logger.debug('FeatureRoutes mounted', { component: 'FeatureRoutes', feature: slug });
+  // Monitor performance of feature routes
+  usePerformanceMonitor('FeatureRoutes');
+  
+  // logger.debug('FeatureRoutes mounted', { component: 'FeatureRoutes', feature: slug });
   
   // Special handling for Knowledge Base app
   if (slug === 'knowledge-base') {
-    logger.debug('Rendering Knowledge Base app', { component: 'FeatureRoutes' });
-    return (
-      <Suspense fallback={
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-48" />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </div>
-        </div>
-      }>
-        <KBApp />
-      </Suspense>
-    );
+    // logger.debug('Rendering Knowledge Base app', { component: 'FeatureRoutes' });
+    // Remove redundant Suspense - KBApp handles its own loading states
+    return <KBApp />;
   }
 
   return (
     <AppLayout>
-      <FeatureLayout>
-        <Suspense fallback={
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-48" />
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
+      <FeatureProvider slug={slug}>
+        <FeatureLayout>
+          <Suspense fallback={
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-48" />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+              </div>
             </div>
-          </div>
-        }>
-          <Routes>
-            <Route path="" element={<FeatureDashboard />} />
-            <Route path="dashboard" element={<FeatureDashboard />} />
-            <Route path="settings" element={<FeatureSettings />} />
-            <Route path="*" element={<FeatureContent />} />
-          </Routes>
-        </Suspense>
-      </FeatureLayout>
+          }>
+            <Routes>
+              <Route path="" element={<FeatureDashboard />} />
+              <Route path="dashboard" element={<FeatureDashboard />} />
+              <Route path="settings" element={<FeatureSettings />} />
+              <Route path="*" element={<FeatureContent />} />
+            </Routes>
+          </Suspense>
+        </FeatureLayout>
+      </FeatureProvider>
     </AppLayout>
   );
-}
+});
 
-export function FeatureRouter() {
+export const FeatureRouter = memo(function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
+  
+  // Monitor performance of feature router
+  usePerformanceMonitor('FeatureRouter');
 
-  logger.debug('FeatureRouter mounted', { component: 'FeatureRouter', feature: slug });
+  // logger.debug('FeatureRouter mounted', { component: 'FeatureRouter', feature: slug });
 
   if (!slug) {
-    logger.debug('No feature slug provided');
+    // logger.debug('No feature slug provided');
     return <NotFound />;
   }
 
-  logger.debug('Rendering feature router', { component: 'FeatureRouter', feature: slug });
+  // logger.debug('Rendering feature router', { component: 'FeatureRouter', feature: slug });
 
   return (
     <FeatureAccessCheck slug={slug}>
       <FeatureRoutes />
     </FeatureAccessCheck>
   );
-}
+});

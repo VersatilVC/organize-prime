@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useFeatureContext } from '@/contexts/FeatureContext';
+import { useStableLoading } from '@/hooks/useLoadingState';
 import { Icons } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { ArrowLeft } from 'lucide-react';
@@ -13,11 +15,35 @@ interface FeatureLayoutProps {
 }
 
 export function FeatureLayout({ children }: FeatureLayoutProps) {
-  const { feature, userRole } = useFeatureContext();
+  const { feature, userRole, isLoading } = useFeatureContext();
   const location = useLocation();
+  
+  // Use stable loading to prevent flashing
+  const stableLoading = useStableLoading(isLoading || !feature, 300);
 
-  if (!feature) {
-    return <div>Loading feature...</div>;
+  if (stableLoading) {
+    return (
+      <div className="flex flex-col space-y-6 p-6">
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-64" />
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-12 w-12 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <div className="border-b border-border">
+            <div className="flex space-x-8">
+              <Skeleton className="h-12 w-24" />
+              <Skeleton className="h-12 w-24" />
+              <Skeleton className="h-12 w-24" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
   const FeatureIcon = Icons[feature.iconName as keyof typeof Icons] || Icons.package;

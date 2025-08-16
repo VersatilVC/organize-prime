@@ -4,11 +4,14 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createOptimizedQueryClient } from '@/lib/query-client';
 import { AuthProvider } from './auth/AuthProvider';
 import { OrganizationProvider } from './contexts/OrganizationContext';
+import { PermissionProvider } from './contexts/PermissionContext';
 import { AccessibilityProvider, SkipToContent } from './components/accessibility/AccessibilityProvider';
 import { AccessibilityChecker } from './components/accessibility/AccessibilityChecker';
 import { ProgressiveEnhancementDemo } from './components/ProgressiveEnhancementDemo';
 import { AppRoutes } from './AppRoutes';
 import { registerServiceWorker } from './utils/serviceWorker';
+import { useRoutePreloader } from './hooks/useResourcePreloader';
+import { useBundlePerformance, useMemoryOptimization } from './hooks/usePerformanceMonitor';
 import './index.css';
 
 // Create optimized query client instance - memoized to prevent recreation
@@ -20,7 +23,9 @@ const AppContent = React.memo(() => (
     <SkipToContent />
     <AuthProvider>
       <OrganizationProvider>
-        <AppRoutes />
+        <PermissionProvider>
+          <AppRoutes />
+        </PermissionProvider>
       </OrganizationProvider>
     </AuthProvider>
   </AccessibilityProvider>
@@ -29,6 +34,18 @@ const AppContent = React.memo(() => (
 AppContent.displayName = 'AppContent';
 
 function App() {
+  // Performance monitoring and optimization
+  useBundlePerformance();
+  const { addCleanupFunction } = useMemoryOptimization();
+
+  // Preload common routes for faster navigation
+  useRoutePreloader([
+    '/dashboard', 
+    '/features/knowledge-base',
+    '/users',
+    '/settings'
+  ]);
+
   // Register service worker for progressive enhancement
   React.useEffect(() => {
     const isDev = import.meta.env.DEV;
@@ -50,7 +67,12 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <AppContent />
         <AccessibilityChecker />
         <ProgressiveEnhancementDemo />

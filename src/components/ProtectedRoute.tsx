@@ -2,8 +2,8 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
-import { Skeleton } from '@/components/ui/skeleton';
-import { logger } from '@/lib/secure-logger';
+import { LoadingScreen } from '@/components/ui/loading-screen';
+import { useStableLoading } from '@/hooks/useLoadingState';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,35 +15,18 @@ export function ProtectedRoute({ children, requiredRole = 'user' }: ProtectedRou
   const { role, loading: roleLoading } = useOptimizedUserRole();
   const location = useLocation();
 
-  // Add timeout to prevent infinite loading
-  const [timeoutReached, setTimeoutReached] = React.useState(false);
-  
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      logger.warn('Loading timeout reached');
-      setTimeoutReached(true);
-    }, 5000); // 5 second timeout
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Use stable loading to prevent flashing
+  const isLoading = authLoading || roleLoading;
+  const stableLoading = useStableLoading(isLoading, 300); // Minimum 300ms loading
 
-  if ((authLoading || roleLoading) && !timeoutReached) {
-    logger.debug('Auth state loading');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="space-y-4 w-full max-w-md">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-8 w-1/2" />
-        </div>
-      </div>
-    );
+  if (stableLoading) {
+    return <LoadingScreen message="Verifying access..." />;
   }
 
-  logger.debug('Auth state resolved');
+  // Reduced logging to prevent flashing
+  // logger.debug('Auth state resolved');
 
   if (!user) {
-    logger.debug('Redirecting to auth - no user');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
