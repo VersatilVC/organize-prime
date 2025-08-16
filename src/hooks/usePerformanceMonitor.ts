@@ -1,4 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import * as React from 'react';
+
+// Safe React hook access with null checks
+const safeUseEffect = React.useEffect || (() => {});
+const safeUseRef = React.useRef || (() => ({ current: undefined }));
+const safeUseCallback = React.useCallback || ((fn: any) => fn);
 
 interface PerformanceMetrics {
   renderTime: number;
@@ -11,18 +16,28 @@ interface PerformanceMetrics {
  * Hook to monitor component performance and memory usage
  */
 export function usePerformanceMonitor(componentName: string, enabled: boolean = process.env.NODE_ENV === 'development') {
-  const startTimeRef = useRef<number>();
-  const renderCountRef = useRef(0);
-  const metricsRef = useRef<PerformanceMetrics[]>([]);
+  // Return early if React hooks are not available
+  if (!React.useEffect || !React.useRef || !React.useCallback) {
+    console.warn('React hooks not available - performance monitoring disabled');
+    return {
+      metrics: [],
+      averageRenderTime: 0,
+      renderCount: 0,
+    };
+  }
+
+  const startTimeRef = safeUseRef<number>();
+  const renderCountRef = safeUseRef(0);
+  const metricsRef = safeUseRef<PerformanceMetrics[]>([]);
 
   // Start performance measurement
-  const startMeasurement = useCallback(() => {
+  const startMeasurement = safeUseCallback(() => {
     if (!enabled) return;
     startTimeRef.current = performance.now();
   }, [enabled]);
 
   // End performance measurement
-  const endMeasurement = useCallback(() => {
+  const endMeasurement = safeUseCallback(() => {
     if (!enabled || !startTimeRef.current) return;
     
     const renderTime = performance.now() - startTimeRef.current;
@@ -55,13 +70,13 @@ export function usePerformanceMonitor(componentName: string, enabled: boolean = 
   }, [enabled, componentName]);
 
   // Measure component mount time
-  useEffect(() => {
+  safeUseEffect(() => {
     startMeasurement();
     return endMeasurement;
   });
 
   // Measure each render
-  useEffect(() => {
+  safeUseEffect(() => {
     startMeasurement();
     endMeasurement();
   });
@@ -79,13 +94,22 @@ export function usePerformanceMonitor(componentName: string, enabled: boolean = 
  * Hook to cleanup memory leaks and optimize garbage collection
  */
 export function useMemoryOptimization() {
-  const cleanupFunctionsRef = useRef<(() => void)[]>([]);
+  // Return early if React hooks are not available
+  if (!React.useEffect || !React.useRef || !React.useCallback) {
+    return {
+      addCleanupFunction: () => {},
+      forceCleanup: () => {},
+      cleanupCount: 0,
+    };
+  }
 
-  const addCleanupFunction = useCallback((fn: () => void) => {
+  const cleanupFunctionsRef = safeUseRef<(() => void)[]>([]);
+
+  const addCleanupFunction = safeUseCallback((fn: () => void) => {
     cleanupFunctionsRef.current.push(fn);
   }, []);
 
-  const forceCleanup = useCallback(() => {
+  const forceCleanup = safeUseCallback(() => {
     cleanupFunctionsRef.current.forEach(fn => {
       try {
         fn();
@@ -102,14 +126,14 @@ export function useMemoryOptimization() {
   }, []);
 
   // Cleanup on unmount
-  useEffect(() => {
+  safeUseEffect(() => {
     return () => {
       forceCleanup();
     };
   }, [forceCleanup]);
 
   // Periodic cleanup every 5 minutes
-  useEffect(() => {
+  safeUseEffect(() => {
     const interval = setInterval(() => {
       if (cleanupFunctionsRef.current.length > 10) {
         forceCleanup();
@@ -130,7 +154,12 @@ export function useMemoryOptimization() {
  * Hook to measure and optimize bundle loading performance
  */
 export function useBundlePerformance() {
-  useEffect(() => {
+  // Return early if React hooks are not available
+  if (!React.useEffect) {
+    return;
+  }
+
+  safeUseEffect(() => {
     // Measure initial bundle load time
     if ('performance' in window && 'getEntriesByType' in performance) {
       const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
@@ -156,21 +185,23 @@ export function useBundlePerformance() {
     }
 
     // Monitor resource loading
-    const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach((entry) => {
-        if (entry.entryType === 'resource' && entry.name.includes('.js')) {
-          const resourceEntry = entry as PerformanceResourceTiming;
-          const loadTime = resourceEntry.responseEnd - resourceEntry.fetchStart;
-          
-          if (loadTime > 1000) { // More than 1 second
-            console.warn(`🐌 Slow resource load: ${entry.name} took ${loadTime.toFixed(2)}ms`);
+    if ('PerformanceObserver' in window) {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          if (entry.entryType === 'resource' && entry.name.includes('.js')) {
+            const resourceEntry = entry as PerformanceResourceTiming;
+            const loadTime = resourceEntry.responseEnd - resourceEntry.fetchStart;
+            
+            if (loadTime > 1000) { // More than 1 second
+              console.warn(`🐌 Slow resource load: ${entry.name} took ${loadTime.toFixed(2)}ms`);
+            }
           }
-        }
+        });
       });
-    });
 
-    observer.observe({ entryTypes: ['resource'] });
+      observer.observe({ entryTypes: ['resource'] });
 
-    return () => observer.disconnect();
+      return () => observer.disconnect();
+    }
   }, []);
 }

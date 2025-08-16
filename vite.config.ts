@@ -88,7 +88,9 @@ export default defineConfig(({ mode }) => ({
       '@supabase/realtime-js',
       '@supabase/storage-js',
     ],
-    force: true
+    force: true,
+    // Exclude React from being duplicated
+    exclude: mode === 'production' ? [] : undefined
   },
   // Fix ESM/CommonJS compatibility issues
   ssr: {

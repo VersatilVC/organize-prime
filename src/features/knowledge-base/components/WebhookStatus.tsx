@@ -34,6 +34,7 @@ interface WebhookStatusProps {
 
 export function WebhookStatus({ className }: WebhookStatusProps) {
   const [isTesting, setIsTesting] = useState(false);
+  const [lastTestResult, setLastTestResult] = useState<{ success: boolean; timestamp: Date } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -51,26 +52,33 @@ export function WebhookStatus({ className }: WebhookStatusProps) {
     onMutate: () => setIsTesting(true),
     onSettled: () => setIsTesting(false),
     onSuccess: (result) => {
+      setLastTestResult({ success: result.success, timestamp: new Date() });
+      
       if (result.success) {
         toast({
-          title: 'Webhook test successful',
-          description: `Response time: ${result.responseTime}ms`,
+          title: '✅ Webhook Test Successful!',
+          description: `N8N webhook responded in ${result.responseTime}ms with status ${result.statusCode || 200}. Your integration is working correctly.`,
+          duration: 5000,
         });
       } else {
         toast({
-          title: 'Webhook test failed',
-          description: result.error,
+          title: '❌ Webhook Test Failed',
+          description: `${result.error}. Please check your N8N webhook URL and configuration.`,
           variant: 'destructive',
+          duration: 7000,
         });
       }
       // Refresh health status
       queryClient.invalidateQueries({ queryKey: ['webhook-health'] });
     },
     onError: (error) => {
+      setLastTestResult({ success: false, timestamp: new Date() });
+      
       toast({
-        title: 'Test failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        title: '❌ Webhook Test Failed',
+        description: `Unable to test webhook: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your webhook configuration.`,
         variant: 'destructive',
+        duration: 7000,
       });
     },
   });
@@ -226,6 +234,27 @@ export function WebhookStatus({ className }: WebhookStatusProps) {
                 <AlertDescription>
                   No webhook calls have been made yet. Upload a file to test the integration.
                 </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Last Test Result */}
+            {lastTestResult && (
+              <Alert className={lastTestResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+                {lastTestResult.success ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      ✅ Last webhook test was successful at {formatDate(lastTestResult.timestamp)}
+                    </AlertDescription>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-800">
+                      ❌ Last webhook test failed at {formatDate(lastTestResult.timestamp)}
+                    </AlertDescription>
+                  </>
+                )}
               </Alert>
             )}
 

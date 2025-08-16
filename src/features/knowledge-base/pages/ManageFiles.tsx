@@ -208,6 +208,9 @@ export default function ManageFiles() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* N8N Webhook Status */}
+            <WebhookStatus />
           </div>
         </TabsContent>
       </Tabs>

@@ -137,21 +137,50 @@ export class KBFileProcessingService {
    */
   private static async getWebhookConfig(): Promise<WebhookConfig | null> {
     try {
+      console.log('🔍 Looking for webhook config with name:', this.WEBHOOK_NAME);
+      
+      // First, let's check what webhooks exist in the database
+      const { data: allWebhooks, error: listError } = await supabase
+        .from('feature_webhooks')
+        .select('id, name, url, feature_id, is_active')
+        .limit(10);
+        
+      if (listError) {
+        console.error('❌ Error listing webhooks:', listError);
+      } else {
+        console.log('📋 Available webhooks:', allWebhooks);
+      }
+
+      // Now try to find the specific webhook we need
       const { data, error } = await supabase
         .from('feature_webhooks')
         .select('id, name, url, secret_key, headers, timeout_seconds, retry_attempts, is_active')
         .eq('name', this.WEBHOOK_NAME)
-        .eq('feature_slug', 'knowledge-base')
         .single();
 
       if (error) {
-        console.error('Failed to get webhook config:', error);
+        console.error('❌ Failed to get webhook config for name "' + this.WEBHOOK_NAME + '":', error);
+        
+        // Try a broader search without feature_slug restriction
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('feature_webhooks')
+          .select('id, name, url, secret_key, headers, timeout_seconds, retry_attempts, is_active')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+          
+        if (!fallbackError && fallbackData) {
+          console.log('✅ Found active webhook as fallback:', fallbackData.name);
+          return fallbackData as WebhookConfig;
+        }
+        
         return null;
       }
 
+      console.log('✅ Found webhook config:', data.name, data.url);
       return data as WebhookConfig;
     } catch (error) {
-      console.error('Error fetching webhook config:', error);
+      console.error('❌ Error fetching webhook config:', error);
       return null;
     }
   }
@@ -163,6 +192,27 @@ export class KBFileProcessingService {
     config: WebhookConfig, 
     fileData: FileProcessingRequest
   ): Promise<ProcessingResponse> {
+    // Generate direct download URL for the file
+    let downloadUrl: string | null = null;
+    try {
+      console.log('🔗 Generating download URL for file:', fileData.filePath);
+      
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from('kb-documents')
+        .createSignedUrl(fileData.filePath, 86400); // 24 hours expiry
+
+      if (urlError) {
+        console.error('❌ Supabase URL generation error:', urlError);
+      } else if (urlData?.signedUrl) {
+        downloadUrl = urlData.signedUrl;
+        console.log('✅ Generated download URL successfully:', downloadUrl.substring(0, 100) + '...');
+      } else {
+        console.warn('⚠️ No signed URL returned from Supabase');
+      }
+    } catch (urlError) {
+      console.error('❌ Failed to generate download URL for webhook:', urlError);
+    }
+
     const payload = {
       event_type: 'file_uploaded',
       file_id: fileData.fileId,
@@ -174,11 +224,17 @@ export class KBFileProcessingService {
       mime_type: fileData.mimeType,
       uploaded_by: fileData.uploadedBy,
       uploaded_at: new Date().toISOString(),
+      download_url: downloadUrl, // Direct download URL for N8N processing
       webhook_config: {
         retry_attempts: config.retry_attempts,
         timeout_seconds: config.timeout_seconds
       }
     };
+
+    console.log('📋 Webhook payload prepared:', {
+      ...payload,
+      download_url: downloadUrl ? downloadUrl.substring(0, 100) + '...' : null
+    });
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
