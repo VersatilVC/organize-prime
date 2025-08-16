@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { MessageSquare, Brain, Sparkles } from 'lucide-react';
+import { MessageSquare, Brain, Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatSidebar } from './ChatSidebar';
-import { useActiveSession } from '../hooks/useChatSessions';
+import { ChatHeader } from './ChatHeader';
+import { ChatMessage } from './ChatMessage';
+import { ChatInput } from './ChatInput';
+import { useActiveSession, useChatSessions } from '../hooks/useChatSessions';
+import { useChatInterface, useConversationExport } from '../hooks/useChatInterface';
 import { useKnowledgeBases } from '../../hooks/useKnowledgeBases';
 import { cn } from '@/lib/utils';
 
@@ -66,7 +71,7 @@ export function ChatLayout({ className }: ChatLayoutProps) {
 }
 
 interface ChatInterfaceProps {
-  session: any; // Will be replaced with proper ChatSession + messages
+  session: any;
   isLoading: boolean;
   onToggleSidebar: () => void;
   isSidebarCollapsed: boolean;
@@ -74,74 +79,144 @@ interface ChatInterfaceProps {
 
 function ChatInterface({ 
   session, 
-  isLoading,
+  isLoading: isSessionLoading,
   onToggleSidebar,
   isSidebarCollapsed 
 }: ChatInterfaceProps) {
-  if (isLoading) {
+  const [selectedKbIds, setSelectedKbIds] = useState<string[]>(session?.kb_ids || []);
+  const [modelConfig, setModelConfig] = useState({
+    model: session?.model_config?.model || 'gpt-4',
+    temperature: session?.model_config?.temperature || 0.7
+  });
+
+  const { updateTitle } = useChatSessions();
+  const { exportConversation } = useConversationExport();
+  
+  const {
+    messages,
+    isLoadingMessages,
+    messagesError,
+    sendMessage,
+    regenerateResponse,
+    handleMessageReaction,
+    isProcessing,
+    scrollRef,
+  } = useChatInterface(session?.id);
+
+  if (isSessionLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading conversation...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex-1 flex flex-col">
-      {/* Chat Header */}
-      <div className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {isSidebarCollapsed && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggleSidebar}
-                className="lg:hidden"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-            )}
-            
-            <div>
-              <h1 className="font-semibold text-lg">{session.title}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-muted-foreground">
-                  {session.message_count} messages
-                </span>
-                {session.kb_ids.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {session.kb_ids.length} Knowledge Base{session.kb_ids.length > 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {session.model_config?.model || 'gpt-4'}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      {/* Chat Messages Area */}
+  if (!session) {
+    return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-medium mb-2">Chat Interface Coming Soon</h3>
-          <p className="text-muted-foreground mb-4">
-            The messaging interface will be implemented in the next phase.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Session ID: {session.id}
+          <h3 className="text-lg font-medium mb-2">Session Not Found</h3>
+          <p className="text-muted-foreground">
+            The requested conversation could not be found.
           </p>
         </div>
       </div>
+    );
+  }
+
+  const handleTitleUpdate = (newTitle: string) => {
+    updateTitle({ conversationId: session.id, title: newTitle });
+  };
+
+  const handleModelConfigChange = (config: { model: string; temperature: number }) => {
+    setModelConfig(config);
+    // In a real implementation, you might want to save this to the session
+  };
+
+  const handleExportConversation = () => {
+    exportConversation(messages, session.title);
+  };
+
+  const handleClearConversation = () => {
+    // Implementation would clear all messages in the conversation
+    console.log('Clear conversation requested');
+  };
+
+  const handleSendMessage = (message: string) => {
+    sendMessage(message, selectedKbIds, modelConfig);
+  };
+
+  const handleRegenerateResponse = (messageId: string, originalPrompt: string) => {
+    regenerateResponse(messageId, originalPrompt, modelConfig);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Chat Header */}
+      <ChatHeader
+        session={session}
+        selectedKbIds={selectedKbIds}
+        onKbSelectionChange={setSelectedKbIds}
+        onTitleUpdate={handleTitleUpdate}
+        onModelConfigChange={handleModelConfigChange}
+        onExportConversation={handleExportConversation}
+        onClearConversation={handleClearConversation}
+        onToggleSidebar={onToggleSidebar}
+        isSidebarCollapsed={isSidebarCollapsed}
+      />
+
+      {/* Messages Area */}
+      <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {isLoadingMessages ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <span className="text-muted-foreground">Loading messages...</span>
+            </div>
+          ) : messagesError ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">Failed to load messages</p>
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-medium mb-2">Start the Conversation</h3>
+                <p className="text-muted-foreground">
+                  Send a message to begin chatting with your knowledge base.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {messages.map((message, index) => (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  isLast={index === messages.length - 1}
+                  onRegenerate={handleRegenerateResponse}
+                  onReaction={handleMessageReaction}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Chat Input */}
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={!session}
+        isProcessing={isProcessing}
+        placeholder="Ask a question about your knowledge base..."
+      />
     </div>
   );
 }
