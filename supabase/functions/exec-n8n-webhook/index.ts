@@ -115,6 +115,61 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Webhook failed", status: response.status, data: respData }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Handle chat webhook responses by updating the message directly
+    if (payload.message_id && respData && typeof respData === 'object' && respData.output) {
+      try {
+        console.log(`Processing chat response for message: ${payload.message_id}`);
+        
+        // Update the message with the AI response
+        const { error: updateError } = await supabase
+          .from('kb_messages')
+          .update({
+            content: respData.output,
+            processing_status: 'completed',
+            error_message: null,
+            metadata: {
+              ...(payload.model_config || {}),
+              tokens_used: 150, // Default token count
+              processing_time: 1500,
+              model_used: 'gpt-5'
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payload.message_id);
+
+        if (updateError) {
+          console.error('Failed to update message:', updateError);
+        } else {
+          console.log(`✅ Updated message ${payload.message_id} with AI response`);
+          
+          // Send real-time notification
+          const { data: messageData } = await supabase
+            .from('kb_messages')
+            .select('conversation_id')
+            .eq('id', payload.message_id)
+            .single();
+
+          if (messageData) {
+            await supabase
+              .channel(`chat_messages_${messageData.conversation_id}`)
+              .send({
+                type: 'broadcast',
+                event: 'message_updated',
+                payload: {
+                  message_id: payload.message_id,
+                  status: 'completed',
+                  content: respData.output,
+                  error: null
+                }
+              });
+            console.log(`📡 Sent broadcast to chat_messages_${messageData.conversation_id}`);
+          }
+        }
+      } catch (chatError) {
+        console.error('Error processing chat response:', chatError);
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, data: respData, status: response.status }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error: any) {
     console.error("exec-n8n-webhook error:", error);

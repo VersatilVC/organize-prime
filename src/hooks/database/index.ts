@@ -25,6 +25,17 @@ export {
   useOptimizedUserRole 
 } from './useOptimizedUserRole';
 
+// Knowledge Base Chat hooks
+export { 
+  useOptimizedKBConversations,
+  useOptimizedKBMessages,
+  useOptimizedActiveSession,
+  useOptimizedKBChatMutations,
+  useOptimizedKBChatInvalidation,
+  type KBConversation,
+  type KBMessage
+} from './useOptimizedChat';
+
 // System features
 export { useSystemFeatures } from './useSystemFeatures';
 export { useOrganizationFeatures } from './useOrganizationFeatures';

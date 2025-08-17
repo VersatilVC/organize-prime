@@ -1,0 +1,48 @@
+# N8N HTTP Request Node Configuration for Webhook Response
+
+## Import this curl command into N8N:
+
+curl -X POST "https://cjwgfoingscquolnfkhh.supabase.co/functions/v1/webhook-chat-response" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "success": true,
+    "message_id": "{{ $('\''Webhook'\'').first().json.message_id }}",
+    "response": "{{ $('\''ChatGPT'\'').first().json.choices[0].message.content }}",
+    "metadata": {
+      "tokens_used": {{ $('\''ChatGPT'\'').first().json.usage.total_tokens }},
+      "processing_time": 1500,
+      "model_used": "gpt-4"
+    }
+  }'
+
+## Manual Configuration (if import doesn't work):
+
+**Method**: POST
+
+**URL**: https://cjwgfoingscquolnfkhh.supabase.co/functions/v1/webhook-chat-response
+
+**Headers**:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo
+Content-Type: application/json
+
+**Body Type**: JSON
+
+**JSON Body**:
+{
+  "success": true,
+  "message_id": "{{ $('Webhook').first().json.message_id }}",
+  "response": "{{ $('ChatGPT').first().json.choices[0].message.content }}",
+  "metadata": {
+    "tokens_used": {{ $('ChatGPT').first().json.usage.total_tokens }},
+    "processing_time": 1500,
+    "model_used": "gpt-4"
+  }
+}
+
+## Notes:
+- Replace 'Webhook' with your actual webhook trigger node name
+- Replace 'ChatGPT' with your actual AI node name (could be 'OpenAI', 'Claude', etc.)
+- Adjust the response field path based on your AI node's output structure
+- The message_id MUST come from the original webhook request
+- Set this HTTP Request node to execute AFTER your AI processing node

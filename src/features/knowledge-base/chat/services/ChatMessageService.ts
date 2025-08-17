@@ -161,7 +161,19 @@ export class ChatMessageService {
         console.log('✅ Chat message sent for processing');
       } catch (webhookError) {
         console.error('Webhook processing failed:', webhookError);
-        // Error handling is done within ChatWebhookService
+        
+        // Provide fallback response when webhook is not configured
+        const fallbackResponse = this.generateFallbackResponse(params.message);
+        await this.updateMessage(assistantMessageId, {
+          content: fallbackResponse,
+          processing_status: 'completed',
+          metadata: {
+            fallback: true,
+            model: 'fallback',
+            processing_time: 0,
+            error: webhookError instanceof Error ? webhookError.message : 'Webhook unavailable'
+          }
+        });
       }
 
       return userMessageId;
@@ -316,6 +328,24 @@ export class ChatMessageService {
       console.error('ChatMessageService.regenerateResponse error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate a fallback response when webhook is not available
+   */
+  private static generateFallbackResponse(userMessage: string): string {
+    const responses = [
+      `I understand you're asking about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}". I apologize, but I'm currently unable to access the AI processing system to provide a proper response.`,
+      `Thank you for your question about "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}". The AI chat system is temporarily unavailable. Please try again later or contact your administrator.`,
+      `I received your message: "${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}". Unfortunately, I cannot process this request right now due to system connectivity issues.`
+    ];
+
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    
+    return `${randomResponse}
+
+**System Status**: AI processing temporarily unavailable
+**Suggestion**: Please check your webhook configuration in Admin → Webhook Management, or contact your system administrator.`;
   }
 
   /**

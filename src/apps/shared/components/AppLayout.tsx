@@ -42,6 +42,9 @@ export function AppLayout({
   const appSlug = params.slug || '';
   const organizationId = currentOrganization?.id || '';
   const userId = user?.id || '';
+  
+  // Check if we're on a chat page that needs full-height layout
+  const isChatPage = location.pathname.includes('/chat');
 
   // Get app configuration
   const { 
@@ -208,7 +211,7 @@ export function AppLayout({
   return (
     <BaseAppLayout>
       <div className="flex-1 flex flex-col overflow-hidden">
-        {showBreadcrumbs && breadcrumbs.length > 0 && (
+        {showBreadcrumbs && breadcrumbs.length > 0 && !isChatPage && (
           <div className="border-b border-border px-6 py-3">
             <div className="text-sm breadcrumbs">
               {breadcrumbs.map((crumb, index) => (
@@ -225,7 +228,7 @@ export function AppLayout({
           </div>
         )}
         
-        <div className="flex-1 overflow-auto">
+        <div className={isChatPage ? "flex-1 h-full" : "flex-1 overflow-auto"}>
           {appContext ? (
             <AppContextProvider.Provider value={appContext}>
               {children}

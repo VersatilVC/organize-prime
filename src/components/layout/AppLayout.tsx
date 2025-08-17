@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
@@ -8,17 +9,22 @@ interface AppLayoutProps {
 }
 
 // Memoized main content wrapper to prevent unnecessary re-renders
-const MainContent = React.memo(({ children }: { children: React.ReactNode }) => (
-  <main 
-    id="main-content"
-    className="flex flex-1 flex-col gap-4 p-4 pt-0"
-    role="main"
-    aria-label="Main content"
-    tabIndex={-1}
-  >
-    {children}
-  </main>
-));
+const MainContent = React.memo(({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const isChatPage = location.pathname.includes('/chat');
+  
+  return (
+    <main 
+      id="main-content"
+      className={isChatPage ? "flex flex-1 flex-col h-full" : "flex flex-1 flex-col gap-4 p-4 pt-0"}
+      role="main"
+      aria-label="Main content"
+      tabIndex={-1}
+    >
+      {children}
+    </main>
+  );
+});
 
 MainContent.displayName = 'MainContent';
 

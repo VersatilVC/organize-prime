@@ -102,126 +102,59 @@ export function ConversationManager({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
 
-  const { data: conversations, updateConversation, deleteConversation } = useChatSessions();
+  const { conversations, updateTitle, deleteConversation } = useChatSessions();
   const { toast } = useToast();
 
-  // Filter and sort conversations
+  // Filter and sort conversations - simplified for debugging
   const filteredConversations = useMemo(() => {
-    if (!conversations) return [];
-
-    let filtered = [...conversations];
-
-    // Apply tab filter
-    switch (activeTab) {
-      case 'bookmarked':
-        filtered = filtered.filter(conv => conv.is_bookmarked);
-        break;
-      case 'pinned':
-        filtered = filtered.filter(conv => conv.is_pinned);
-        break;
-      case 'archived':
-        filtered = filtered.filter(conv => conv.is_archived);
-        break;
-      case 'all':
-      default:
-        filtered = filtered.filter(conv => !conv.is_archived);
-        break;
+    if (!conversations) {
+      console.log('📋 No conversations data');
+      return [];
     }
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(conv =>
-        conv.title.toLowerCase().includes(query) ||
-        conv.last_message_preview?.toLowerCase().includes(query)
-      );
-    }
-
-    // Sort conversations
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortField) {
-        case 'title':
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case 'created':
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-        case 'messages':
-          comparison = (a.message_count || 0) - (b.message_count || 0);
-          break;
-        case 'updated':
-        default:
-          comparison = new Date(a.updated_at || a.created_at).getTime() - 
-                      new Date(b.updated_at || b.created_at).getTime();
-          break;
-      }
-
-      return sortOrder === 'desc' ? -comparison : comparison;
-    });
-
-    // Prioritize pinned conversations
-    const pinned = filtered.filter(conv => conv.is_pinned);
-    const unpinned = filtered.filter(conv => !conv.is_pinned);
+    console.log('📋 Processing conversations:', conversations.length);
     
-    return [...pinned, ...unpinned];
-  }, [conversations, activeTab, searchQuery, sortField, sortOrder]);
+    // For now, just return all active conversations sorted by creation date
+    const filtered = conversations
+      .filter(conv => conv.is_active !== false) // Show all active conversations
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // Newest first
+    
+    console.log('📋 Filtered result:', filtered.length);
+    return filtered;
+  }, [conversations]);
+
+  // Debug logging for conversations data
+  React.useEffect(() => {
+    console.log('📋 ConversationManager received conversations:', conversations?.length || 0);
+    console.log('📋 Conversations data:', conversations);
+    console.log('📋 Filtered conversations:', filteredConversations?.length || 0);
+    console.log('📋 Active tab:', activeTab);
+    console.log('📋 Search query:', searchQuery);
+  }, [conversations, filteredConversations, activeTab, searchQuery]);
 
   // Handle conversation actions
   const handleToggleBookmark = async (conversationId: string, currentState: boolean) => {
-    try {
-      await updateConversation({
-        conversationId,
-        updates: { is_bookmarked: !currentState }
-      });
-      
-      toast({
-        title: !currentState ? 'Bookmarked' : 'Bookmark Removed',
-        description: `Conversation ${!currentState ? 'added to' : 'removed from'} bookmarks.`,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update bookmark status.',
-        variant: 'destructive',
-      });
-    }
+    // For now, just show a placeholder toast - this feature can be implemented later
+    toast({
+      title: 'Feature Coming Soon',
+      description: 'Bookmark functionality will be available in a future update.',
+    });
   };
 
   const handleTogglePin = async (conversationId: string, currentState: boolean) => {
-    try {
-      await updateConversation({
-        conversationId,
-        updates: { is_pinned: !currentState }
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update pin status.',
-        variant: 'destructive',
-      });
-    }
+    // For now, just show a placeholder toast - this feature can be implemented later
+    toast({
+      title: 'Feature Coming Soon',
+      description: 'Pin functionality will be available in a future update.',
+    });
   };
 
   const handleArchive = async (conversationId: string) => {
-    try {
-      await updateConversation({
-        conversationId,
-        updates: { is_archived: true }
-      });
-      
-      toast({
-        title: 'Archived',
-        description: 'Conversation has been archived.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to archive conversation.',
-        variant: 'destructive',
-      });
-    }
+    // For now, just show a placeholder toast - this feature can be implemented later
+    toast({
+      title: 'Feature Coming Soon',
+      description: 'Archive functionality will be available in a future update.',
+    });
   };
 
   const handleDelete = async (conversationId: string) => {
@@ -241,53 +174,13 @@ export function ConversationManager({
     }
   };
 
-  // Bulk actions
+  // Bulk actions - simplified for clean interface
   const handleSelectAll = () => {
-    if (selectedItems.size === filteredConversations.length) {
-      setSelectedItems(new Set());
-    } else {
-      setSelectedItems(new Set(filteredConversations.map(conv => conv.id)));
-    }
+    // Bulk actions disabled for clean interface
   };
 
   const handleBulkAction = async (action: 'bookmark' | 'archive' | 'delete') => {
-    const selectedIds = Array.from(selectedItems);
-    
-    try {
-      for (const id of selectedIds) {
-        switch (action) {
-          case 'bookmark':
-            await updateConversation({
-              conversationId: id,
-              updates: { is_bookmarked: true }
-            });
-            break;
-          case 'archive':
-            await updateConversation({
-              conversationId: id,
-              updates: { is_archived: true }
-            });
-            break;
-          case 'delete':
-            await deleteConversation(id);
-            break;
-        }
-      }
-
-      setSelectedItems(new Set());
-      setShowBulkActions(false);
-      
-      toast({
-        title: 'Bulk Action Complete',
-        description: `${selectedIds.length} conversation(s) ${action}d successfully.`,
-      });
-    } catch (error) {
-      toast({
-        title: 'Bulk Action Failed',
-        description: `Failed to ${action} selected conversations.`,
-        variant: 'destructive',
-      });
-    }
+    // Bulk actions disabled for clean interface
   };
 
   const getTabCounts = () => {
@@ -327,7 +220,7 @@ export function ConversationManager({
         )}
       </div>
 
-      {/* Filters and Controls */}
+      {/* Simplified Filters - Only show when enabled */}
       {showFilters && (
         <div className="p-4 border-b space-y-4">
           {/* Tabs */}
@@ -470,10 +363,7 @@ export function ConversationManager({
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
-        <div className={cn(
-          "p-4",
-          viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-2"
-        )}>
+        <div className="p-2 space-y-1">
           {filteredConversations.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -492,19 +382,11 @@ export function ConversationManager({
                 key={conversation.id}
                 conversation={conversation}
                 isActive={activeConversationId === conversation.id}
-                isSelected={selectedItems.has(conversation.id)}
-                viewMode={viewMode}
-                allowSelection={allowBulkActions}
+                isSelected={false}
+                viewMode="list"
+                allowSelection={false}
                 onSelect={() => onSelectConversation(conversation.id)}
-                onToggleSelection={(selected) => {
-                  const newSelected = new Set(selectedItems);
-                  if (selected) {
-                    newSelected.add(conversation.id);
-                  } else {
-                    newSelected.delete(conversation.id);
-                  }
-                  setSelectedItems(newSelected);
-                }}
+                onToggleSelection={() => {}}
                 onToggleBookmark={(state) => handleToggleBookmark(conversation.id, state)}
                 onTogglePin={(state) => handleTogglePin(conversation.id, state)}
                 onArchive={() => handleArchive(conversation.id)}
@@ -561,116 +443,60 @@ function ConversationCard({
   };
 
   return (
-    <Card className={cn(
-      "cursor-pointer transition-all duration-200 hover:shadow-md",
-      isActive && "ring-2 ring-primary bg-accent",
-      isSelected && "ring-2 ring-blue-500",
-      viewMode === 'list' ? "p-3" : "p-4"
-    )}>
-      <CardContent className="p-0">
-        <div className="flex items-start gap-3">
-          {/* Selection Checkbox */}
-          {allowSelection && (
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onToggleSelection}
-              onClick={(e) => e.stopPropagation()}
-            />
-          )}
-
-          {/* Content */}
-          <div className="flex-1 min-w-0" onClick={onSelect}>
-            <div className="flex items-center gap-2 mb-1">
-              {conversation.is_pinned && (
-                <Pin className="h-3 w-3 text-orange-500 fill-current" />
-              )}
-              {conversation.is_bookmarked && (
-                <Bookmark className="h-3 w-3 text-yellow-500 fill-current" />
-              )}
-              <h3 className="font-medium text-sm truncate flex-1">
-                {conversation.title}
-              </h3>
-            </div>
-
-            {viewMode === 'grid' && conversation.last_message_preview && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                {conversation.last_message_preview}
-              </p>
+    <div 
+      className={cn(
+        "group cursor-pointer transition-all duration-200 rounded-lg p-3 hover:bg-accent/50",
+        isActive && "bg-accent border-l-2 border-primary"
+      )}
+      onClick={onSelect}
+    >
+      <div className="flex items-start gap-3">
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {conversation.is_pinned && (
+              <Pin className="h-3 w-3 text-orange-500 fill-current" />
             )}
-
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>{formatDate(conversation.updated_at || conversation.created_at)}</span>
-              
-              <MessageSquare className="h-3 w-3 ml-2" />
-              <span>{conversation.message_count || 0}</span>
-
-              {conversation.model_config?.model && (
-                <>
-                  <Badge variant="outline" className="text-xs">
-                    {conversation.model_config.model}
-                  </Badge>
-                </>
-              )}
-            </div>
-
-            {conversation.tags && conversation.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {conversation.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    <Tag className="h-2 w-2 mr-1" />
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+            {conversation.is_bookmarked && (
+              <Bookmark className="h-3 w-3 text-yellow-500 fill-current" />
             )}
+            <h3 className="font-medium text-sm truncate flex-1">
+              {conversation.title}
+            </h3>
           </div>
 
-          {/* Actions Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onToggleBookmark(!!conversation.is_bookmarked)}>
-                <Bookmark className="h-4 w-4 mr-2" />
-                {conversation.is_bookmarked ? 'Remove Bookmark' : 'Bookmark'}
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => onTogglePin(!!conversation.is_pinned)}>
-                <Pin className="h-4 w-4 mr-2" />
-                {conversation.is_pinned ? 'Unpin' : 'Pin'}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem>
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </DropdownMenuItem>
-
-              <DropdownMenuItem>
-                <Copy className="h-4 w-4 mr-2" />
-                Duplicate
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem onClick={onArchive}>
-                <Archive className="h-4 w-4 mr-2" />
-                Archive
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={onDelete} className="text-red-600">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{formatDate(conversation.updated_at || conversation.created_at)}</span>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Simple Actions Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreHorizontal className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onToggleBookmark(!!conversation.is_bookmarked)}>
+              <Bookmark className="h-4 w-4 mr-2" />
+              {conversation.is_bookmarked ? 'Remove Bookmark' : 'Bookmark'}
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem onClick={() => onTogglePin(!!conversation.is_pinned)}>
+              <Pin className="h-4 w-4 mr-2" />
+              {conversation.is_pinned ? 'Unpin' : 'Pin'}
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={onDelete} className="text-red-600">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }

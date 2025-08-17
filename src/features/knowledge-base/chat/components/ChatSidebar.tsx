@@ -16,10 +16,16 @@ export function ChatSidebar({
   onNewChat,
   className
 }: ChatSidebarProps) {
-  const { createConversation } = useChatSessions();
+  const { createConversation, isCreating } = useChatSessions();
 
   const handleCreateConversation = () => {
+    if (isCreating) {
+      console.warn('🚫 Chat creation already in progress');
+      return;
+    }
+    
     console.log('📝 Creating new conversation from sidebar...');
+    
     createConversation(
       { title: 'New Chat', kbIds: [] },
       {
@@ -43,9 +49,9 @@ export function ChatSidebar({
         onSelectConversation={onSessionSelect}
         onCreateConversation={handleCreateConversation}
         activeConversationId={activeSessionId}
-        showSearch={true}
-        showFilters={true}
-        allowBulkActions={true}
+        showSearch={false}
+        showFilters={false}
+        allowBulkActions={false}
       />
     </div>
   );

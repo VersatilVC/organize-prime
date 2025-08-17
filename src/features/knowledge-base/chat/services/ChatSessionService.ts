@@ -23,6 +23,14 @@ export class ChatSessionService {
    */
   static async getUserConversations(organizationId: string): Promise<ChatSession[]> {
     try {
+      // Get current user for debugging
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔍 Current user fetching conversations:', {
+        userId: user?.id,
+        email: user?.email,
+        organizationId
+      });
+
       const { data, error } = await supabase
         .from('kb_conversations')
         .select('*')
@@ -30,11 +38,18 @@ export class ChatSessionService {
         .eq('is_active', true)
         .order('updated_at', { ascending: false });
 
+      console.log('📋 Raw conversation query result:', {
+        data: data?.length || 0,
+        error: error?.message,
+        organizationId
+      });
+
       if (error) {
         console.error('Error fetching conversations:', error);
         throw new Error(`Failed to fetch conversations: ${error.message}`);
       }
 
+      console.log('📋 Returning conversations:', data?.length || 0);
       return (data || []) as ChatSession[];
     } catch (error) {
       console.error('ChatSessionService.getUserConversations error:', error);

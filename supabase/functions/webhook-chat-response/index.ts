@@ -85,22 +85,35 @@ serve(async (req) => {
 
     console.log(`✅ Updated message ${body.message_id} with webhook response`)
 
-    // Send real-time notification
-    const { error: channelError } = await supabaseClient
-      .channel(`chat_message_${body.message_id}`)
-      .send({
-        type: 'broadcast',
-        event: 'message_updated',
-        payload: {
-          message_id: body.message_id,
-          status: updateData.processing_status,
-          content: updateData.content || '',
-          error: updateData.error_message
-        }
-      })
+    // Get conversation ID for the message to broadcast to the correct channel
+    const { data: messageData, error: messageError } = await supabaseClient
+      .from('kb_messages')
+      .select('conversation_id')
+      .eq('id', body.message_id)
+      .single()
 
-    if (channelError) {
-      console.warn('Failed to send real-time notification:', channelError)
+    if (messageError || !messageData) {
+      console.warn('Could not get conversation ID for broadcast:', messageError)
+    } else {
+      // Send real-time notification to the conversation channel
+      const { error: channelError } = await supabaseClient
+        .channel(`chat_messages_${messageData.conversation_id}`)
+        .send({
+          type: 'broadcast',
+          event: 'message_updated',
+          payload: {
+            message_id: body.message_id,
+            status: updateData.processing_status,
+            content: updateData.content || '',
+            error: updateData.error_message
+          }
+        })
+
+      if (channelError) {
+        console.warn('Failed to send real-time notification:', channelError)
+      } else {
+        console.log(`📡 Sent broadcast to chat_messages_${messageData.conversation_id}`)
+      }
     }
 
     return new Response(

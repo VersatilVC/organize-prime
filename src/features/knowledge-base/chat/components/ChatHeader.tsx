@@ -11,7 +11,8 @@ import {
   ChevronDown,
   Sparkles,
   Webhook,
-  RefreshCw
+  RefreshCw,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +60,7 @@ interface ChatHeaderProps {
   isSidebarCollapsed?: boolean;
   className?: string;
   messages?: any[]; // For export functionality
+  onNewChat?: () => void;
 }
 
 export function ChatHeader({
@@ -72,10 +74,16 @@ export function ChatHeader({
   onToggleSidebar,
   isSidebarCollapsed = false,
   className,
-  messages = []
+  messages = [],
+  onNewChat
 }: ChatHeaderProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(session.title);
+  
+  // Update titleValue when session title changes
+  React.useEffect(() => {
+    setTitleValue(session.title);
+  }, [session.title]);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const { data: knowledgeBases } = useKnowledgeBases();
 
@@ -112,7 +120,7 @@ export function ChatHeader({
   return (
     <div className={cn("border-b bg-background p-4", className)}>
       <div className="flex items-center justify-between gap-4">
-        {/* Left Section: Title and KB Selection */}
+        {/* Left Section: Title */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Sidebar Toggle (Mobile) */}
           {isSidebarCollapsed && onToggleSidebar && (
@@ -157,29 +165,23 @@ export function ChatHeader({
               </div>
             )}
           </div>
-
-          {/* Knowledge Base Selector */}
-          <SmartKBSelector
-            selectedKbIds={selectedKbIds}
-            onSelectionChange={onKbSelectionChange}
-            className="w-auto"
-            enableSmartSuggestions={false} // Keep header simple
-            showStatusIndicators={true}
-          />
         </div>
 
-        {/* Right Section: Stats and Settings */}
+        {/* Right Section: Actions */}
         <div className="flex items-center gap-2">
-          {/* Session Stats */}
-          <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-            <Badge variant="outline">
-              {session.message_count} messages
-            </Badge>
-            <Badge variant="outline">
-              {session.model_config?.model || 'gpt-4'}
-            </Badge>
-          </div>
-
+          {/* New Chat Button */}
+          {onNewChat && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNewChat}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Chat</span>
+            </Button>
+          )}
+          
           {/* Settings Menu */}
           <ChatSettingsMenu
             session={session}

@@ -122,12 +122,12 @@ interface UserMessageProps {
 
 function UserMessage({ message, onCopy, formatTimestamp, className }: UserMessageProps) {
   return (
-    <div className={cn("flex justify-end mb-4", className)}>
+    <div className={cn("flex justify-end mb-6", className)}>
       <div className="flex items-start gap-3 max-w-[80%]">
         <div className="flex flex-col items-end gap-2">
           <div className="group relative">
-            <div className="bg-primary text-primary-foreground rounded-lg rounded-br-sm px-4 py-2 shadow-sm">
-              <p className="text-sm whitespace-pre-wrap break-words">
+            <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
+              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                 {message.content}
               </p>
             </div>
@@ -241,16 +241,16 @@ function AssistantMessage({
     }
 
     return (
-      <p className="text-sm whitespace-pre-wrap break-words">
+      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
         {message.content || 'No response available.'}
       </p>
     );
   };
 
   return (
-    <div className={cn("flex justify-start mb-4", className)}>
+    <div className={cn("flex justify-start mb-6", className)}>
       <div className="flex items-start gap-3 max-w-[85%]">
-        <Avatar className="h-8 w-8">
+        <Avatar className="h-8 w-8 mt-1">
           <AvatarFallback>
             <Bot className="h-4 w-4" />
           </AvatarFallback>
@@ -258,27 +258,14 @@ function AssistantMessage({
 
         <div className="flex flex-col gap-2 flex-1">
           <div className="group relative">
-            <div className="bg-muted rounded-lg rounded-bl-sm px-4 py-2 shadow-sm">
-              {getMessageContent()}
+            <div className="bg-muted/50 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+              <div className="prose prose-sm max-w-none">
+                {getMessageContent()}
+              </div>
               
-              {/* Metadata */}
-              {message.metadata && Object.keys(message.metadata).length > 0 && (
-                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                  {message.metadata.model && (
-                    <Badge variant="outline" className="text-xs">
-                      {message.metadata.model}
-                    </Badge>
-                  )}
-                  {message.metadata.tokens_used && (
-                    <span className="text-xs text-muted-foreground">
-                      {message.metadata.tokens_used} tokens
-                    </span>
-                  )}
-                  {message.metadata.processing_time && (
-                    <span className="text-xs text-muted-foreground">
-                      {message.metadata.processing_time}ms
-                    </span>
-                  )}
+              {/* Status Icon Only */}
+              {getStatusIcon() && (
+                <div className="flex items-center gap-2 mt-2">
                   {getStatusIcon()}
                 </div>
               )}

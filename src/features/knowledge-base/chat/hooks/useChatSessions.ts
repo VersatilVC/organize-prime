@@ -26,10 +26,14 @@ export function useChatSessions() {
   // Fetch user's conversations
   const conversationsQuery = useQuery({
     queryKey: chatQueryKeys.conversations(orgId || ''),
-    queryFn: () => ChatSessionService.getUserConversations(orgId!),
+    queryFn: () => {
+      console.log('🔍 Fetching conversations for org:', orgId);
+      return ChatSessionService.getUserConversations(orgId!);
+    },
     enabled: !!orgId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 1000, // 10 seconds (reduced for testing)
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
   // Create new conversation mutation
@@ -37,10 +41,21 @@ export function useChatSessions() {
     mutationFn: ({ title, kbIds }: { title?: string; kbIds?: string[] }) =>
       ChatSessionService.createConversation(title, kbIds, orgId),
     onSuccess: (conversationId) => {
-      // Invalidate conversations list to refresh
+      console.log('🎉 Conversation created successfully:', conversationId);
+      console.log('🔄 Invalidating queries for org:', orgId);
+      
+      // Immediately invalidate and refetch
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.conversations(orgId || '')
       });
+      
+      // Also refetch immediately
+      setTimeout(() => {
+        console.log('🔄 Force refetching conversations...');
+        queryClient.refetchQueries({
+          queryKey: chatQueryKeys.conversations(orgId || '')
+        });
+      }, 50);
       
       toast({
         title: 'Chat Created',
@@ -104,7 +119,12 @@ export function useChatSessions() {
         variant: 'destructive',
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, { conversationId }) => {
+      // Also invalidate the specific conversation query
+      queryClient.invalidateQueries({
+        queryKey: chatQueryKeys.conversation(conversationId)
+      });
+      
       toast({
         title: 'Title Updated',
         description: 'Chat title updated successfully.',
@@ -199,6 +219,27 @@ export function useChatSessions() {
     };
   }, [orgId, queryClient]);
 
+  // Wrapper function for createConversation that handles callbacks properly
+  const createConversationWrapper = (
+    params: { title?: string; kbIds?: string[] },
+    callbacks?: {
+      onSuccess?: (conversationId: string) => void;
+      onError?: (error: Error) => void;
+    }
+  ) => {
+    console.log('🚀 Creating conversation with params:', params);
+    createConversationMutation.mutate(params, {
+      onSuccess: (conversationId) => {
+        console.log('✅ Conversation created, calling success callback:', conversationId);
+        callbacks?.onSuccess?.(conversationId);
+      },
+      onError: (error) => {
+        console.error('❌ Conversation creation failed:', error);
+        callbacks?.onError?.(error instanceof Error ? error : new Error('Unknown error'));
+      }
+    });
+  };
+
   return {
     // Data
     conversations: conversationsQuery.data || [],
@@ -206,7 +247,7 @@ export function useChatSessions() {
     error: conversationsQuery.error,
     
     // Actions
-    createConversation: createConversationMutation.mutate,
+    createConversation: createConversationWrapper,
     updateTitle: updateTitleMutation.mutate,
     deleteConversation: deleteConversationMutation.mutate,
     

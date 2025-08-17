@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Brain, Sparkles, Loader2 } from 'lucide-react';
+import './chat-layout.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessage } from './ChatMessage';
-import { EnhancedChatInput } from './EnhancedChatInput';
+import { SimpleChatInput } from './SimpleChatInput';
 import { useActiveSession, useChatSessions } from '../hooks/useChatSessions';
 import { useChatInterface, useConversationExport } from '../hooks/useChatInterface';
 import { useKnowledgeBases } from '../../hooks/useKnowledgeBases';
@@ -21,6 +21,14 @@ export function ChatLayout({ className }: ChatLayoutProps) {
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // Add CSS class to body for chat-specific styling
+  useEffect(() => {
+    document.body.classList.add('chat-page');
+    return () => {
+      document.body.classList.remove('chat-page');
+    };
+  }, []);
+
   const { session: activeSession, isLoading: isSessionLoading } = useActiveSession(activeSessionId);
   const { data: knowledgeBases } = useKnowledgeBases();
   const { createConversation, isCreating } = useChatSessions();
@@ -30,29 +38,35 @@ export function ChatLayout({ className }: ChatLayoutProps) {
   };
 
   const handleNewChat = () => {
-    console.log('📝 Creating new chat conversation...');
+    console.log('📝 Creating new chat from layout...');
+    
+    // Clear current session first to show immediate feedback
+    setActiveSessionId('');
+    
+    // Create a new conversation
     createConversation(
       { title: 'New Chat', kbIds: [] },
       {
         onSuccess: (conversationId) => {
-          console.log('✅ New conversation created:', conversationId);
-          if (conversationId) {
-            setActiveSessionId(conversationId);
-          }
+          console.log('✅ New chat created successfully:', conversationId);
+          // Switch to the new conversation
+          setActiveSessionId(conversationId);
         },
         onError: (error) => {
           console.error('❌ Failed to create new chat:', error);
+          // If creation fails, don't leave user in blank state
+          // Could add toast notification here
         }
       }
     );
   };
 
   return (
-    <div className={cn("flex h-full min-h-[600px]", className)}>
+    <div className={cn("flex h-full", className)}>
       {/* Sidebar */}
       <div className={cn(
-        "transition-all duration-300 border-r",
-        isSidebarCollapsed ? "w-0 overflow-hidden" : "w-80 flex-shrink-0"
+        "transition-all duration-300 border-r bg-background flex-shrink-0",
+        isSidebarCollapsed ? "w-0 overflow-hidden" : "w-80"
       )}>
         <ChatSidebar
           activeSessionId={activeSessionId}
@@ -63,7 +77,7 @@ export function ChatLayout({ className }: ChatLayoutProps) {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full">
         {activeSessionId && activeSession ? (
           <ChatInterface
             session={activeSession}
@@ -103,6 +117,7 @@ function ChatInterface({
     temperature: session?.model_config?.temperature || 0.7
   });
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { updateTitle } = useChatSessions();
   const { exportConversation } = useConversationExport();
   
@@ -114,15 +129,23 @@ function ChatInterface({
     regenerateResponse,
     handleMessageReaction,
     isProcessing,
-    scrollRef,
   } = useChatInterface(session?.id);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   if (isSessionLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading conversation...</p>
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading conversation...</p>
+          </div>
         </div>
       </div>
     );
@@ -130,13 +153,15 @@ function ChatInterface({
 
   if (!session) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-medium mb-2">Session Not Found</h3>
-          <p className="text-muted-foreground">
-            The requested conversation could not be found.
-          </p>
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-medium mb-2">Session Not Found</h3>
+            <p className="text-muted-foreground">
+              The requested conversation could not be found.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -169,23 +194,51 @@ function ChatInterface({
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      {/* Chat Header */}
-      <ChatHeader
-        session={session}
-        selectedKbIds={selectedKbIds}
-        onKbSelectionChange={setSelectedKbIds}
-        onTitleUpdate={handleTitleUpdate}
-        onModelConfigChange={handleModelConfigChange}
-        onExportConversation={handleExportConversation}
-        onClearConversation={handleClearConversation}
-        onToggleSidebar={onToggleSidebar}
-        isSidebarCollapsed={isSidebarCollapsed}
-        messages={messages}
-      />
+    <div 
+      className="flex flex-col h-full chat-container" 
+      style={{ 
+        display: 'flex !important', 
+        flexDirection: 'column !important', 
+        height: '100% !important',
+        minHeight: '0 !important',
+        overflow: 'hidden !important'
+      }}
+    >
+      {/* Chat Header - Fixed at top */}
+      <div 
+        className="flex-shrink-0 border-b bg-background chat-header" 
+        style={{ 
+          flexShrink: '0 !important',
+          flexGrow: '0 !important',
+          minHeight: 'auto !important'
+        }}
+      >
+        <ChatHeader
+          session={session}
+          selectedKbIds={selectedKbIds}
+          onKbSelectionChange={setSelectedKbIds}
+          onTitleUpdate={handleTitleUpdate}
+          onModelConfigChange={handleModelConfigChange}
+          onExportConversation={handleExportConversation}
+          onClearConversation={handleClearConversation}
+          onToggleSidebar={onToggleSidebar}
+          isSidebarCollapsed={isSidebarCollapsed}
+          messages={messages}
+          onNewChat={handleNewChat}
+        />
+      </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
+      {/* Messages Area - Scrollable middle section */}
+      <div 
+        className="overflow-y-auto chat-messages" 
+        style={{ 
+          flex: '1 1 0% !important', 
+          overflowY: 'auto !important',
+          overflowX: 'hidden !important',
+          minHeight: '0 !important',
+          height: '0 !important'
+        }}
+      >
         <div className="max-w-4xl mx-auto px-4 py-6">
           {isLoadingMessages ? (
             <div className="flex items-center justify-center py-12">
@@ -220,20 +273,33 @@ function ChatInterface({
                   onReaction={handleMessageReaction}
                 />
               ))}
+              {/* Invisible element to scroll to */}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Chat Input */}
-      <EnhancedChatInput
-        conversationId={session?.id || ''}
-        onSendMessage={handleSendMessage}
-        disabled={!session}
-        isProcessing={isProcessing}
-        placeholder="Ask a question about your knowledge base..."
-        selectedKbIds={selectedKbIds}
-      />
+      {/* Chat Input - Fixed at bottom */}
+      <div 
+        className="border-t bg-background shadow-sm chat-input" 
+        style={{ 
+          flexShrink: '0 !important',
+          flexGrow: '0 !important',
+          position: 'relative !important',
+          zIndex: '10 !important'
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <SimpleChatInput
+            conversationId={session?.id || ''}
+            onSendMessage={handleSendMessage}
+            disabled={!session}
+            isProcessing={isProcessing}
+            placeholder="Ask a question about your knowledge base..."
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -251,10 +317,37 @@ function WelcomeScreen({
   onToggleSidebar,
   isSidebarCollapsed 
 }: WelcomeScreenProps) {
+  const handleSendMessage = (message: string) => {
+    // Only create a new chat if there's actually a message
+    if (!message || !message.trim()) {
+      console.warn('🚫 Empty message, not creating chat');
+      return;
+    }
+    
+    // For welcome screen, we'll create a new chat with this message
+    console.log('Starting new chat with message:', message.trim());
+    onNewChat();
+  };
+
   return (
-    <div className="flex-1 flex flex-col">
-      {/* Header */}
-      <div className="border-b p-4">
+    <div 
+      className="flex flex-col h-full chat-container" 
+      style={{ 
+        display: 'flex !important', 
+        flexDirection: 'column !important', 
+        height: '100% !important',
+        minHeight: '0 !important',
+        overflow: 'hidden !important'
+      }}
+    >
+      {/* Header - Fixed at top */}
+      <div 
+        className="flex-shrink-0 border-b p-4 bg-background chat-header" 
+        style={{ 
+          flexShrink: '0 !important',
+          flexGrow: '0 !important'
+        }}
+      >
         <div className="flex items-center gap-3">
           {isSidebarCollapsed && (
             <Button
@@ -269,87 +362,119 @@ function WelcomeScreen({
         </div>
       </div>
 
-      {/* Welcome Content */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="max-w-md text-center space-y-6">
-          <div className="space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Brain className="h-8 w-8 text-primary" />
+      {/* Welcome Content - Scrollable middle area */}
+      <div 
+        className="overflow-y-auto chat-messages" 
+        style={{ 
+          flex: '1 1 0% !important', 
+          overflowY: 'auto !important',
+          overflowX: 'hidden !important',
+          minHeight: '0 !important',
+          height: '0 !important'
+        }}
+      >
+        <div className="flex items-center justify-center p-8 min-h-full">
+          <div className="max-w-md text-center space-y-6">
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Brain className="h-8 w-8 text-primary" />
+                  </div>
+                </div>
+                <div className="relative w-20 h-20 mx-auto">
+                  <Sparkles className="absolute top-0 right-0 h-4 w-4 text-yellow-500 animate-pulse" />
+                  <Sparkles className="absolute bottom-2 left-1 h-3 w-3 text-blue-500 animate-pulse delay-1000" />
                 </div>
               </div>
-              <div className="relative w-20 h-20 mx-auto">
-                <Sparkles className="absolute top-0 right-0 h-4 w-4 text-yellow-500 animate-pulse" />
-                <Sparkles className="absolute bottom-2 left-1 h-3 w-3 text-blue-500 animate-pulse delay-1000" />
+
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Welcome to AI Chat</h2>
+                <p className="text-muted-foreground">
+                  Start a conversation with your knowledge base. Ask questions, get insights, and explore your documents with AI assistance.
+                </p>
               </div>
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Welcome to AI Chat</h2>
-              <p className="text-muted-foreground">
-                Start a conversation with your knowledge base. Ask questions, get insights, and explore your documents with AI assistance.
-              </p>
+            <div className="space-y-4">
+              <Button onClick={onNewChat} size="lg" className="w-full">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Start New Chat
+              </Button>
+
+              {knowledgeBasesCount > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  Ready to search across {knowledgeBasesCount} knowledge base{knowledgeBasesCount > 1 ? 's' : ''}
+                </div>
+              )}
+            </div>
+
+            {/* Feature Cards */}
+            <div className="grid grid-cols-1 gap-3 mt-8">
+              <Card className="text-left">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Brain className="h-4 w-4" />
+                    AI-Powered Search
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">
+                    Get intelligent answers from your knowledge base with context-aware responses.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="text-left">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Natural Conversation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">
+                    Ask follow-up questions and maintain context throughout your conversation.
+                  </p>
+                </CardContent>
+                </Card>
+
+              <Card className="text-left">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Source References
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">
+                    See exactly which documents and sections were used to answer your questions.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-4">
-            <Button onClick={onNewChat} size="lg" className="w-full">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Start New Chat
-            </Button>
-
-            {knowledgeBasesCount > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Ready to search across {knowledgeBasesCount} knowledge base{knowledgeBasesCount > 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-
-          {/* Feature Cards */}
-          <div className="grid grid-cols-1 gap-3 mt-8">
-            <Card className="text-left">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  AI-Powered Search
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Get intelligent answers from your knowledge base with context-aware responses.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-left">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Natural Conversation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Ask follow-up questions and maintain context throughout your conversation.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-left">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Source References
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  See exactly which documents and sections were used to answer your questions.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Chat Input - Fixed at bottom */}
+      <div 
+        className="border-t bg-background shadow-sm chat-input" 
+        style={{ 
+          flexShrink: '0 !important',
+          flexGrow: '0 !important',
+          position: 'relative !important',
+          zIndex: '10 !important'
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <SimpleChatInput
+            conversationId=""
+            onSendMessage={handleSendMessage}
+            disabled={false}
+            isProcessing={false}
+            placeholder="Ask a question about your knowledge base..."
+          />
         </div>
       </div>
     </div>

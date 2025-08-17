@@ -44,10 +44,17 @@
       "Bash(npm run test:unit:*)",
       "Bash(npm run:*)",
       "mcp__supabase__get_logs",
-      "mcp__supabase__list_edge_functions"
+      "mcp__supabase__list_edge_functions",
+      "Bash(node:*)",
+      "mcp__supabase__deploy_edge_function",
+      "Bash(curl:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": [],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "C:\\c\\Users\\ilanh\\.local\\bin"
+    ]
   }
 }
