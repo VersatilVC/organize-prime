@@ -287,6 +287,199 @@ export function useKBChat() {
     return `optimistic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }, []);
 
+  // Webhook configuration diagnostics
+  const verifyWebhookConfiguration = useCallback(async () => {
+    try {
+      console.log('🔍 Starting webhook configuration diagnostics...');
+      
+      // 1. Check if Knowledge Base feature exists
+      const { data: kbFeature, error: featureError } = await supabase
+        .from('system_features')  
+        .select('id, name, slug, is_enabled_globally')
+        .eq('slug', 'knowledge-base')
+        .single();
+
+      if (featureError) {
+        console.error('❌ Error finding Knowledge Base feature:', featureError);
+        return { success: false, error: 'Knowledge Base feature not found' };
+      }
+
+      console.log('✅ Knowledge Base feature found:', {
+        id: kbFeature.id,
+        name: kbFeature.name,
+        enabled: kbFeature.is_enabled_globally
+      });
+
+      // 2. Get all webhooks for KB feature
+      const { data: webhooks, error: webhooksError } = await supabase
+        .from('feature_webhooks')
+        .select('id, name, endpoint_url, url, is_active, method, headers, created_at')
+        .eq('feature_id', kbFeature.id);
+
+      if (webhooksError) {
+        console.error('❌ Error fetching webhooks:', webhooksError);
+        return { success: false, error: 'Failed to fetch webhooks' };
+      }
+
+      console.log(`📊 Total webhooks for Knowledge Base: ${webhooks?.length || 0}`);
+      
+      if (webhooks && webhooks.length > 0) {
+        console.table(webhooks.map(w => ({
+          name: w.name,
+          active: w.is_active,
+          hasUrl: !!(w.endpoint_url || w.url),
+          method: w.method || 'POST',
+          created: new Date(w.created_at).toLocaleDateString()
+        })));
+      }
+
+      // 3. Filter active webhooks
+      const activeWebhooks = webhooks?.filter(w => w.is_active) || [];
+      console.log(`🟢 Active webhooks: ${activeWebhooks.length}`);
+
+      // 4. Look for chat-related webhooks
+      const chatWebhooks = activeWebhooks.filter(w => 
+        w.name.toLowerCase().includes('chat') || 
+        w.name.toLowerCase().includes('ai') ||
+        w.name.toLowerCase().includes('kb')
+      );
+
+      console.log(`💬 Chat-related webhooks: ${chatWebhooks.length}`);
+      
+      if (chatWebhooks.length > 0) {
+        console.log('Chat webhooks found:');
+        chatWebhooks.forEach(w => {
+          console.log(`  - ${w.name}: ${w.endpoint_url || w.url || 'NO URL'}`);
+        });
+      }
+
+      // 5. Check organization feature access
+      const { data: orgFeature, error: orgError } = await supabase
+        .from('organization_feature_configs')
+        .select('is_enabled')
+        .eq('organization_id', currentOrganization?.id)
+        .eq('feature_slug', 'knowledge-base')
+        .single();
+
+      if (orgError && orgError.code !== 'PGRST116') { // Ignore "no rows" error
+        console.warn('⚠️ Error checking organization feature access:', orgError);
+      } else if (orgFeature) {
+        console.log(`🏢 Organization KB access: ${orgFeature.is_enabled ? '✅ Enabled' : '❌ Disabled'}`);
+      }
+
+      // 6. Summary
+      const summary = {
+        kbFeatureExists: !!kbFeature,
+        kbFeatureEnabled: kbFeature?.is_enabled_globally,
+        totalWebhooks: webhooks?.length || 0,
+        activeWebhooks: activeWebhooks.length,
+        chatWebhooks: chatWebhooks.length,
+        orgAccessEnabled: orgFeature?.is_enabled,
+        firstChatWebhook: chatWebhooks[0] || null
+      };
+
+      console.log('📋 Configuration Summary:', summary);
+
+      return { 
+        success: true, 
+        summary,
+        recommendations: generateRecommendations(summary, chatWebhooks)
+      };
+
+    } catch (error) {
+      console.error('💥 Webhook diagnostics failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }, [currentOrganization?.id]);
+
+  // Generate recommendations based on diagnostic results
+  const generateRecommendations = (summary: any, chatWebhooks: any[]) => {
+    const recommendations = [];
+
+    if (!summary.kbFeatureExists) {
+      recommendations.push('❌ Knowledge Base feature is not configured in system_features table');
+    } else if (!summary.kbFeatureEnabled) {
+      recommendations.push('❌ Knowledge Base feature is globally disabled');
+    }
+
+    if (summary.totalWebhooks === 0) {
+      recommendations.push('❌ No webhooks configured for Knowledge Base feature');
+      recommendations.push('💡 Go to System Settings → Features → Knowledge Base → Webhooks to add a chat webhook');
+    } else if (summary.activeWebhooks === 0) {
+      recommendations.push('❌ No active webhooks found - check webhook status');
+    } else if (summary.chatWebhooks === 0) {
+      recommendations.push('❌ No chat-related webhooks found');
+      recommendations.push('💡 Create a webhook with "chat", "ai", or "kb" in the name');
+    }
+
+    if (summary.chatWebhooks > 0) {
+      const webhook = chatWebhooks[0];
+      if (!webhook.endpoint_url && !webhook.url) {
+        recommendations.push('❌ Chat webhook found but no URL configured');
+      } else {
+        recommendations.push('✅ Chat webhook appears to be configured correctly');
+        recommendations.push(`🔗 Using webhook: ${webhook.name}`);
+      }
+    }
+
+    if (summary.orgAccessEnabled === false) {
+      recommendations.push('❌ Organization does not have access to Knowledge Base feature');
+    }
+
+    return recommendations;
+  };
+
+  // Handle webhook failures with helpful fallback messages
+  const handleWebhookFailure = useCallback(async (conversationId: string, userMessage: string, error: Error) => {
+    console.error('🚨 Webhook failed:', error);
+    
+    // Determine appropriate fallback message based on error type
+    let fallbackMessage = "I'm having trouble processing your message right now. Please try again in a moment.";
+    
+    if (error.message.includes('webhook found') || error.message.includes('No active webhooks')) {
+      fallbackMessage = "I'm not properly configured to provide AI responses yet. Please ask your administrator to set up the Knowledge Base AI webhook in the system settings.";
+    } else if (error.message.includes('feature not found')) {
+      fallbackMessage = "The Knowledge Base feature is not properly configured. Please contact your administrator.";
+    } else if (error.message.includes('base URL') || error.message.includes('endpoint URL')) {
+      fallbackMessage = "The AI webhook is configured but the URL is not set correctly. Please ask your administrator to check the webhook configuration.";
+    } else if (error.message.includes('timeout') || error.message.includes('network')) {
+      fallbackMessage = "I'm having trouble connecting to the AI service. Please try again in a moment.";
+    }
+
+    // Send fallback message to user
+    try {
+      await sendMessage.mutateAsync({
+        conversationId,
+        content: fallbackMessage,
+        message_type: 'assistant',
+        sources: [],
+        confidence_score: 0,
+        processing_status: 'completed',
+        metadata: {
+          error_type: 'webhook_failure',
+          original_error: error.message,
+        }
+      });
+
+      // Log analytics event
+      if (currentOrganization?.id && user?.id) {
+        await supabase.from('kb_analytics').insert({
+          organization_id: currentOrganization.id,
+          user_id: user.id,
+          event_type: 'webhook_error',
+          processing_time_ms: 0,
+          tokens_consumed: 0,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (fallbackError) {
+      console.error('Failed to send fallback message:', fallbackError);
+    }
+  }, [sendMessage, currentOrganization?.id, user?.id]);
+
   // Create optimistic message
   const createOptimisticMessage = useCallback((content: string): ChatMessage => {
     const optimisticId = generateOptimisticId();
@@ -430,11 +623,12 @@ export function useKBChat() {
           updateMessageStatus(optimisticMessage.optimisticId!, 'failed', 
             webhookError instanceof Error ? webhookError.message : 'AI processing failed');
           
-          toast({
-            title: 'AI Response Failed',
-            description: 'The AI couldn\'t process your message. You can retry sending it.',
-            variant: 'destructive',
-          });
+          // Use our enhanced error handling with helpful fallback messages
+          await handleWebhookFailure(
+            conversationId, 
+            content.trim(), 
+            webhookError instanceof Error ? webhookError : new Error('AI processing failed')
+          );
         }
 
       } catch (error) {
@@ -595,6 +789,19 @@ export function useKBChat() {
     };
   }, [currentConversationId, debouncedSend]);
 
+  // Run webhook diagnostics on mount (development only)
+  useEffect(() => {
+    if (import.meta.env.DEV && currentOrganization?.id) {
+      console.log('🚀 Running webhook diagnostics on mount...');
+      verifyWebhookConfiguration().then(result => {
+        if (result.recommendations) {
+          console.log('📝 Webhook Configuration Recommendations:');
+          result.recommendations.forEach(rec => console.log(`  ${rec}`));
+        }
+      });
+    }
+  }, [currentOrganization?.id, verifyWebhookConfiguration]);
+
   // Set up real-time subscriptions for message updates
   useEffect(() => {
     if (!currentConversationId || !currentOrganization?.id) return;
@@ -688,6 +895,9 @@ export function useKBChat() {
       const optimistic = chatState.optimisticMessages.get(messageId);
       return optimistic?.status || 'delivered';
     },
+    
+    // Diagnostics
+    verifyWebhookConfiguration,
     
     // Analytics
     getTotalTokensUsed: () => {

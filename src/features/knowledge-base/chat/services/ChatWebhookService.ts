@@ -140,46 +140,60 @@ export class ChatWebhookService {
   }
 
   /**
-   * Get the active chat webhook configuration
+   * Get the active chat webhook configuration using dynamic discovery
    */
   static async getChatWebhookUrl(): Promise<string> {
     try {
-      // Try to get chat webhook - check for the configured AI Chat webhook
-      const webhookNames = ['AI Chat_1755359351213', 'ai-chat-query', 'kb-chat-processing', 'chat-processing'];
-      let data = null;
-      let error = null;
+      console.log('🔍 Starting dynamic webhook discovery...');
       
-      for (const webhookName of webhookNames) {
-        const result = await supabase
-          .from('feature_webhooks')
-          .select('endpoint_url, url, is_active, name, feature_id')
-          .eq('name', webhookName)
-          .eq('is_active', true)
-          .single();
-          
-        if (!result.error && result.data) {
-          data = result.data;
-          console.log(`🔗 Found active chat webhook: ${webhookName}`);
-          console.log(`🔗 Webhook URL: ${data.endpoint_url || data.url}`);
-          break;
-        } else if (result.error && !result.error.message.includes('No rows found')) {
-          error = result.error;
-        }
+      // 1. First, get Knowledge Base feature ID
+      const { data: kbFeature, error: featureError } = await supabase
+        .from('system_features')
+        .select('id, name, slug')
+        .eq('slug', 'knowledge-base')
+        .single();
+
+      if (featureError) {
+        console.error('❌ Knowledge Base feature not found:', featureError);
+        throw new Error('Knowledge Base feature not found in system configuration');
       }
 
-      if (error && !data) {
-        console.error('Error fetching chat webhook:', error);
-        throw new Error(`Failed to get chat webhook: ${error.message}`);
+      console.log(`✅ Knowledge Base feature found: ${kbFeature.name} (ID: ${kbFeature.id})`);
+
+      // 2. Get all active webhooks for KB feature
+      const { data: webhooks, error: webhooksError } = await supabase
+        .from('feature_webhooks')
+        .select('id, name, endpoint_url, url, is_active, method, headers')
+        .eq('feature_id', kbFeature.id)
+        .eq('is_active', true);
+
+      if (webhooksError) {
+        console.error('❌ Error fetching webhooks:', webhooksError);
+        throw new Error(`Failed to fetch webhooks: ${webhooksError.message}`);
       }
 
-      if (!data) {
-        throw new Error(`No active chat webhook found. Looking for: ${webhookNames.join(', ')}. Please ensure your AI Chat webhook is active in the Knowledge Base feature settings.`);
+      if (!webhooks || webhooks.length === 0) {
+        throw new Error('No active webhooks found for Knowledge Base feature. Please configure a webhook in System Settings → Features → Knowledge Base → Webhooks.');
       }
 
-      // Use endpoint_url or url field
-      const webhookUrl = data.endpoint_url || data.url;
+      console.log(`📊 Found ${webhooks.length} active webhook(s) for Knowledge Base`);
+
+      // 3. Look for chat-related webhooks (flexible matching)
+      const chatWebhook = webhooks.find(w => 
+        w.name.toLowerCase().includes('chat') || 
+        w.name.toLowerCase().includes('ai') ||
+        w.name.toLowerCase().includes('kb') ||
+        w.name.toLowerCase().includes('assistant')
+      );
+
+      let selectedWebhook = chatWebhook || webhooks[0]; // Fallback to first webhook if no chat-specific found
+
+      console.log(`🎯 Selected webhook: ${selectedWebhook.name}`);
+
+      // 4. Validate webhook URL
+      const webhookUrl = selectedWebhook.endpoint_url || selectedWebhook.url;
       if (!webhookUrl) {
-        throw new Error('Webhook URL is not configured. Please set the endpoint URL in Admin → Webhook Management.');
+        throw new Error(`Webhook "${selectedWebhook.name}" is configured but has no URL. Please set the endpoint URL in webhook settings.`);
       }
 
       // Ensure it's a full URL
@@ -549,22 +563,57 @@ export class ChatWebhookService {
   }
 
   /**
-   * Get webhook configuration
+   * Get webhook configuration using dynamic discovery
    */
   static async getWebhookConfig(): Promise<WebhookConfig | null> {
     try {
-      const { data, error } = await supabase
-        .from('feature_webhooks')
-        .select('id, name, endpoint_url, is_active, timeout_seconds, retry_attempts')
-        .eq('name', 'kb-chat-processing')
+      // Use the same dynamic discovery logic as getChatWebhookUrl
+      const { data: kbFeature, error: featureError } = await supabase
+        .from('system_features')
+        .select('id, name, slug')
+        .eq('slug', 'knowledge-base')
         .single();
 
-      if (error) {
-        console.error('Error fetching webhook config:', error);
+      if (featureError) {
+        console.error('Knowledge Base feature not found:', featureError);
         return null;
       }
 
-      return data as WebhookConfig;
+      // Get active webhooks for KB feature
+      const { data: webhooks, error: webhooksError } = await supabase
+        .from('feature_webhooks')
+        .select('id, name, endpoint_url, is_active, timeout_seconds, retry_attempts')
+        .eq('feature_id', kbFeature.id)
+        .eq('is_active', true);
+
+      if (webhooksError) {
+        console.error('Error fetching webhooks:', webhooksError);
+        return null;
+      }
+
+      if (!webhooks || webhooks.length === 0) {
+        return null;
+      }
+
+      // Look for chat-related webhook (same logic as getChatWebhookUrl)
+      const chatWebhook = webhooks.find(w => 
+        w.name.toLowerCase().includes('chat') || 
+        w.name.toLowerCase().includes('ai') ||
+        w.name.toLowerCase().includes('kb') ||
+        w.name.toLowerCase().includes('assistant')
+      );
+
+      const selectedWebhook = chatWebhook || webhooks[0];
+
+      return {
+        id: selectedWebhook.id,
+        name: selectedWebhook.name,
+        endpoint_url: selectedWebhook.endpoint_url,
+        is_active: selectedWebhook.is_active,
+        timeout_seconds: selectedWebhook.timeout_seconds || 60,
+        retry_attempts: selectedWebhook.retry_attempts || 3
+      } as WebhookConfig;
+
     } catch (error) {
       console.error('ChatWebhookService.getWebhookConfig error:', error);
       return null;
@@ -572,17 +621,42 @@ export class ChatWebhookService {
   }
 
   /**
-   * Update webhook configuration
+   * Update webhook configuration using dynamic discovery
    */
-  static async updateWebhookConfig(config: Partial<WebhookConfig>): Promise<void> {
+  static async updateWebhookConfig(config: Partial<WebhookConfig> & { id?: string }): Promise<void> {
     try {
+      // If ID is provided, use it directly
+      if (config.id) {
+        const { error } = await supabase
+          .from('feature_webhooks')
+          .update({
+            ...config,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', config.id);
+
+        if (error) {
+          console.error('Error updating webhook config:', error);
+          throw new Error(`Failed to update webhook config: ${error.message}`);
+        }
+
+        console.log('✅ Webhook configuration updated successfully');
+        return;
+      }
+
+      // Otherwise, find the webhook using dynamic discovery
+      const currentConfig = await this.getWebhookConfig();
+      if (!currentConfig) {
+        throw new Error('No active webhook found for Knowledge Base feature');
+      }
+
       const { error } = await supabase
         .from('feature_webhooks')
         .update({
           ...config,
           updated_at: new Date().toISOString()
         })
-        .eq('name', 'kb-chat-processing');
+        .eq('id', currentConfig.id);
 
       if (error) {
         console.error('Error updating webhook config:', error);
