@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useFeatureContext } from '@/contexts/FeatureContext';
+import { useSimpleFeatureContext } from '@/contexts/SimpleFeatureContext';
 import { useStableLoading } from '@/hooks/useLoadingState';
 import { Icons } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,11 @@ interface FeatureLayoutProps {
 }
 
 export function FeatureLayout({ children }: FeatureLayoutProps) {
-  const { feature, userRole, isLoading } = useFeatureContext();
+  const { config, slug, navigation, isLoading, hasAccess } = useSimpleFeatureContext();
   const location = useLocation();
   
   // Use stable loading to prevent flashing
-  const stableLoading = useStableLoading(isLoading || !feature, 300);
+  const stableLoading = useStableLoading(isLoading || !config, 300);
 
   if (stableLoading) {
     return (
@@ -46,19 +46,14 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
     );
   }
 
-  const FeatureIcon = Icons[feature.iconName as keyof typeof Icons] || Icons.package;
+  const FeatureIcon = Icons[config.icon_name as keyof typeof Icons] || Icons.package;
   
   // Get current path segment for active tab
   const pathSegments = location.pathname.split('/');
   const currentPage = pathSegments[pathSegments.length - 1] || 'dashboard';
 
-  // Filter navigation based on user role
-  const visibleNavigation = feature.navigation.filter(item => {
-    if (!item.requiresRole) return true;
-    if (item.requiresRole === 'admin') return userRole === 'admin' || userRole === 'super_admin';
-    if (item.requiresRole === 'super_admin') return userRole === 'super_admin';
-    return true;
-  });
+  // Use the navigation from context (already filtered by permissions)
+  const visibleNavigation = navigation;
 
   return (
     <div className="flex flex-col space-y-6 p-6">
@@ -80,7 +75,7 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{feature.displayName}</BreadcrumbPage>
+              <BreadcrumbPage>{config.display_name}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -93,8 +88,8 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
                 <FeatureIcon className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">{feature.displayName}</h1>
-                <p className="text-muted-foreground">{feature.description}</p>
+                <h1 className="text-2xl font-bold tracking-tight">{config.display_name}</h1>
+                <p className="text-muted-foreground">{config.description}</p>
               </div>
             </div>
           </div>
@@ -113,7 +108,7 @@ export function FeatureLayout({ children }: FeatureLayoutProps) {
             {visibleNavigation.map((item) => {
               const ItemIcon = Icons[item.icon as keyof typeof Icons] || Icons.package;
               const tabValue = item.path.replace('/', '') || 'dashboard';
-              const fullPath = `/features/${feature.slug}${item.path}`;
+              const fullPath = `/features/${slug}${item.path}`;
               const isActive = currentPage === tabValue;
               
               return (

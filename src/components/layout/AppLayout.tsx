@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
+import { OfflineStatusBanner } from '@/components/OfflineStatusBanner';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ MainContent.displayName = 'MainContent';
 const SidebarInsetContent = React.memo(({ children }: { children: React.ReactNode }) => (
   <SidebarInset>
     <AppHeader />
+    <OfflineStatusBanner className="mx-4 mt-2" />
     <MainContent>{children}</MainContent>
   </SidebarInset>
 ));

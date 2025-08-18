@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { debugSafeguards } from '@/lib/debug-safeguards';
 
 interface AuthContextType {
   user: User | null;
@@ -34,12 +35,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   React.useEffect(() => {
-    // Set up auth state listener
+    // Prevent duplicate listeners in StrictMode
+    let isSubscribed = true;
+    
+    // Use a more reliable duplicate prevention mechanism
+    const authInstanceId = `auth-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Check if we already have an active listener to prevent duplicates
+    if ((globalThis as any).__authListenerActive) {
+      console.warn(`AuthProvider: Duplicate listener prevented. Active ID: ${(globalThis as any).__authListenerInstanceId}`);
+      return () => {}; // Skip if already active
+    }
+    
+    (globalThis as any).__authListenerActive = true;
+    (globalThis as any).__authListenerInstanceId = authInstanceId;
+    console.log(`AuthProvider: Auth listener started with ID: ${authInstanceId}`);
+    
+    // Set up auth state listener (consolidated from client.ts to prevent duplicates)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isSubscribed) return; // Prevent execution after cleanup
+        
+        debugSafeguards.trackAuthEvent(event, session);
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // ✅ Handle cache clearing on sign out (moved from client.ts)
+        if (event === 'SIGNED_OUT') {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+              localStorage.removeItem('currentOrganizationId');
+              localStorage.removeItem('cached-permissions');
+              localStorage.removeItem('cached-organization-data');
+              // Clear any cache with patterns
+              const keys = Object.keys(localStorage);
+              keys.forEach(key => {
+                if (key.startsWith('cache-permissions-') || key.startsWith('cache-organizations-')) {
+                  localStorage.removeItem(key);
+                }
+              });
+            } catch (error) {
+              console.warn('Could not clear localStorage on signout:', error);
+            }
+          }
+        }
 
         // Handle post-auth setup for new users
         if (event === 'SIGNED_IN' && session?.user) {
@@ -52,15 +93,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isSubscribed) return; // Prevent execution after cleanup
+      
+      debugSafeguards.trackAuthEvent('getSession', session);
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     }).catch((error) => {
+      if (!isSubscribed) return;
       console.error('Error getting session:', error);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isSubscribed = false;
+      subscription.unsubscribe();
+      (globalThis as any).__authListenerActive = false;
+      (globalThis as any).__authListenerInstanceId = null;
+      console.log(`AuthProvider: Auth listener cleaned up for ID: ${authInstanceId}`);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

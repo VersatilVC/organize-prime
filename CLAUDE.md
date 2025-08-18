@@ -700,6 +700,40 @@ FOR ALL USING (
 - Connection pooling and reconnection handling
 - Graceful degradation when offline
 
+## ⚠️ CRITICAL DEVELOPMENT GUIDELINES (August 2025)
+
+### 🚨 Infinite Loop Prevention
+**MANDATORY:** Always ensure only ONE localhost development server is running at a time.
+
+**Root Cause Identified (August 18, 2025):**
+- **Multiple Vite dev servers** on different ports cause WebSocket connection conflicts
+- **HMR (Hot Module Replacement)** tries to connect to wrong ports causing infinite reload loops
+- **Module dependency chains** auto-import Supabase client causing auth state loops
+
+**Prevention Rules:**
+1. **Kill existing servers** before starting new ones: `taskkill /F /IM node.exe` (Windows)
+2. **Clear Vite cache** when switching configurations: `rm -rf node_modules/.vite`
+3. **Use consistent ports** - don't let Vite auto-increment to different ports
+4. **Monitor console** for WebSocket connection errors indicating port conflicts
+5. **Disable HMR temporarily** if experiencing infinite loops: `hmr: false` in vite.config.ts
+
+**Emergency Recovery:**
+```bash
+# Kill all Node processes
+taskkill /F /IM node.exe
+
+# Clear all Vite caches
+rm -rf node_modules/.vite
+rm -rf .vite
+
+# Check for remaining processes
+netstat -ano | findstr :5173
+netstat -ano | findstr :8080
+
+# Start clean single server
+npm run dev
+```
+
 ## Recent Optimizations Applied (August 2025)
 
 ### 🔒 Security Enhancements

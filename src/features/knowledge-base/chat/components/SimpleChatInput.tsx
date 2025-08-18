@@ -14,6 +14,7 @@ interface SimpleChatInputProps {
 }
 
 export function SimpleChatInput({
+  conversationId,
   onSendMessage,
   disabled = false,
   isProcessing = false,

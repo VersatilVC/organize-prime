@@ -1,19 +1,22 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
+import { initializeEnvironment } from './lib/env-validation'
+
+// Switch between minimal and full app for debugging
+const USE_MINIMAL_APP = false; // Now using full app
 
 try {
+  // Validate environment before starting the app
+  initializeEnvironment();
+  
   const root = createRoot(document.getElementById('root')!)
   
-  console.log('🚀 OrganizePrime v3.0 - Optimized Loading [Cache Cleared]');
-  root.render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  )
+  console.info('🚀 OrganizePrime v3.0 - Restored Full Application', { rendering: true });
   
-  console.log('✅ App rendered successfully')
+  root.render(<App />)
+  
+  console.info('✅ App rendered successfully', { completed: true })
 } catch (error) {
   console.error('❌ Failed to render app:', error)
   

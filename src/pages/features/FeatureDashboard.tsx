@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFeatureContext } from '@/contexts/FeatureContext';
+import { useSimpleFeatureContext } from '@/contexts/SimpleFeatureContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/icons';
@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function FeatureDashboard() {
-  const { feature, isLoading } = useFeatureContext();
+  const { config, isLoading } = useSimpleFeatureContext();
 
-  if (isLoading || !feature) {
+  if (isLoading || !config) {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -31,7 +31,7 @@ export default function FeatureDashboard() {
 
   // Mock data based on feature type
   const getFeatureStats = () => {
-    switch (feature.slug) {
+    switch (config.feature_slug) {
       case 'knowledge-base':
         return [
           { label: 'Total Documents', value: '1,234', icon: 'file', change: '+12%' },
@@ -60,7 +60,7 @@ export default function FeatureDashboard() {
   };
 
   const getRecentActivity = () => {
-    switch (feature.slug) {
+    switch (config.feature_slug) {
       case 'knowledge-base':
         return [
           { action: 'Document uploaded: "Q4 Financial Report"', time: '2 minutes ago', type: 'upload' },
@@ -127,12 +127,12 @@ export default function FeatureDashboard() {
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>
-            Common tasks and actions for {feature.displayName}
+            Common tasks and actions for {config.display_name}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {feature.dashboardConfig.quickActions.map((action, index) => (
+            {['create-content', 'search-data', 'generate-report', 'manage-settings'].map((action, index) => (
               <Button key={index} variant="outline" size="sm">
                 {action.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
               </Button>
@@ -146,7 +146,7 @@ export default function FeatureDashboard() {
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
           <CardDescription>
-            Latest actions and updates in {feature.displayName}
+            Latest actions and updates in {config.display_name}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -169,7 +169,7 @@ export default function FeatureDashboard() {
 
       {/* Feature Widgets */}
       <div className="grid gap-4 md:grid-cols-2">
-        {feature.dashboardConfig.widgets.slice(0, 2).map((widget, index) => (
+        {['analytics-overview', 'recent-items'].map((widget, index) => (
           <Card key={index}>
             <CardHeader>
               <CardTitle className="text-base">

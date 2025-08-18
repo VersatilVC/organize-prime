@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, withRetry, cacheManager } from '@/integrations/supabase/client';
 import { useMemo } from 'react';
 import * as React from 'react';
+import { useResilientQuery } from './useResilientQuery';
 
 interface UserRoleData {
   role: string;
@@ -23,64 +23,73 @@ export function useOptimizedUserRole() {
     currentOrganization?.id
   ], [user?.id, currentOrganization?.id]);
 
-  const query = useQuery({
+  const query = useResilientQuery({
     queryKey,
     queryFn: async (): Promise<UserRoleData> => {
       if (!user?.id) {
         throw new Error('User not authenticated');
       }
 
-      // Get user profile and super admin status
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_super_admin')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      const isSuperAdmin = profile?.is_super_admin || false;
-
-      // If super admin, return with highest permissions
-      if (isSuperAdmin) {
-        return {
-          role: 'super_admin',
-          isSuperAdmin: true,
-          isOrgAdmin: false,
-          permissions: ['read', 'write', 'admin', 'super_admin']
-        };
-      }
-
-      // Get organization membership if org is selected
-      if (currentOrganization?.id) {
-        const { data: membership, error: membershipError } = await supabase
-          .from('memberships')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('organization_id', currentOrganization.id)
-          .eq('status', 'active')
+      return await withRetry(async () => {
+        // Get user profile and super admin status
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_super_admin')
+          .eq('id', user.id)
           .maybeSingle();
 
-        if (membershipError) throw membershipError;
+        if (profileError) throw profileError;
 
-        const role = membership?.role || 'user';
-        const isOrgAdmin = role === 'admin';
+        const isSuperAdmin = profile?.is_super_admin || false;
 
+        // If super admin, return with highest permissions
+        if (isSuperAdmin) {
+          return {
+            role: 'super_admin',
+            isSuperAdmin: true,
+            isOrgAdmin: false,
+            permissions: ['read', 'write', 'admin', 'super_admin']
+          };
+        }
+
+        // Get organization membership if org is selected
+        if (currentOrganization?.id) {
+          const { data: membership, error: membershipError } = await supabase
+            .from('memberships')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('organization_id', currentOrganization.id)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (membershipError) throw membershipError;
+
+          const role = membership?.role || 'user';
+          const isOrgAdmin = role === 'admin';
+
+          return {
+            role,
+            isSuperAdmin: false,
+            isOrgAdmin,
+            permissions: isOrgAdmin ? ['read', 'write', 'admin'] : ['read']
+          };
+        }
+
+        // Default to user role if no organization selected
         return {
-          role,
+          role: 'user',
           isSuperAdmin: false,
-          isOrgAdmin,
-          permissions: isOrgAdmin ? ['read', 'write', 'admin'] : ['read']
+          isOrgAdmin: false,
+          permissions: ['read']
         };
-      }
-
-      // Default to user role if no organization selected
-      return {
-        role: 'user',
-        isSuperAdmin: false,
-        isOrgAdmin: false,
-        permissions: ['read']
-      };
+      });
+    },
+    cacheKey: `user-role-${user?.id}-${currentOrganization?.id}`,
+    fallbackData: {
+      role: 'user',
+      isSuperAdmin: false,
+      isOrgAdmin: false,
+      permissions: ['read']
     },
     enabled: !!user?.id,
     staleTime: 15 * 60 * 1000, // 15 minutes - roles rarely change

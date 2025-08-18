@@ -106,9 +106,8 @@ export const createOptimizedQueryClient = () => {
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,
-        placeholderData: (prev) => prev as unknown,
         // Prevent flashing by keeping old data during background refetches
-        keepPreviousData: true,
+        placeholderData: (prev) => prev as unknown,
         
         retry: (failureCount, error: any) => {
           // Don't retry on client errors (4xx) or authentication errors

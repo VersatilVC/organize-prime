@@ -1,27 +1,28 @@
 import * as React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
-import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoadingScreen, LayoutLoadingScreen } from '@/components/ui/loading-screen';
+import { createLazyRoute, lazyImportNamed } from '@/lib/lazy-import';
 
-// Lazy load components for optimal bundle splitting
-const Index = React.lazy(() => import('@/pages/Index'));
-const AuthPage = React.lazy(() => import('@/auth/pages/AuthPage').then(module => ({ default: module.AuthPage })));
-const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
-const Users = React.lazy(() => import('@/pages/Users'));
-const Organizations = React.lazy(() => import('@/pages/Organizations'));
-const ProfileSettings = React.lazy(() => import('@/pages/ProfileSettings'));
-const CompanySettings = React.lazy(() => import('@/pages/CompanySettings'));
-const SystemSettings = React.lazy(() => import('@/pages/SystemSettings'));
-const Feedback = React.lazy(() => import('@/pages/Feedback'));
-const MyFeedback = React.lazy(() => import('@/pages/MyFeedback'));
-const Notifications = React.lazy(() => import('@/pages/Notifications'));
-const Billing = React.lazy(() => import('@/pages/Billing'));
-const Help = React.lazy(() => import('@/pages/Help'));
-const FeedbackManagement = React.lazy(() => import('@/pages/admin/FeedbackManagement'));
-const FeatureRouter = React.lazy(() => import('@/components/FeatureRouter').then(module => ({ default: module.FeatureRouter })));
-const NotFound = React.lazy(() => import('@/pages/NotFound'));
+// Enhanced lazy load components with retry mechanism
+const Index = createLazyRoute(() => import('@/pages/Index'));
+const AuthPage = lazyImportNamed(() => import('@/auth/pages/AuthPage'), 'AuthPage');
+const Dashboard = createLazyRoute(() => import('@/pages/Dashboard'));
+const Users = createLazyRoute(() => import('@/pages/Users'));
+const Organizations = createLazyRoute(() => import('@/pages/Organizations'));
+const ProfileSettings = createLazyRoute(() => import('@/pages/ProfileSettings'));
+const CompanySettings = createLazyRoute(() => import('@/pages/CompanySettings'));
+const SystemSettings = createLazyRoute(() => import('@/pages/SystemSettings'));
+const Feedback = createLazyRoute(() => import('@/pages/Feedback'));
+const MyFeedback = createLazyRoute(() => import('@/pages/MyFeedback'));
+const Notifications = createLazyRoute(() => import('@/pages/Notifications'));
+const Billing = createLazyRoute(() => import('@/pages/Billing'));
+const Help = createLazyRoute(() => import('@/pages/Help'));
+const FeedbackManagement = createLazyRoute(() => import('@/pages/admin/FeedbackManagement'));
+const SimpleFeatureRouter = lazyImportNamed(() => import('@/components/SimpleFeatureRouter'), 'SimpleFeatureRouter');
+const NotFound = createLazyRoute(() => import('@/pages/NotFound'));
 
 // Use the new optimized loading components
 const RouteLoadingFallback: React.FC = () => <LoadingScreen message="Loading page..." />;
@@ -209,13 +210,13 @@ export function AppRoutes() {
           } 
         />
 
-        {/* Feature routes - dynamic feature system */}
+        {/* Feature routes - simplified dynamic feature system */}
         <Route 
           path="/features/:slug/*" 
           element={
             <AuthGuard>
               <React.Suspense fallback={<LayoutLoadingFallback />}>
-                <FeatureRouter />
+                <SimpleFeatureRouter />
               </React.Suspense>
             </AuthGuard>
           } 

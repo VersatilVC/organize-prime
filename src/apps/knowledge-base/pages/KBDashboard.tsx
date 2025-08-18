@@ -14,7 +14,7 @@ import { ChartLoadingSkeleton } from '@/components/LoadingSkeletons';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOrganizationData } from '@/contexts/OrganizationContext';
-import { useKBContext } from '../context/KBContext';
+import { useKBContext } from '../hooks/useKBContext';
 import { KBPermissionGuard } from '../components/shared/KBPermissionGuard';
 import { useToast } from '@/hooks/use-toast';
 

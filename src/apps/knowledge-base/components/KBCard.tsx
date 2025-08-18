@@ -37,7 +37,7 @@ export function KBCard({ config, onDuplicate, onDelete }: KBCardProps) {
             {config.is_default && <Badge variant="outline">Default</Badge>}
             {config.is_premium && <Badge>Premium</Badge>}
           </CardTitle>
-          <Badge variant={statusVariant as any} className="capitalize">{config.status ?? 'active'}</Badge>
+          <Badge variant={statusVariant} className="capitalize">{config.status ?? 'active'}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">

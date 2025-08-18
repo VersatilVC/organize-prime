@@ -53,8 +53,9 @@ export function KBCreateDialog({ onCreated }: KBCreateDialogProps) {
       setOpen(false);
       setStep(1);
       onCreated?.();
-    } catch (e: any) {
-      toast({ title: 'Creation failed', description: e?.message ?? 'Please try again', variant: 'destructive' });
+    } catch (e: unknown) {
+      const error = e as { message?: string };
+      toast({ title: 'Creation failed', description: error?.message ?? 'Please try again', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -127,7 +128,7 @@ export function KBCreateDialog({ onCreated }: KBCreateDialogProps) {
                 <button
                   key={t.key}
                   type="button"
-                  onClick={() => setForm({ ...form, type: t.key as any, is_premium: t.premium })}
+                  onClick={() => setForm({ ...form, type: t.key, is_premium: t.premium })}
                   className={`rounded-md border p-3 text-left ${form.type === t.key ? 'ring-2 ring-primary' : ''}`}
                 >
                   <div className="font-medium">{t.label}</div>

@@ -4,6 +4,15 @@ import { useOrganizationData } from '@/contexts/OrganizationContext';
 import { kbService } from '../services/kbService';
 import { supabase } from '@/integrations/supabase/client';
 import { useKBPermissions } from '../hooks/useKBPermissions';
+import type { Database } from '@/integrations/supabase/types';
+
+type KBConfigRow = Database['public']['Tables']['kb_configurations']['Row'];
+type RealtimePayload = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: Record<string, unknown>;
+  old: Record<string, unknown>;
+  errors: string[] | null;
+};
 
 export type KBPermissionKey = keyof ReturnType<typeof useKBPermissions>;
 
@@ -24,13 +33,7 @@ interface KBContextValue {
   activeConversations: number;
 }
 
-const KBContext = React.createContext<KBContextValue | undefined>(undefined);
-
-export function useKBContext() {
-  const ctx = React.useContext(KBContext);
-  if (!ctx) throw new Error('useKBContext must be used within KBProvider');
-  return ctx;
-}
+export const KBContext = React.createContext<KBContextValue | undefined>(undefined);
 
 export function KBProvider({ children }: { children: React.ReactNode }) {
   const { currentOrganization } = useOrganizationData();
@@ -60,15 +63,16 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
         setIsLoadingConfigs(true);
         const data = await kbService.listConfigurations(orgId);
         if (!isMounted) return;
-        setConfigurations((data as any[]).map((c) => ({
+        setConfigurations((data as KBConfigRow[]).map((c) => ({
           id: c.id,
           name: c.name,
           display_name: c.display_name,
           is_default: c.is_default,
         })));
-      } catch (e: any) {
+      } catch (e: unknown) {
         // Handle missing table gracefully for placeholder pages
-        if (e?.code === '42P01') {
+        const error = e as { code?: string };
+        if (error?.code === '42P01') {
           console.log('KB configurations table not found - using empty state for placeholder pages');
           if (isMounted) setConfigurations([]);
         } else {
@@ -85,9 +89,9 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
   // Realtime subscriptions for processing status and conversations
   React.useEffect(() => {
     if (!orgId) return;
-    const channel = (supabase as any)
+    const channel = supabase
       .channel('kb-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kb_files', filter: `organization_id=eq.${orgId}` }, (payload: any) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kb_files', filter: `organization_id=eq.${orgId}` }, (payload: RealtimePayload) => {
         // Recount processing files cheaply by increment/decrement when possible
         const newStatus = payload.new?.processing_status;
         const oldStatus = payload.old?.processing_status;
@@ -103,7 +107,11 @@ export function KBProvider({ children }: { children: React.ReactNode }) {
       .subscribe();
 
     return () => {
-      try { (supabase as any).removeChannel(channel); } catch {}
+      try { 
+        supabase.removeChannel(channel); 
+      } catch (error) {
+        // Silently handle channel removal errors
+      }
     };
   }, [orgId]);
 

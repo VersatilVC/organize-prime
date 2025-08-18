@@ -48,7 +48,8 @@
       "Bash(node:*)",
       "mcp__supabase__deploy_edge_function",
       "Bash(curl:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": [],

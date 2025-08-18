@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { useFeatureContext } from '@/contexts/FeatureContext';
+import { useSimpleFeatureContext } from '@/contexts/SimpleFeatureContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { PlaceholderPage } from '@/components/ui/placeholder-page';
 
 export default function FeatureContent() {
-  const { feature } = useFeatureContext();
+  const { config, navigation } = useSimpleFeatureContext();
   const location = useLocation();
   const params = useParams();
   
@@ -17,12 +17,12 @@ export default function FeatureContent() {
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const currentPath = pathSegments.slice(2).join('/'); // Remove 'features' and slug
 
-  if (!feature) {
+  if (!config) {
     return <div>Loading...</div>;
   }
 
   // Find matching navigation item for the current path
-  const currentNavItem = feature.navigation.find(item => 
+  const currentNavItem = navigation.find(item => 
     item.path.replace('/', '') === currentPath || 
     (item.path !== '/dashboard' && currentPath.startsWith(item.path.replace('/', '')))
   );
@@ -236,7 +236,7 @@ export default function FeatureContent() {
   };
 
   // Route to specific feature content based on feature type
-  switch (feature.slug) {
+  switch (config.feature_slug) {
     case 'knowledge-base':
       return renderKnowledgeBaseContent();
     case 'content-creation':

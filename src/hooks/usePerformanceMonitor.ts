@@ -1,10 +1,5 @@
 import * as React from 'react';
 
-// Safe React hook access with null checks
-const safeUseEffect = React.useEffect || (() => {});
-const safeUseRef = React.useRef || (() => ({ current: undefined }));
-const safeUseCallback = React.useCallback || ((fn: any) => fn);
-
 interface PerformanceMetrics {
   renderTime: number;
   memoryUsage?: number;
@@ -12,196 +7,317 @@ interface PerformanceMetrics {
   timestamp: number;
 }
 
+interface PerformanceConfig {
+  enabled?: boolean;
+  enableMemoryTracking?: boolean;
+  maxMetrics?: number;
+  slowRenderThreshold?: number;
+  throttleMs?: number;
+}
+
+const DEFAULT_CONFIG: Required<PerformanceConfig> = {
+  enabled: import.meta.env.DEV && import.meta.env.VITE_ENABLE_PERFORMANCE_MONITORING !== 'false',
+  enableMemoryTracking: import.meta.env.DEV,
+  maxMetrics: 50, // Reduced from 100 to lower memory usage
+  slowRenderThreshold: 16.67, // 60fps threshold
+  throttleMs: 100, // Throttle measurements to every 100ms
+};
+
 /**
- * Hook to monitor component performance and memory usage
+ * Optimized performance monitoring hook with safeguards against infinite re-renders
+ * and reduced overhead for development
  */
-export function usePerformanceMonitor(componentName: string, enabled: boolean = process.env.NODE_ENV === 'development') {
-  // Return early if React hooks are not available
-  if (!React.useEffect || !React.useRef || !React.useCallback) {
-    console.warn('React hooks not available - performance monitoring disabled');
-    return {
+export function usePerformanceMonitor(
+  componentName: string, 
+  config: PerformanceConfig = {}
+) {
+  const finalConfig = React.useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
+  
+  // Early return if monitoring is disabled
+  if (!finalConfig.enabled) {
+    return React.useMemo(() => ({
       metrics: [],
       averageRenderTime: 0,
       renderCount: 0,
-    };
+      startMeasurement: () => {},
+      endMeasurement: () => {},
+    }), []);
   }
 
-  const startTimeRef = safeUseRef<number>();
-  const renderCountRef = safeUseRef(0);
-  const metricsRef = safeUseRef<PerformanceMetrics[]>([]);
+  const renderCountRef = React.useRef(0);
+  const metricsRef = React.useRef<PerformanceMetrics[]>([]);
+  const lastMeasurementRef = React.useRef(0);
+  const measurementInProgressRef = React.useRef(false);
 
-  // Start performance measurement
-  const startMeasurement = safeUseCallback(() => {
-    if (!enabled) return;
-    startTimeRef.current = performance.now();
-  }, [enabled]);
-
-  // End performance measurement
-  const endMeasurement = safeUseCallback(() => {
-    if (!enabled || !startTimeRef.current) return;
+  // Throttled measurement function to prevent excessive calls
+  const measureRender = React.useCallback(() => {
+    const now = performance.now();
     
-    const renderTime = performance.now() - startTimeRef.current;
-    renderCountRef.current++;
-
-    const metrics: PerformanceMetrics = {
-      renderTime,
-      componentCount: renderCountRef.current,
-      timestamp: Date.now(),
-    };
-
-    // Add memory usage if available
-    if ('memory' in performance) {
-      metrics.memoryUsage = (performance as any).memory.usedJSHeapSize;
+    // Throttle measurements to prevent excessive overhead
+    if (now - lastMeasurementRef.current < finalConfig.throttleMs) {
+      return;
     }
-
-    metricsRef.current.push(metrics);
-
-    // Keep only last 100 measurements
-    if (metricsRef.current.length > 100) {
-      metricsRef.current = metricsRef.current.slice(-100);
+    
+    // Prevent overlapping measurements
+    if (measurementInProgressRef.current) {
+      return;
     }
+    
+    measurementInProgressRef.current = true;
+    lastMeasurementRef.current = now;
+    
+    // Use setTimeout to measure after render
+    setTimeout(() => {
+      try {
+        const renderTime = performance.now() - now;
+        renderCountRef.current++;
 
-    // Log performance warnings in development
-    if (renderTime > 16.67) { // More than one frame (60fps)
-      console.warn(`⚠️ Slow render in ${componentName}: ${renderTime.toFixed(2)}ms`);
-    }
+        const metrics: PerformanceMetrics = {
+          renderTime,
+          componentCount: renderCountRef.current,
+          timestamp: Date.now(),
+        };
 
-    startTimeRef.current = undefined;
-  }, [enabled, componentName]);
+        // Add memory usage if enabled and available
+        if (finalConfig.enableMemoryTracking && 'memory' in performance) {
+          try {
+            metrics.memoryUsage = (performance as any).memory?.usedJSHeapSize;
+          } catch {
+            // Silent failure for memory access
+          }
+        }
 
-  // Measure component mount time
-  safeUseEffect(() => {
-    startMeasurement();
-    return endMeasurement;
+        metricsRef.current.push(metrics);
+
+        // Keep only recent measurements
+        if (metricsRef.current.length > finalConfig.maxMetrics) {
+          metricsRef.current = metricsRef.current.slice(-finalConfig.maxMetrics);
+        }
+
+        // Log performance warnings only for significant slowdowns
+        if (renderTime > finalConfig.slowRenderThreshold) {
+          console.warn(`⚠️ Slow render in ${componentName}: ${renderTime.toFixed(2)}ms`);
+        }
+      } catch (error) {
+        // Silent failure to prevent monitoring from breaking the app
+        console.debug('Performance measurement failed:', error);
+      } finally {
+        measurementInProgressRef.current = false;
+      }
+    }, 0);
+  }, [componentName, finalConfig]);
+
+  // Measure only on actual re-renders, not on every effect run
+  React.useEffect(() => {
+    measureRender();
   });
 
-  // Measure each render
-  safeUseEffect(() => {
-    startMeasurement();
-    endMeasurement();
-  });
-
-  return {
+  return React.useMemo(() => ({
     metrics: metricsRef.current,
     averageRenderTime: metricsRef.current.length > 0 
       ? metricsRef.current.reduce((sum, m) => sum + m.renderTime, 0) / metricsRef.current.length 
       : 0,
     renderCount: renderCountRef.current,
-  };
+    startMeasurement: () => {}, // Legacy API compatibility
+    endMeasurement: () => {}, // Legacy API compatibility
+  }), []);
 }
 
 /**
- * Hook to cleanup memory leaks and optimize garbage collection
+ * Optimized memory management hook that doesn't interfere with normal operation
  */
-export function useMemoryOptimization() {
-  // Return early if React hooks are not available
-  if (!React.useEffect || !React.useRef || !React.useCallback) {
-    return {
-      addCleanupFunction: () => {},
-      forceCleanup: () => {},
-      cleanupCount: 0,
-    };
-  }
+export function useMemoryOptimization(options: {
+  enabled?: boolean;
+  cleanupThreshold?: number;
+  cleanupInterval?: number;
+} = {}) {
+  const {
+    enabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_MEMORY_OPTIMIZATION !== 'false',
+    cleanupThreshold = 20, // Increased threshold
+    cleanupInterval = 10 * 60 * 1000, // 10 minutes instead of 5
+  } = options;
 
-  const cleanupFunctionsRef = safeUseRef<(() => void)[]>([]);
+  const cleanupFunctionsRef = React.useRef<(() => void)[]>([]);
+  const lastCleanupRef = React.useRef(0);
 
-  const addCleanupFunction = safeUseCallback((fn: () => void) => {
-    cleanupFunctionsRef.current.push(fn);
-  }, []);
+  const addCleanupFunction = React.useCallback((fn: () => void) => {
+    if (!enabled) return;
+    
+    try {
+      cleanupFunctionsRef.current.push(fn);
+    } catch (error) {
+      // Silent failure to prevent breaking normal operation
+      console.debug('Failed to add cleanup function:', error);
+    }
+  }, [enabled]);
 
-  const forceCleanup = safeUseCallback(() => {
-    cleanupFunctionsRef.current.forEach(fn => {
+  const forceCleanup = React.useCallback(() => {
+    if (!enabled) return;
+    
+    const now = Date.now();
+    // Prevent too frequent cleanups
+    if (now - lastCleanupRef.current < 30000) { // 30 seconds minimum between cleanups
+      return;
+    }
+    
+    lastCleanupRef.current = now;
+    const cleanupFunctions = [...cleanupFunctionsRef.current];
+    cleanupFunctionsRef.current = [];
+    
+    // Run cleanup functions safely
+    cleanupFunctions.forEach((fn, index) => {
       try {
         fn();
       } catch (error) {
-        console.error('Error during cleanup:', error);
+        console.debug(`Cleanup function ${index} failed:`, error);
       }
     });
-    cleanupFunctionsRef.current = [];
     
-    // Suggest garbage collection if available
-    if ('gc' in window) {
-      (window as any).gc();
+    // Suggest garbage collection only in development
+    if (import.meta.env.DEV && 'gc' in window) {
+      try {
+        (window as any).gc();
+      } catch {
+        // Silent failure
+      }
     }
-  }, []);
+  }, [enabled]);
 
   // Cleanup on unmount
-  safeUseEffect(() => {
+  React.useEffect(() => {
+    if (!enabled) return;
+    
     return () => {
-      forceCleanup();
-    };
-  }, [forceCleanup]);
-
-  // Periodic cleanup every 5 minutes
-  safeUseEffect(() => {
-    const interval = setInterval(() => {
-      if (cleanupFunctionsRef.current.length > 10) {
+      try {
         forceCleanup();
+      } catch (error) {
+        // Silent cleanup failure
+        console.debug('Unmount cleanup failed:', error);
       }
-    }, 5 * 60 * 1000);
+    };
+  }, [forceCleanup, enabled]);
 
-    return () => clearInterval(interval);
-  }, [forceCleanup]);
+  // Periodic cleanup with configurable interval
+  React.useEffect(() => {
+    if (!enabled) return;
+    
+    const interval = setInterval(() => {
+      try {
+        if (cleanupFunctionsRef.current.length > cleanupThreshold) {
+          forceCleanup();
+        }
+      } catch (error) {
+        console.debug('Periodic cleanup failed:', error);
+      }
+    }, cleanupInterval);
 
-  return {
+    return () => {
+      try {
+        clearInterval(interval);
+      } catch {
+        // Silent failure
+      }
+    };
+  }, [forceCleanup, enabled, cleanupThreshold, cleanupInterval]);
+
+  return React.useMemo(() => ({
     addCleanupFunction,
     forceCleanup,
     cleanupCount: cleanupFunctionsRef.current.length,
-  };
+    enabled,
+  }), [addCleanupFunction, forceCleanup, enabled]);
 }
 
 /**
- * Hook to measure and optimize bundle loading performance
+ * Optimized bundle performance monitoring with throttling and error handling
  */
-export function useBundlePerformance() {
-  // Return early if React hooks are not available
-  if (!React.useEffect) {
-    return;
-  }
+export function useBundlePerformance(options: {
+  enabled?: boolean;
+  slowResourceThreshold?: number;
+  logPerformanceMetrics?: boolean;
+} = {}) {
+  const {
+    enabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_BUNDLE_MONITORING !== 'false',
+    slowResourceThreshold = 2000, // Increased to 2 seconds to reduce noise
+    logPerformanceMetrics = import.meta.env.DEV,
+  } = options;
 
-  safeUseEffect(() => {
-    // Measure initial bundle load time
-    if ('performance' in window && 'getEntriesByType' in performance) {
-      const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-      
-      if (navigationEntries.length > 0) {
-        const entry = navigationEntries[0];
-        
-        // Only log if values are valid (not 0 or NaN)
-        if (entry.loadEventEnd > 0 && entry.navigationStart > 0) {
-          const loadTime = entry.loadEventEnd - entry.navigationStart;
-          const domContentLoaded = entry.domContentLoadedEventEnd - entry.navigationStart;
-          const timeToInteractive = entry.loadEventEnd - entry.fetchStart;
-          
-          if (loadTime > 0 && !isNaN(loadTime)) {
-            console.log('📊 Bundle Performance:', {
-              totalLoadTime: `${loadTime.toFixed(2)}ms`,
-              domContentLoaded: `${domContentLoaded.toFixed(2)}ms`,
-              timeToInteractive: `${timeToInteractive.toFixed(2)}ms`,
-            });
-          }
-        }
-      }
-    }
-
-    // Monitor resource loading
-    if ('PerformanceObserver' in window) {
-      const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry) => {
-          if (entry.entryType === 'resource' && entry.name.includes('.js')) {
-            const resourceEntry = entry as PerformanceResourceTiming;
-            const loadTime = resourceEntry.responseEnd - resourceEntry.fetchStart;
+  React.useEffect(() => {
+    if (!enabled) return;
+    
+    let observer: PerformanceObserver | null = null;
+    
+    try {
+      // Measure initial bundle load time with error handling
+      if ('performance' in window && 'getEntriesByType' in performance) {
+        const measureBundlePerformance = () => {
+          try {
+            const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
             
-            if (loadTime > 1000) { // More than 1 second
-              console.warn(`🐌 Slow resource load: ${entry.name} took ${loadTime.toFixed(2)}ms`);
+            if (navigationEntries.length > 0) {
+              const entry = navigationEntries[0];
+              
+              // Validate metrics before logging
+              const loadTime = entry.loadEventEnd - entry.navigationStart;
+              const domContentLoaded = entry.domContentLoadedEventEnd - entry.navigationStart;
+              
+              if (loadTime > 0 && !isNaN(loadTime) && logPerformanceMetrics) {
+                console.log('📊 Bundle Performance:', {
+                  totalLoadTime: `${loadTime.toFixed(2)}ms`,
+                  domContentLoaded: `${domContentLoaded.toFixed(2)}ms`,
+                  timeToInteractive: `${(entry.loadEventEnd - entry.fetchStart).toFixed(2)}ms`,
+                });
+              }
             }
+          } catch (error) {
+            console.debug('Bundle performance measurement failed:', error);
+          }
+        };
+        
+        // Delay measurement to ensure navigation timing is available
+        setTimeout(measureBundlePerformance, 1000);
+      }
+
+      // Monitor resource loading with throttling
+      if ('PerformanceObserver' in window) {
+        const reportedResources = new Set<string>();
+        
+        observer = new PerformanceObserver((list) => {
+          try {
+            list.getEntries().forEach((entry) => {
+              if (entry.entryType === 'resource' && entry.name.includes('.js')) {
+                const resourceEntry = entry as PerformanceResourceTiming;
+                const loadTime = resourceEntry.responseEnd - resourceEntry.fetchStart;
+                
+                // Only report each slow resource once
+                if (loadTime > slowResourceThreshold && !reportedResources.has(entry.name)) {
+                  reportedResources.add(entry.name);
+                  console.warn(`🐌 Slow resource load: ${entry.name.split('/').pop()} took ${loadTime.toFixed(2)}ms`);
+                }
+              }
+            });
+          } catch (error) {
+            console.debug('Resource performance monitoring failed:', error);
           }
         });
-      });
 
-      observer.observe({ entryTypes: ['resource'] });
-
-      return () => observer.disconnect();
+        try {
+          observer.observe({ entryTypes: ['resource'] });
+        } catch (error) {
+          console.debug('Failed to start performance observer:', error);
+          observer = null;
+        }
+      }
+    } catch (error) {
+      console.debug('Bundle performance monitoring setup failed:', error);
     }
-  }, []);
+
+    return () => {
+      try {
+        observer?.disconnect();
+      } catch (error) {
+        console.debug('Failed to disconnect performance observer:', error);
+      }
+    };
+  }, [enabled, slowResourceThreshold, logPerformanceMetrics]);
 }

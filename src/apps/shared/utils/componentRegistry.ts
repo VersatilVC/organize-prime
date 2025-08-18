@@ -4,7 +4,7 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 // Lazy load the Knowledge Base components
 const ManageKnowledgeBases = React.lazy(() => import('@/features/knowledge-base/pages/ManageKnowledgeBases'));
 const ManageFiles = React.lazy(() => import('@/features/knowledge-base/pages/ManageFiles'));
-const Chat = React.lazy(() => import('@/features/knowledge-base/chat/components/EnterpriseKBChat'));
+const Chat = React.lazy(() => import('@/features/knowledge-base/chat/pages/ChatPage'));
 const ChatSettings = React.lazy(() => import('@/features/knowledge-base/chat/pages/ChatSettingsPage').then(module => ({ default: module.ChatSettingsPage })));
 
 // Only implemented components - everything else gets placeholder

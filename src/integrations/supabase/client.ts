@@ -2,19 +2,30 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Secure configuration using environment variables
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://cjwgfoingscquolnfkhh.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo";
+// Secure configuration using environment variables - NO HARDCODED CREDENTIALS
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Validate environment
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error('Missing Supabase configuration. Please check your environment variables.');
+  console.error('Missing Supabase configuration:', {
+    url: !!SUPABASE_URL,
+    key: !!SUPABASE_PUBLISHABLE_KEY,
+    env: import.meta.env.MODE
+  });
+  throw new Error('Missing Supabase configuration. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
 }
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Singleton pattern - ensure only one client instance exists globally
+declare global {
+  var __supabaseClient: ReturnType<typeof createClient<Database>> | undefined;
+}
+
+// Enhanced Supabase client with connection resilience (singleton)
+export const supabase = globalThis.__supabaseClient ?? createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     // Use a fallback storage if localStorage is not available
     storage: typeof window !== 'undefined' && window.localStorage ? localStorage : {
@@ -27,7 +38,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     // Enhanced OAuth configuration with production domain support
     flowType: 'pkce',
     detectSessionInUrl: true,
-    debug: false, // Disable debug in production to prevent DOM manipulation issues
+    debug: import.meta.env.DEV, // Enable debug only in development
     // Ensure proper OAuth session handling
     storageKey: 'sb-auth-token',
   },
@@ -35,35 +46,49 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   global: {
     headers: {
       'X-Client-Info': 'organize-prime-web',
-      'X-Environment': typeof window !== 'undefined' ? 
-        (window.location.hostname.includes('lovable') ? 'production' : 'development') : 'server'
+      'X-Environment': import.meta.env.MODE,
+      'X-App-Version': '1.0.0'
+    },
+    // Add connection timeout and retry configuration
+    fetch: (url, options = {}) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
     }
   },
   // Add database configuration
   db: {
     schema: 'public',
   },
-  // Disable realtime by default to prevent connection issues during initialization
+  // Configure realtime with proper error handling
   realtime: {
     params: {
       eventsPerSecond: 2,
     },
+    heartbeatIntervalMs: 30000,
+    reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 30000),
   },
 });
 
-// Add error handling for Supabase operations
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT') {
-    // Clear any cached data when user signs out
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        localStorage.removeItem('currentOrganizationId');
-      } catch (error) {
-        console.warn('Could not clear localStorage on signout:', error);
-      }
-    }
-  }
-});
+// Store the client globally to ensure singleton behavior
+if (!globalThis.__supabaseClient) {
+  globalThis.__supabaseClient = supabase;
+}
+
+// Connection monitoring and error tracking
+let connectionState = {
+  isConnected: true,
+  lastError: null as Error | null,
+  retryCount: 0,
+  lastSuccessfulOperation: Date.now()
+};
+
+// ✅ REMOVED: Duplicate auth state listener - handled in AuthProvider.tsx
+// This prevents race conditions and excessive session checks
 
 // Export a helper function to check if Supabase is ready
 export const isSupabaseReady = () => {
@@ -72,5 +97,147 @@ export const isSupabaseReady = () => {
   } catch (error) {
     console.error('Supabase readiness check failed:', error);
     return false;
+  }
+};
+
+// Database operation wrapper with retry logic
+export const withRetry = async <T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> => {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await operation();
+      connectionState.isConnected = true;
+      connectionState.lastError = null;
+      connectionState.retryCount = 0;
+      connectionState.lastSuccessfulOperation = Date.now();
+      return result;
+    } catch (error) {
+      lastError = error as Error;
+      connectionState.lastError = lastError;
+      connectionState.retryCount = attempt;
+      
+      // Check if error is retryable
+      const isRetryable = isRetryableError(lastError);
+      
+      if (!isRetryable || attempt === maxRetries) {
+        connectionState.isConnected = false;
+        throw lastError;
+      }
+      
+      // Wait before retry with exponential backoff
+      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt - 1)));
+    }
+  }
+  
+  throw lastError!;
+};
+
+// Check if error is retryable
+const isRetryableError = (error: Error): boolean => {
+  const message = error.message.toLowerCase();
+  
+  // Network errors that are worth retrying
+  if (message.includes('network') || 
+      message.includes('timeout') || 
+      message.includes('connection') ||
+      message.includes('fetch')) {
+    return true;
+  }
+  
+  // HTTP status codes that are retryable
+  if ('status' in error) {
+    const status = (error as any).status;
+    return status >= 500 || status === 429; // Server errors or rate limiting
+  }
+  
+  return false;
+};
+
+// Connection health checker
+export const checkConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.from('system_feature_configs').select('id').limit(1);
+    
+    if (error) {
+      connectionState.isConnected = false;
+      connectionState.lastError = error;
+      return false;
+    }
+    
+    connectionState.isConnected = true;
+    connectionState.lastError = null;
+    connectionState.lastSuccessfulOperation = Date.now();
+    return true;
+  } catch (error) {
+    connectionState.isConnected = false;
+    connectionState.lastError = error as Error;
+    return false;
+  }
+};
+
+// Get connection status
+export const getConnectionStatus = () => ({
+  ...connectionState,
+  timeSinceLastSuccess: Date.now() - connectionState.lastSuccessfulOperation
+});
+
+// Cache management for offline support
+export const cacheManager = {
+  set: (key: string, data: unknown, ttl: number = 300000) => { // 5 minutes default TTL
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const cacheData = {
+          data,
+          timestamp: Date.now(),
+          ttl
+        };
+        localStorage.setItem(`cache-${key}`, JSON.stringify(cacheData));
+      } catch (error) {
+        console.warn('Cache set failed:', error);
+      }
+    }
+  },
+  
+  get: (key: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const cached = localStorage.getItem(`cache-${key}`);
+        if (!cached) return null;
+        
+        const { data, timestamp, ttl } = JSON.parse(cached);
+        
+        // Check if cache is still valid
+        if (Date.now() - timestamp > ttl) {
+          localStorage.removeItem(`cache-${key}`);
+          return null;
+        }
+        
+        return data;
+      } catch (error) {
+        console.warn('Cache get failed:', error);
+        return null;
+      }
+    }
+    return null;
+  },
+  
+  clear: (pattern?: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('cache-') && (!pattern || key.includes(pattern))) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (error) {
+        console.warn('Cache clear failed:', error);
+      }
+    }
   }
 };

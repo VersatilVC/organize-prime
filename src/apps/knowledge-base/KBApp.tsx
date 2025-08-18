@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { KBLayout } from './components/KBLayout';
 import { KBPlaceholderPage } from './components/KBPlaceholderPage';
@@ -12,7 +12,14 @@ import { useFeatureSync } from '@/hooks/useFeatureSync';
 import { logger } from '@/lib/secure-logger';
 
 // Dynamic route component that renders based on database configuration
-function DynamicRoute({ route }: { route: any }) {
+interface RouteConfig {
+  component: string;
+  permissions?: string[];
+  path?: string;
+  title?: string;
+}
+
+function DynamicRoute({ route }: { route: RouteConfig }) {
   const Component = getComponent(route.component);
   const isAdminRoute = route.permissions?.includes('admin') || route.permissions?.includes('super_admin');
   
@@ -47,6 +54,7 @@ function DynamicRoute({ route }: { route: any }) {
 
 export default function KBApp() {
   const { routes, isLoading } = useFeatureRoutes('knowledge-base');
+  const location = useLocation();
   
   // Reduced logging to prevent flashing
   // logger.debug('KB App mounted', { 
@@ -91,6 +99,58 @@ export default function KBApp() {
     );
   }
 
+  // Check if current route is a chat route
+  const isChatRoute = location.pathname.includes('/ai-chat') || 
+                      location.pathname.includes('/chat') ||
+                      location.pathname.includes('ai-chat') ||
+                      location.pathname.includes('chat-settings');
+  
+  // Debug logging in development
+  if (import.meta.env.DEV) {
+    console.log('🔍 Route Debug:', {
+      pathname: location.pathname,
+      isChatRoute,
+      routes: routes.map(r => ({ path: r.path, component: r.component }))
+    });
+  }
+
+  // For chat routes, render without AppLayout wrapper
+  if (isChatRoute) {
+    return (
+      <ErrorBoundary>
+        <Routes>
+          <Route path="" element={<Navigate to={defaultRoute} replace />} />
+          {routes.map((route) => {
+            // Handle both /apps/ and /features/ prefixes and normalize to local route path
+            let routePath = route.path;
+            if (routePath.startsWith('/apps/knowledge-base/')) {
+              routePath = routePath.replace('/apps/knowledge-base/', '');
+            } else if (routePath.startsWith('/features/knowledge-base/')) {
+              routePath = routePath.replace('/features/knowledge-base/', '');
+            } else if (routePath.startsWith('/knowledge-base/')) {
+              routePath = routePath.replace('/knowledge-base/', '');
+            }
+            return (
+              <Route
+                key={route.path}
+                path={routePath}
+                element={<DynamicRoute route={route} />}
+              />
+            );
+          })}
+          <Route path="*" element={
+            <KBPlaceholderPage 
+              component="Custom" 
+              title="Page under construction" 
+              description="This page is not available yet."
+            />
+          } />
+        </Routes>
+      </ErrorBoundary>
+    );
+  }
+
+  // For non-chat routes, use the standard AppLayout wrapper
   return (
     <AppLayout>
       <KBLayout>

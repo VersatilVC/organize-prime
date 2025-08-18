@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFeatureContext } from '@/contexts/FeatureContext';
+import { useSimpleFeatureContext } from '@/contexts/SimpleFeatureContext';
 import { DynamicSettingsForm } from './DynamicSettingsForm';
 import { useFeatureSettings } from '@/hooks/useFeatureSettings';
 import { getFeatureSettings } from '@/lib/feature-settings-schemas';
@@ -9,7 +9,7 @@ import { Loader2, AlertTriangle, Lock, Settings } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 
 export function FeatureSettings() {
-  const { feature } = useFeatureContext();
+  const { config, slug } = useSimpleFeatureContext();
   const { role } = useUserRole();
   const {
     settings,
@@ -19,9 +19,9 @@ export function FeatureSettings() {
     resetSettings,
     isResetting,
     error
-  } = useFeatureSettings(feature?.slug || '');
+  } = useFeatureSettings(slug || '');
 
-  if (!feature) {
+  if (!config) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -40,7 +40,7 @@ export function FeatureSettings() {
   }
 
   // Get the settings schema for this feature
-  const settingsSchema = getFeatureSettings(feature.slug);
+  const settingsSchema = getFeatureSettings(config.feature_slug);
 
   if (!settingsSchema) {
     return (
