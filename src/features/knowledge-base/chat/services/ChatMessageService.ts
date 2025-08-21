@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ChatWebhookService } from './ChatWebhookService';
+import { ElementWebhookTriggerService } from '@/services/ElementWebhookTriggerService';
 
 export interface MessageSource {
   document_name: string;
@@ -145,7 +146,7 @@ export class ChatMessageService {
         }
       });
 
-      // Use the new webhook service to process the message
+      // Use the feature webhook service to process the message
       try {
         await ChatWebhookService.sendChatMessage(
           params.conversationId,
@@ -158,9 +159,9 @@ export class ChatMessageService {
           params.modelConfig || { model: 'gpt-4', temperature: 0.7 }
         );
 
-        console.log('✅ Chat message sent for processing');
+        console.log('✅ Chat message sent for processing via feature webhook');
       } catch (webhookError) {
-        console.error('Webhook processing failed:', webhookError);
+        console.error('Feature webhook processing failed:', webhookError);
         
         // Provide fallback response when webhook is not configured
         const fallbackResponse = this.generateFallbackResponse(params.message);
@@ -171,9 +172,43 @@ export class ChatMessageService {
             fallback: true,
             model: 'fallback',
             processing_time: 0,
-            error: webhookError instanceof Error ? webhookError.message : 'Webhook unavailable'
+            error: webhookError instanceof Error ? webhookError.message : 'Feature webhook unavailable'
           }
         });
+      }
+
+      // ALSO trigger element webhooks for the chat_message_sent event
+      try {
+        const elementWebhookService = new ElementWebhookTriggerService(
+          conversation.organization_id,
+          'supabase-anon-key' // Will use environment variable
+        );
+
+        const elementWebhookResults = await elementWebhookService.triggerChatMessageWebhooks(
+            'chat_message_sent',
+            {
+              conversationId: params.conversationId,
+              messageId: assistantMessageId,
+              userMessage: params.message,
+              organizationId: conversation.organization_id,
+              userId: user.id,
+              modelConfig: params.modelConfig || { model: 'gpt-4', temperature: 0.7 }
+            }
+          );
+
+          console.log(`✅ Triggered ${elementWebhookResults.length} element webhooks for chat message`);
+          
+          // Log element webhook results
+          const successfulElementWebhooks = elementWebhookResults.filter(r => r.success).length;
+          if (successfulElementWebhooks > 0) {
+            console.log(`🎯 ${successfulElementWebhooks} element webhooks executed successfully`);
+          }
+
+          // Clean up
+          elementWebhookService.dispose();
+      } catch (elementWebhookError) {
+        // Don't fail the main chat flow if element webhooks fail
+        console.warn('Element webhook execution failed (non-critical):', elementWebhookError);
       }
 
       return userMessageId;
