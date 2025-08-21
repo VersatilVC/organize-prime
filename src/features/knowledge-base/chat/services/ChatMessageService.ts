@@ -179,6 +179,11 @@ export class ChatMessageService {
 
       // ALSO trigger element webhooks for the chat_message_sent event
       try {
+        console.log('🚀 Starting element webhook execution...');
+        console.log('🏢 Organization ID for element webhooks:', conversation.organization_id);
+        console.log('👤 User ID:', user.id);
+        console.log('💬 Conversation ID:', params.conversationId);
+        
         const elementWebhookService = new ElementWebhookTriggerService(
           conversation.organization_id,
           'supabase-anon-key' // Will use environment variable
@@ -200,15 +205,33 @@ export class ChatMessageService {
           
           // Log element webhook results
           const successfulElementWebhooks = elementWebhookResults.filter(r => r.success).length;
+          const failedElementWebhooks = elementWebhookResults.filter(r => !r.success).length;
+          
           if (successfulElementWebhooks > 0) {
             console.log(`🎯 ${successfulElementWebhooks} element webhooks executed successfully`);
+          }
+          
+          if (failedElementWebhooks > 0) {
+            console.log(`❌ ${failedElementWebhooks} element webhooks failed`);
+            elementWebhookResults.filter(r => !r.success).forEach(result => {
+              console.log(`❌ Failed webhook ${result.webhookId}:`, result.error?.message);
+            });
+          }
+          
+          if (elementWebhookResults.length === 0) {
+            console.log('📭 No element webhooks were found or executed');
           }
 
           // Clean up
           elementWebhookService.dispose();
       } catch (elementWebhookError) {
         // Don't fail the main chat flow if element webhooks fail
-        console.warn('Element webhook execution failed (non-critical):', elementWebhookError);
+        console.error('❌ Element webhook execution failed (non-critical):', elementWebhookError);
+        console.error('❌ Element webhook error details:', {
+          error: elementWebhookError,
+          organizationId: conversation.organization_id,
+          conversationId: params.conversationId
+        });
       }
 
       return userMessageId;
