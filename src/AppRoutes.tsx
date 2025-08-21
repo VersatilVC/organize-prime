@@ -21,7 +21,9 @@ const Notifications = createLazyRoute(() => import('@/pages/Notifications'));
 const Billing = createLazyRoute(() => import('@/pages/Billing'));
 const Help = createLazyRoute(() => import('@/pages/Help'));
 const FeedbackManagement = createLazyRoute(() => import('@/pages/admin/FeedbackManagement'));
+const WebhookManagement = createLazyRoute(() => import('@/pages/admin/WebhookManagement'));
 const SimpleFeatureRouter = lazyImportNamed(() => import('@/components/SimpleFeatureRouter'), 'SimpleFeatureRouter');
+const WebhookServiceTester = lazyImportNamed(() => import('@/test/WebhookServiceTester'), 'WebhookServiceTester');
 const NotFound = createLazyRoute(() => import('@/pages/NotFound'));
 
 // Use the new optimized loading components
@@ -172,6 +174,19 @@ export function AppRoutes() {
         />
 
         <Route 
+          path="/admin/webhooks" 
+          element={
+            <AuthGuard>
+              <AppLayout>
+                <React.Suspense fallback={<LayoutLoadingFallback />}>
+                  <WebhookManagement />
+                </React.Suspense>
+              </AppLayout>
+            </AuthGuard>
+          } 
+        />
+
+        <Route 
           path="/notifications" 
           element={
             <AuthGuard>
@@ -204,6 +219,20 @@ export function AppRoutes() {
               <AppLayout>
                 <React.Suspense fallback={<LayoutLoadingFallback />}>
                   <Help />
+                </React.Suspense>
+              </AppLayout>
+            </AuthGuard>
+          } 
+        />
+
+        {/* Development/Testing Routes */}
+        <Route 
+          path="/test/webhook-services" 
+          element={
+            <AuthGuard>
+              <AppLayout>
+                <React.Suspense fallback={<LayoutLoadingFallback />}>
+                  <WebhookServiceTester />
                 </React.Suspense>
               </AppLayout>
             </AuthGuard>

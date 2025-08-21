@@ -2,7 +2,6 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { supabase, withRetry, cacheManager } from '@/integrations/supabase/client';
 import { useMemo } from 'react';
-import * as React from 'react';
 import { useResilientQuery } from './useResilientQuery';
 
 interface UserRoleData {
@@ -123,12 +122,12 @@ export function useOptimizedUserRole() {
   }, [query.data?.role]);
 
   // Create stable fallbacks to prevent role switching
-  const stableRole = React.useMemo(() => {
+  const stableRole = useMemo(() => {
     if (query.isLoading && !query.data) return 'user'; // Loading state
     return query.data?.role || 'user';
   }, [query.data?.role, query.isLoading]);
 
-  const stableIsSuperAdmin = React.useMemo(() => {
+  const stableIsSuperAdmin = useMemo(() => {
     if (query.isLoading && !query.data) return false;
     return query.data?.isSuperAdmin || false;
   }, [query.data?.isSuperAdmin, query.isLoading]);

@@ -8,12 +8,13 @@ import { visualizer } from 'rollup-plugin-visualizer';
 export default defineConfig(({ mode }) => ({
   server: {
     host: "localhost",
-    // Let Vite auto-select an available port
-    // Disable HMR completely to prevent WebSocket issues
-    hmr: false,
-    // Allow port auto-increment
-    strictPort: false,
-    // Minimal configuration
+    port: 5174,
+    // Re-enable HMR with proper configuration
+    hmr: {
+      port: 24679,
+    },
+    // Use strict port to prevent conflicts
+    strictPort: true,
     fs: {
       strict: false,
     },
@@ -187,5 +188,17 @@ export default defineConfig(({ mode }) => ({
   // Ensure React consistency across the app
   define: {
     global: 'globalThis',
+  },
+  
+  // Vitest configuration
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['src/test/setup.ts'],
+    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['node_modules', 'dist'],
+    css: true,
+    mockReset: true,
+    restoreMocks: true,
   },
 }));

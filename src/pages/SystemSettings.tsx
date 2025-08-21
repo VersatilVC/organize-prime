@@ -732,6 +732,7 @@ export default function SystemSettings() {
             <FeatureCategoryManagement />
           </TabsContent>
 
+
           <TabsContent value="statistics">
             <Card>
               <CardHeader>

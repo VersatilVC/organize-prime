@@ -9,7 +9,7 @@ interface WebhookSetupRequiredProps {
 }
 
 export function WebhookSetupRequired({ featureName }: WebhookSetupRequiredProps) {
-  const migrationScript = `-- Run this migration in your Supabase SQL Editor
+  const setupScript = `-- Run this setup script in your Supabase SQL Editor
 -- Enhanced Webhook Management System for OrganizePrime
 
 -- Enable required extensions
@@ -58,8 +58,8 @@ CREATE POLICY "Super admins can manage all webhooks" ON feature_webhooks
     );
 `;
 
-  const copyMigrationScript = () => {
-    navigator.clipboard.writeText(migrationScript);
+  const copySetupScript = () => {
+    navigator.clipboard.writeText(setupScript);
   };
 
   return (
@@ -79,7 +79,7 @@ CREATE POLICY "Super admins can manage all webhooks" ON feature_webhooks
           <AlertDescription>
             <strong>Database Setup Required</strong>
             <br />
-            The webhook tables haven't been created yet. Please run the database migration to enable webhook functionality.
+            The webhook tables haven't been created yet. Please run the database setup to enable webhook functionality.
           </AlertDescription>
         </Alert>
 
@@ -88,7 +88,7 @@ CREATE POLICY "Super admins can manage all webhooks" ON feature_webhooks
             <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-medium mb-2">Webhook System Setup Required</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              To use webhooks with OrganizePrime, you need to run a database migration 
+              To use webhooks with OrganizePrime, you need to run a database setup 
               to create the necessary tables and permissions.
             </p>
           </div>
@@ -97,18 +97,18 @@ CREATE POLICY "Super admins can manage all webhooks" ON feature_webhooks
             <div className="bg-muted/50 p-4 rounded-lg space-y-3">
               <h4 className="font-medium text-sm">Setup Instructions:</h4>
               <ol className="text-sm space-y-2 list-decimal list-inside text-muted-foreground">
-                <li>Copy the migration script below</li>
+                <li>Copy the setup script below</li>
                 <li>Open your Supabase project dashboard</li>
                 <li>Go to the SQL Editor</li>
-                <li>Paste and run the migration script</li>
+                <li>Paste and run the setup script</li>
                 <li>Refresh this page to access webhook management</li>
               </ol>
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={copyMigrationScript} className="flex-1">
+              <Button onClick={copySetupScript} className="flex-1">
                 <Database className="h-4 w-4 mr-2" />
-                Copy Migration Script
+                Copy Setup Script
               </Button>
               <Button 
                 variant="outline" 
@@ -121,11 +121,11 @@ CREATE POLICY "Super admins can manage all webhooks" ON feature_webhooks
 
             <details className="border rounded-lg">
               <summary className="p-3 cursor-pointer hover:bg-muted/50 font-medium text-sm">
-                View Migration Script
+                View Setup Script
               </summary>
               <div className="border-t p-3">
                 <pre className="text-xs bg-muted/50 p-3 rounded overflow-x-auto">
-                  <code>{migrationScript}</code>
+                  <code>{setupScript}</code>
                 </pre>
               </div>
             </details>

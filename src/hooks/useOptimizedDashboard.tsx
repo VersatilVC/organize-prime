@@ -62,10 +62,10 @@ export function useOptimizedDashboard() {
         queryFn: async () => {
           if (!currentOrganization?.id || !user?.id) return null;
           
-          const { data, error } = await supabase.rpc('get_organization_users', {
+          const { data, error } = await supabase.rpc('get_organization_users_optimized', {
             p_organization_id: currentOrganization.id,
-            p_requesting_user_id: user.id,
-            p_include_emails: false
+            p_limit: 5,
+            p_offset: 0
           });
           
           if (error) throw error;

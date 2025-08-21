@@ -54,6 +54,7 @@ const getSectionItems = (type: 'main' | 'management' | 'system-admin' | 'support
     case 'system-admin':
       return role === 'super_admin' ? [
         { name: 'Organizations', href: '/organizations', icon: Icons.building },
+        { name: 'Webhook Management', href: '/admin/webhooks', icon: Icons.webhook },
         { name: 'System Settings', href: '/settings/system', icon: Icons.settings },
       ] : [];
     

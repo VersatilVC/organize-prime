@@ -345,7 +345,7 @@ export function useFeatureWebhooks(featureId?: string, enabled = true) {
         // Handle missing table error
         if (error.message?.includes('relation "public.feature_webhooks" does not exist') ||
             error.message?.includes('Bad Request')) {
-          throw new Error('Webhook tables are not set up yet. Please contact your administrator to run the database migrations.');
+          throw new Error('Webhook tables are not set up yet. Please contact your administrator.');
         }
         throw error;
       }

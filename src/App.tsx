@@ -14,6 +14,8 @@ import { useRoutePreloader } from './hooks/useResourcePreloader';
 import { useBundlePerformance, useMemoryOptimization } from './hooks/usePerformanceMonitor';
 import { usePerformanceMonitoring, useLifecycleMonitoring } from './hooks/usePerformanceMonitoring';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PreviewProvider } from '@/components/preview/PreviewController';
+import { ElementScanner } from '@/components/preview/ElementScanner';
 import { emergencyCircuitBreaker } from './lib/emergency-circuit-breaker';
 import './index.css';
 
@@ -31,7 +33,11 @@ const AppContent = React.memo(() => (
             <OrganizationProvider>
               <ErrorBoundary>
                 <PermissionProvider>
-                  <AppRoutes />
+                  <PreviewProvider>
+                    <ElementScanner>
+                      <AppRoutes />
+                    </ElementScanner>
+                  </PreviewProvider>
                 </PermissionProvider>
               </ErrorBoundary>
             </OrganizationProvider>
