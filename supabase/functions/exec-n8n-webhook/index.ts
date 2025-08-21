@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     };
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 90000); // 90 seconds for long-running AI workflows
 
     let response: Response;
     try {
@@ -116,53 +116,106 @@ Deno.serve(async (req) => {
     }
 
     // Handle chat webhook responses by updating the message directly
-    if (payload.message_id && respData && typeof respData === 'object' && respData.output) {
+    // Look for message_id in the payload body (matching our SimpleChatService format)
+    const messageId = payload.body?.message_id || payload.message_id;
+    const conversationId = payload.body?.conversation_id || payload.conversation_id;
+    
+    if (messageId && conversationId && respData) {
       try {
-        console.log(`Processing chat response for message: ${payload.message_id}`);
+        console.log(`Processing chat response for message: ${messageId}, conversation: ${conversationId}`);
+        console.log(`Response data type: ${typeof respData}`);
+        console.log(`Response data:`, JSON.stringify(respData));
         
-        // Update the message with the AI response
-        const { error: updateError } = await supabase
-          .from('kb_messages')
-          .update({
-            content: respData.output,
-            processing_status: 'completed',
-            error_message: null,
-            metadata: {
-              ...(payload.model_config || {}),
-              tokens_used: 150, // Default token count
-              processing_time: 1500,
-              model_used: 'gpt-5'
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', payload.message_id);
-
-        if (updateError) {
-          console.error('Failed to update message:', updateError);
+        // Handle N8N AI Agent response format
+        let aiOutput = null;
+        
+        if (typeof respData === 'string') {
+          // Direct string response from N8N AI Agent
+          aiOutput = respData;
+          console.log(`Using direct string response: ${aiOutput}`);
+        } else if (Array.isArray(respData) && respData.length > 0) {
+          // N8N returns array: handle first item
+          const firstItem = respData[0];
+          if (typeof firstItem === 'string') {
+            aiOutput = firstItem;
+          } else if (firstItem.output) {
+            aiOutput = firstItem.output;
+          } else if (firstItem.text) {
+            aiOutput = firstItem.text;
+          }
+          console.log(`Extracted output from array: ${aiOutput}`);
+        } else if (typeof respData === 'object' && respData.output) {
+          // N8N returns object: {"output": "..."}
+          aiOutput = respData.output;
+          console.log(`Extracted output from object: ${aiOutput}`);
         } else {
-          console.log(`✅ Updated message ${payload.message_id} with AI response`);
-          
-          // Send real-time notification
-          const { data: messageData } = await supabase
+          console.log(`No recognizable AI output found in response`);
+        }
+        
+        if (aiOutput) {
+          // Find the pending assistant message and update it
+          const { data: assistantMessages, error: findError } = await supabase
             .from('kb_messages')
-            .select('conversation_id')
-            .eq('id', payload.message_id)
-            .single();
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .eq('message_type', 'assistant')
+            .eq('processing_status', 'processing')
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-          if (messageData) {
-            await supabase
-              .channel(`chat_messages_${messageData.conversation_id}`)
-              .send({
-                type: 'broadcast',
-                event: 'message_updated',
-                payload: {
-                  message_id: payload.message_id,
-                  status: 'completed',
-                  content: respData.output,
-                  error: null
+          if (findError) {
+            console.error('Error finding assistant message:', findError);
+            return;
+          }
+
+          if (assistantMessages && assistantMessages.length > 0) {
+            const assistantMessageId = assistantMessages[0].id;
+            
+            console.log(`🎯 Updating assistant message ${assistantMessageId} with AI response`);
+
+            const { error: updateError } = await supabase
+              .from('kb_messages')
+              .update({
+                content: aiOutput,
+                processing_status: 'completed',
+                metadata: {
+                  completed_at: new Date().toISOString(),
+                  model_used: 'gpt-4',
+                  response_to_message_id: messageId
                 }
-              });
-            console.log(`📡 Sent broadcast to chat_messages_${messageData.conversation_id}`);
+              })
+              .eq('id', assistantMessageId);
+
+            if (updateError) {
+              console.error('Failed to update assistant message:', updateError);
+            } else {
+              console.log(`✅ Updated assistant message ${assistantMessageId} with AI response`);
+            }
+          } else {
+            console.log('No pending assistant message found to update');
+          }
+        } else {
+          console.log('No AI output found, marking assistant message as error');
+          
+          // Find and mark assistant message as error
+          const { data: assistantMessages } = await supabase
+            .from('kb_messages')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .eq('message_type', 'assistant')
+            .eq('processing_status', 'processing')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (assistantMessages && assistantMessages.length > 0) {
+            await supabase
+              .from('kb_messages')
+              .update({
+                content: 'Sorry, I could not generate a response. Please try again.',
+                processing_status: 'error',
+                error_message: 'No valid response from AI agent'
+              })
+              .eq('id', assistantMessages[0].id);
           }
         }
       } catch (chatError) {

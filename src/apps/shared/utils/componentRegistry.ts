@@ -4,8 +4,8 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 // Lazy load the Knowledge Base components
 const ManageKnowledgeBases = React.lazy(() => import('@/features/knowledge-base/pages/ManageKnowledgeBases'));
 const ManageFiles = React.lazy(() => import('@/features/knowledge-base/pages/ManageFiles'));
-const Chat = React.lazy(() => import('@/features/knowledge-base/chat/pages/ChatPage'));
-const ChatSettings = React.lazy(() => import('@/features/knowledge-base/chat/pages/ChatSettingsPage').then(module => ({ default: module.ChatSettingsPage })));
+const Chat = React.lazy(() => import('@/apps/knowledge-base/components/KBChat'));
+// ChatSettings removed - now using simple chat interface
 
 // Only implemented components - everything else gets placeholder
 export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
@@ -13,7 +13,6 @@ export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
   'Chat',      // KB Chat page is implemented
   'ManageKnowledgeBases', // KB management page
   'ManageFiles', // KB file management page
-  'ChatSettings' // KB chat settings page is implemented
   // Analytics, Settings are NOT implemented - will show placeholders
 ]);
 
@@ -22,7 +21,6 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   'ManageKnowledgeBases': ManageKnowledgeBases,
   'ManageFiles': ManageFiles,
   'Chat': Chat,
-  'ChatSettings': ChatSettings,
 };
 
 export function getComponent(componentName: string): React.ComponentType<any> {

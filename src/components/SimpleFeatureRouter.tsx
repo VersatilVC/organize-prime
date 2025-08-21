@@ -31,8 +31,8 @@ const LazyFeatureContent = createLazyRoute(() => import('@/pages/features/Featur
 // Knowledge Base specific components
 const LazyManageKnowledgeBases = createLazyRoute(() => import('@/features/knowledge-base/pages/ManageKnowledgeBases'));
 const LazyManageFiles = createLazyRoute(() => import('@/features/knowledge-base/pages/ManageFiles'));
-const LazyChatPage = createLazyRoute(() => import('@/features/knowledge-base/chat/pages/ChatPage'));
-const LazyChatSettingsPage = createLazyRoute(() => import('@/features/knowledge-base/chat/pages/ChatSettingsPage'));
+const LazyChatPage = createLazyRoute(() => import('@/apps/knowledge-base/components/KBChat'));
+// ChatSettingsPage removed - now using simple chat interface
 
 interface FeatureRouteParams {
   slug: string;
@@ -48,7 +48,7 @@ const componentMap: Record<string, React.ComponentType> = {
   'ManageKnowledgeBases': LazyManageKnowledgeBases,
   'ManageFiles': LazyManageFiles,
   'Chat': LazyChatPage,
-  'ChatSettings': LazyChatSettingsPage,
+  // ChatSettings removed - now using simple chat interface
 };
 
 // Test component imports on load (development only)
@@ -72,10 +72,10 @@ if (import.meta.env.DEV) {
     }
     
     try {
-      const chat = await import('@/features/knowledge-base/chat/pages/ChatPage');
-      console.log('✅ ChatPage import successful:', !!chat.default);
+      const chat = await import('@/apps/knowledge-base/components/KBChat');
+      console.log('✅ KBChat import successful:', !!chat.default);
     } catch (error) {
-      console.error('❌ ChatPage import failed:', error);
+      console.error('❌ KBChat import failed:', error);
     }
   };
   

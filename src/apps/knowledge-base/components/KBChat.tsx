@@ -1,79 +1,122 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Bot, User, Send } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { SimpleChat } from '@/components/SimpleChat';
+import { DebugSimpleChat } from '@/components/DebugSimpleChat';
+import { ConversationSidebar } from '@/components/ConversationSidebar';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useConversationCRUD } from '@/hooks/useConversationCRUD';
+import { cn } from '@/lib/utils';
+import { Plus, MessageSquare } from 'lucide-react';
 
 export function KBChat() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">AI Chat</h1>
-        <p className="text-muted-foreground">
-          Chat with your knowledge bases using AI to get instant answers and insights.
-        </p>
-      </div>
+  const { role } = useUserRole();
+  const isSuperAdmin = role === 'super_admin';
+  const [showDebug, setShowDebug] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState<string>('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { createConversation } = useConversationCRUD();
 
-      <div className="grid gap-6 lg:grid-cols-4">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Knowledge Bases</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                No knowledge bases available. Create one first to start chatting.
-              </div>
-            </CardContent>
-          </Card>
+  const handleConversationSelect = (conversationId: string) => {
+    setActiveConversationId(conversationId);
+  };
+
+  const handleConversationCreate = (conversationId: string) => {
+    setActiveConversationId(conversationId);
+  };
+
+  const handleCreateNewConversation = () => {
+    const title = `New Chat ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    createConversation.mutate(title, {
+      onSuccess: (conversationId) => {
+        setActiveConversationId(conversationId);
+        handleConversationCreate(conversationId);
+      },
+    });
+  };
+
+  return (
+    <div className="h-screen flex">
+      {/* Conversation Sidebar */}
+      <ConversationSidebar
+        activeConversationId={activeConversationId}
+        onConversationSelect={handleConversationSelect}
+        onConversationCreate={handleConversationCreate}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        className="flex-shrink-0"
+      />
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="flex-shrink-0 p-6 border-b bg-background/95 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">AI Chat</h1>
+              <p className="text-muted-foreground mt-1">
+                Chat with AI to get instant answers and insights.
+              </p>
+            </div>
+            
+            {/* Debug toggle - only for super admins */}
+            {isSuperAdmin && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowDebug(!showDebug)}
+                className="ml-4"
+              >
+                {showDebug ? 'Production' : 'Debug'} Mode
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="lg:col-span-3">
-          <Card className="h-[600px] flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                AI Assistant
-              </CardTitle>
-              <CardDescription>
-                Ask questions about your knowledge base content
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              <div className="flex-1 space-y-4 mb-4 overflow-y-auto">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-primary" />
+        {/* Chat Area */}
+        <div className="flex-1 p-6 min-h-0">
+          <div className="max-w-4xl mx-auto h-full">
+            {activeConversationId ? (
+              showDebug && isSuperAdmin ? (
+                <DebugSimpleChat />
+              ) : (
+                <SimpleChat 
+                  conversationId={activeConversationId}
+                  onConversationCreated={handleConversationCreate}
+                />
+              )
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-full rounded-full p-0"
+                      onClick={() => setIsSidebarCollapsed(false)}
+                    >
+                      <MessageSquare className="h-8 w-8 text-primary" />
+                    </Button>
                   </div>
-                  <div className="flex-1">
-                    <div className="bg-muted rounded-lg p-3">
-                      <p className="text-sm">
-                        Hello! I'm your AI assistant. I can help you find information from your knowledge bases. 
-                        To get started, please create a knowledge base and upload some documents.
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-medium mb-2">Select a Conversation</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Choose an existing conversation or create a new one to start chatting.
+                  </p>
+                  <Button 
+                    onClick={handleCreateNewConversation}
+                    disabled={createConversation.isPending}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Start New Conversation
+                  </Button>
                 </div>
               </div>
-              
-              <div className="flex gap-2">
-                <Input 
-                  placeholder="Ask a question about your knowledge base..." 
-                  disabled
-                  className="flex-1"
-                />
-                <Button disabled size="icon">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <p className="text-xs text-muted-foreground mt-2">
-                Create a knowledge base first to enable AI chat functionality.
-              </p>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+export default KBChat;
