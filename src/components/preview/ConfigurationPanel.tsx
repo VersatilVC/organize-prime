@@ -135,7 +135,8 @@ export function ConfigurationPanel({ isOpen, elementId, onClose }: Configuration
           .rpc('get_element_webhook_by_fuzzy_match', {
             org_id: currentOrganization.id,
             path_param: currentPath,
-            text_param: elementText
+            text_param: elementText,
+            event_type_param: 'chat_message_sent'  // Prioritize chat webhooks
           });
           
         if (fuzzyError && fuzzyError.code !== 'PGRST116') {
