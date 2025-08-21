@@ -6,7 +6,7 @@ import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConversationCRUD } from '@/hooks/useConversationCRUD';
 import { cn } from '@/lib/utils';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, Loader2 } from 'lucide-react';
 
 export function KBChat() {
   const { role } = useUserRole();
@@ -35,7 +35,15 @@ export function KBChat() {
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen flex relative">
+      {/* Mobile Overlay */}
+      {!isSidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsSidebarCollapsed(true)}
+        />
+      )}
+      
       {/* Conversation Sidebar */}
       <ConversationSidebar
         activeConversationId={activeConversationId}
@@ -43,30 +51,59 @@ export function KBChat() {
         onConversationCreate={handleConversationCreate}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        className="flex-shrink-0"
+        className={cn(
+          "flex-shrink-0 transition-all duration-300 ease-in-out z-50",
+          "md:relative md:translate-x-0",
+          isSidebarCollapsed 
+            ? "md:w-20 -translate-x-full md:translate-x-0" 
+            : "md:w-64 translate-x-0 fixed md:relative left-0 top-0 h-full md:h-auto"
+        )}
       />
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="flex-shrink-0 p-6 border-b bg-background/95 backdrop-blur-sm">
+        <div className="flex-shrink-0 p-3 md:p-4 border-b border-border/30 bg-gradient-to-r from-background/80 via-background/95 to-muted/20 backdrop-blur-2xl shadow-lg">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">AI Chat</h1>
-              <p className="text-muted-foreground mt-1">
-                Chat with AI to get instant answers and insights.
-              </p>
+            <div className="flex items-center gap-2 md:gap-3">
+              {/* Mobile Menu Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="md:hidden p-2 border-2 border-primary/20 bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/40 transition-all duration-300"
+              >
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </Button>
+
+              <div className="hidden md:block p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/30 shadow backdrop-blur-sm">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                  <h1 className="text-lg md:text-2xl font-bold tracking-wide bg-gradient-to-r from-foreground via-primary/80 to-foreground/80 bg-clip-text text-transparent">
+                    AI Chat
+                  </h1>
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-green-700">Online</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-xs md:text-sm font-medium leading-relaxed">
+                  Chat with AI to get instant answers and insights.
+                </p>
+              </div>
             </div>
             
             {/* Debug toggle - only for super admins */}
             {isSuperAdmin && (
               <Button 
                 variant="outline" 
-                size="sm"
+                size="lg"
                 onClick={() => setShowDebug(!showDebug)}
-                className="ml-4"
+                className="ml-4 border-2 border-primary/20 bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/40 transition-all duration-300 font-semibold"
               >
-                {showDebug ? 'Production' : 'Debug'} Mode
+                {showDebug ? '🔧 Production' : '🐛 Debug'} Mode
               </Button>
             )}
           </div>
@@ -85,30 +122,44 @@ export function KBChat() {
                 />
               )
             ) : (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full h-full rounded-full p-0"
-                      onClick={() => setIsSidebarCollapsed(false)}
+              <div className="h-full flex items-center justify-center animate-fade-in">
+                <div className="text-center max-w-md mx-auto p-8">
+                  <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/20 flex items-center justify-center shadow-lg animate-scale-in">
+                    <MessageSquare className="h-8 w-8 text-primary animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                    Select a Conversation
+                  </h3>
+                  <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
+                    Choose an existing conversation or create a new one to start chatting with AI.
+                  </p>
+                  <div className="space-y-4">
+                    <Button 
+                      onClick={handleCreateNewConversation}
+                      disabled={createConversation.isPending}
+                      className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
                     >
-                      <MessageSquare className="h-8 w-8 text-primary" />
+                      {createConversation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Start New Conversation
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setIsSidebarCollapsed(false)}
+                      className="w-full h-9 border-2 hover:border-primary/50 transition-all duration-300"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Browse Conversations
                     </Button>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">Select a Conversation</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Choose an existing conversation or create a new one to start chatting.
-                  </p>
-                  <Button 
-                    onClick={handleCreateNewConversation}
-                    disabled={createConversation.isPending}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Start New Conversation
-                  </Button>
                 </div>
               </div>
             )}

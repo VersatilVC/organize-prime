@@ -95,42 +95,63 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
   }
 
   return (
-    <div className={cn("h-full flex flex-col bg-background border rounded-lg shadow-sm", className)}>
+    <div className={cn("h-full flex flex-col bg-gradient-to-br from-background to-muted/10 border rounded-2xl shadow-xl backdrop-blur-sm", className)}>
       {/* Header */}
-      <div className="flex items-center gap-2 p-4 border-b bg-muted/30">
-        <Bot className="h-5 w-5 text-primary" />
-        <h2 className="font-semibold">AI Chat</h2>
+      <div className="flex items-center gap-2 p-4 border-b border-border/50 bg-gradient-to-r from-background/80 to-muted/20 backdrop-blur-lg rounded-t-2xl">
+        <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
+          <Bot className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold tracking-tight">AI Assistant</h2>
+          <p className="text-xs text-muted-foreground">Ready to help you</p>
+        </div>
       </div>
       
       {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-background to-muted/20"
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background via-background/50 to-muted/30"
       >
           {isLoading && messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin" />
+            <div className="flex items-center justify-center h-full animate-fade-in">
+              <div className="text-center">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/20 mb-4 animate-scale-in">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+                </div>
+                <p className="text-muted-foreground font-medium">Loading conversation...</p>
+              </div>
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center h-full text-red-500">
-              <p>Failed to load messages</p>
+            <div className="flex items-center justify-center h-full text-red-500 animate-fade-in">
+              <div className="text-center p-8 rounded-2xl border border-red-200 bg-red-50/50">
+                <div className="p-4 rounded-2xl bg-red-100 inline-block mb-4">
+                  <Bot className="h-8 w-8 text-red-600" />
+                </div>
+                <p className="font-semibold">Failed to load messages</p>
+                <p className="text-sm text-red-400 mt-2">Please try refreshing the page</p>
+              </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-full animate-fade-in">
               <div className="text-center">
-                <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">Start a conversation by sending a message below.</p>
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-muted/20 border border-primary/20 mb-4 animate-scale-in">
+                  <Bot className="h-12 w-12 mx-auto text-primary animate-pulse" />
+                </div>
+                <h3 className="text-lg font-bold mb-2 text-foreground">Ready to chat!</h3>
+                <p className="text-muted-foreground text-sm">Start a conversation by sending a message below.</p>
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <ChatMessageComponent key={message.id} message={message} />
+            messages.map((message, index) => (
+              <div key={message.id} style={{ animationDelay: `${index * 100}ms` }}>
+                <ChatMessageComponent message={message} />
+              </div>
             ))
           )}
         </div>
 
       {/* Sticky Input Area */}
-      <div className="border-t bg-background/95 backdrop-blur-sm p-4 sticky bottom-0">
+      <div className="border-t border-border/50 bg-gradient-to-r from-background/95 via-background to-background/95 backdrop-blur-lg p-4 sticky bottom-0 rounded-b-2xl">
         <div className="flex gap-3 items-end">
           <div className="flex-1">
             <Input
@@ -139,30 +160,32 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything..."
               disabled={isProcessing}
-              className="min-h-[44px] resize-none border-2 focus:border-primary/50 transition-colors"
+              className="min-h-[40px] resize-none border-2 border-border/50 bg-background/50 backdrop-blur-sm focus:border-primary/50 focus:bg-background/80 transition-all duration-300 text-sm px-4 py-3 rounded-xl shadow-inner"
             />
           </div>
           <Button
             onClick={handleSendMessage}
             disabled={!messageInput.trim() || isProcessing}
-            size="lg"
-            className="h-[44px] w-[44px] p-0 rounded-full shadow-lg hover:shadow-xl transition-all"
+            size="default"
+            className="h-[40px] w-[40px] p-0 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 bg-gradient-to-r from-primary to-primary/90"
           >
             {isProcessing ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4" />
             )}
           </Button>
         </div>
         {isProcessing && (
-          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+          <div className="mt-4 text-sm text-muted-foreground flex items-center gap-3 animate-fade-in">
             <div className="flex gap-1">
-              <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-              <div className="w-1 h-1 bg-primary rounded-full animate-pulse delay-150"></div>
-              <div className="w-1 h-1 bg-primary rounded-full animate-pulse delay-300"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-150"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-300"></div>
             </div>
-            AI is thinking...
+            <span className="font-medium bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              AI is thinking...
+            </span>
           </div>
         )}
       </div>
@@ -180,37 +203,44 @@ function ChatMessageComponent({ message }: ChatMessageComponentProps) {
   const hasError = message.processing_status === 'error';
 
   return (
-    <div className={cn("flex gap-4 group", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex gap-3 group animate-slide-up", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
-        <Avatar className="h-9 w-9 border-2 border-primary/20 shadow-sm">
-          <AvatarFallback className="bg-primary/10 text-primary">
-            <Bot className="h-5 w-5" />
+        <Avatar className="h-8 w-8 border border-primary/30 shadow bg-gradient-to-br from-primary/10 to-primary/20">
+          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/30 text-primary">
+            <Bot className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
       )}
       
       <div className={cn(
-        "max-w-[75%] rounded-2xl px-4 py-3 shadow-sm transition-all group-hover:shadow-md",
-        "word-wrap break-words overflow-wrap-anywhere", // Better text wrapping
+        "max-w-[80%] rounded-2xl px-4 py-3 shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02]",
+        "word-wrap break-words overflow-wrap-anywhere backdrop-blur-sm", // Better text wrapping
         isUser 
-          ? "bg-primary text-primary-foreground rounded-br-sm" 
-          : "bg-white border border-border/50 rounded-bl-sm"
+          ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-br-lg shadow-primary/20" 
+          : "bg-gradient-to-br from-background/80 to-muted/50 border-2 border-border/30 rounded-bl-lg"
       )}>
         {isProcessing && !message.content ? (
-          <div className="flex items-center gap-3 text-muted-foreground py-1">
+          <div className="flex items-center gap-4 text-muted-foreground py-3">
             <div className="flex gap-1">
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150"></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-300"></div>
+              <div className="w-3 h-3 bg-gradient-to-r from-primary to-primary/80 rounded-full animate-bounce"></div>
+              <div className="w-3 h-3 bg-gradient-to-r from-primary to-primary/80 rounded-full animate-bounce delay-150"></div>
+              <div className="w-3 h-3 bg-gradient-to-r from-primary to-primary/80 rounded-full animate-bounce delay-300"></div>
             </div>
-            <span className="text-sm font-medium">AI is thinking...</span>
+            <span className="text-base font-medium bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              AI is thinking...
+            </span>
           </div>
         ) : hasError ? (
-          <div className="flex items-center gap-2 text-red-600">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            <p className="text-sm font-medium">
-              {message.error_message || 'An error occurred while processing your message.'}
-            </p>
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50/50 border-2 border-red-200">
+            <div className="p-2 rounded-lg bg-red-100">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            </div>
+            <div>
+              <p className="text-red-700 font-semibold text-sm">Error</p>
+              <p className="text-red-600 text-sm">
+                {message.error_message || 'An error occurred while processing your message.'}
+              </p>
+            </div>
           </div>
         ) : (
           <div className={cn(
@@ -237,9 +267,9 @@ function ChatMessageComponent({ message }: ChatMessageComponentProps) {
       </div>
 
       {isUser && (
-        <Avatar className="h-9 w-9 border-2 border-muted shadow-sm">
-          <AvatarFallback className="bg-muted/50">
-            <User className="h-5 w-5" />
+        <Avatar className="h-8 w-8 border border-primary/20 shadow bg-gradient-to-br from-muted/10 to-muted/30">
+          <AvatarFallback className="bg-gradient-to-br from-muted/20 to-muted/40 text-muted-foreground">
+            <User className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
       )}

@@ -98,21 +98,30 @@ export function ConversationListItem({ conversation, isActive, onClick }: Conver
     <>
       <div
         className={cn(
-          "group relative p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:bg-accent/50",
-          isActive ? "bg-accent border-primary/50 shadow-sm" : "border-border/50 hover:border-border"
+          "group relative p-2 rounded-lg border transition-all duration-300 cursor-pointer hover:bg-gradient-to-r hover:from-muted/30 hover:to-transparent hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
+          isActive 
+            ? "bg-gradient-to-r from-primary/5 to-primary/10 border-l-4 border-l-primary border-r border-t border-b border-primary/20 shadow-lg" 
+            : "border-border/50 hover:border-primary/20"
         )}
         onClick={!isEditing ? onClick : undefined}
       >
         {/* Main Content */}
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-1">
-            <MessageSquare className={cn(
-              "h-4 w-4 transition-colors",
-              isActive ? "text-primary" : "text-muted-foreground"
-            )} />
+        <div className="flex items-start gap-1">
+          <div className="flex-shrink-0 mt-0.5">
+            <div className={cn(
+              "p-1 rounded-md transition-all duration-200",
+              isActive 
+                ? "bg-primary/20 border border-primary/30" 
+                : "bg-muted/50 border border-muted group-hover:bg-primary/10 group-hover:border-primary/20"
+            )}>
+              <MessageSquare className={cn(
+                "h-3 w-3 transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary/80"
+              )} />
+            </div>
           </div>
           
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pr-6">
             {isEditing ? (
               <Input
                 value={editTitle}
@@ -126,29 +135,38 @@ export function ConversationListItem({ conversation, isActive, onClick }: Conver
             ) : (
               <div>
                 <h3 className={cn(
-                  "text-sm font-medium truncate mb-1 transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/80"
+                  "text-xs font-medium truncate mb-0.5 transition-colors max-w-[140px]",
+                  isActive ? "text-foreground" : "text-foreground/90 group-hover:text-foreground"
                 )}>
                   {conversation.title}
                 </h3>
                 
                 {conversation.message_preview && (
-                  <p className="text-xs text-muted-foreground truncate leading-relaxed">
+                  <p className="text-xs text-muted-foreground truncate leading-tight mb-1 group-hover:text-muted-foreground/80 max-w-[140px]">
                     {conversation.message_preview}
                   </p>
                 )}
                 
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground">
-                    {formatTime(conversation.last_activity_at)}
-                  </span>
+                <div className="flex items-center justify-start gap-1">
+                  <div className="flex items-center gap-1">
+                    <span className={cn(
+                      "text-xs font-medium px-1 py-0.5 rounded-full",
+                      isActive 
+                        ? "bg-primary/20 text-primary" 
+                        : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary/80"
+                    )}>
+                      {formatTime(conversation.last_activity_at)}
+                    </span>
+                  </div>
                   {conversation.message_count > 0 && (
-                    <>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">
-                        {conversation.message_count} messages
-                      </span>
-                    </>
+                    <div className={cn(
+                      "text-xs font-medium px-1 py-0.5 rounded-full border ml-auto",
+                      isActive
+                        ? "bg-primary/10 text-primary border-primary/20"
+                        : "bg-muted/50 text-muted-foreground border-muted group-hover:border-primary/20 group-hover:text-primary/70"
+                    )}>
+                      {conversation.message_count}
+                    </div>
                   )}
                 </div>
               </div>
@@ -157,19 +175,19 @@ export function ConversationListItem({ conversation, isActive, onClick }: Conver
 
           {/* Actions Menu */}
           {!isEditing && (
-            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-1 right-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-accent"
+                    className="h-5 w-5 p-0 hover:bg-accent rounded-md"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <MoreVertical className="h-4 w-4" />
+                    <MoreVertical className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-32">
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -177,7 +195,7 @@ export function ConversationListItem({ conversation, isActive, onClick }: Conver
                     }}
                     disabled={isUpdating}
                   >
-                    <Pencil className="h-4 w-4 mr-2" />
+                    <Pencil className="h-3 w-3 mr-2" />
                     Rename
                   </DropdownMenuItem>
                   
@@ -187,7 +205,7 @@ export function ConversationListItem({ conversation, isActive, onClick }: Conver
                       handleArchive();
                     }}
                   >
-                    <Archive className="h-4 w-4 mr-2" />
+                    <Archive className="h-3 w-3 mr-2" />
                     Archive
                   </DropdownMenuItem>
                   
@@ -200,7 +218,7 @@ export function ConversationListItem({ conversation, isActive, onClick }: Conver
                     }}
                     className="text-red-600 focus:text-red-600 focus:bg-red-50"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3 w-3 mr-2" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
