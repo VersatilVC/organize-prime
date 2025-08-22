@@ -22,6 +22,15 @@ export function useUserRole(): UserRoleResult {
         return { role: 'user' as UserRole, organizations: [] };
       }
 
+      // Development bypass: Return super admin role for bypass user
+      if (import.meta.env.DEV && (globalThis as any).__devBypassActive && user.id === 'd6a2a926-4884-4f92-88d1-1539ea12729a') {
+        devLog.log('🚧 DEV: Using bypass user role - super_admin');
+        return {
+          role: 'super_admin' as UserRole,
+          organizations: ['8aa2da2b-d344-4ff2-beca-d8d34c8d5262'] // Bypass org ID
+        };
+      }
+
       try {
         // Single optimized query to get profile and memberships
         const [profileResult, membershipsResult] = await Promise.all([
@@ -70,9 +79,17 @@ export function useUserRole(): UserRoleResult {
   });
 
   // Memoized result to prevent unnecessary re-renders
-  return useMemo(() => ({
-    role: query.data?.role || 'user',
-    organizations: query.data?.organizations || [],
-    loading: query.isLoading
-  }), [query.data?.role, query.data?.organizations, query.isLoading]);
+  return useMemo(() => {
+    // Development bypass: Use super_admin role while loading for bypass user
+    let defaultRole: UserRole = 'user';
+    if (import.meta.env.DEV && (globalThis as any).__devBypassActive && user?.id === 'd6a2a926-4884-4f92-88d1-1539ea12729a') {
+      defaultRole = 'super_admin';
+    }
+
+    return {
+      role: query.data?.role || defaultRole,
+      organizations: query.data?.organizations || [],
+      loading: query.isLoading
+    };
+  }, [query.data?.role, query.data?.organizations, query.isLoading, user?.id]);
 }

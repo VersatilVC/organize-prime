@@ -71,6 +71,26 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       return;
     }
 
+    // Development bypass: Use hardcoded organization data
+    if (import.meta.env.DEV && (globalThis as any).__devBypassActive && user.id === 'd6a2a926-4884-4f92-88d1-1539ea12729a') {
+      console.log('🚧 DEV: Using bypass organization data');
+      const bypassOrg = {
+        id: '8aa2da2b-d344-4ff2-beca-d8d34c8d5262',
+        name: 'Versatil VC',
+        slug: 'versatil.vc',
+        logo_url: null,
+        is_active: true,
+        created_at: '2025-08-14T16:47:05.081684+00:00',
+        updated_at: '2025-08-14T16:47:05.081684+00:00'
+      };
+      
+      setOrganizations([bypassOrg]);
+      setCurrentOrganization(bypassOrg);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);

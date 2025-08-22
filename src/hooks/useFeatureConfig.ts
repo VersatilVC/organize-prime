@@ -36,6 +36,47 @@ export function useFeatureConfig(slug: string) {
   return useQuery({
     queryKey: ['feature-config', slug],
     queryFn: async (): Promise<FeatureConfig | null> => {
+      // Development bypass: Return mock feature config for bypass user
+      if (import.meta.env.DEV && (globalThis as any).__devBypassActive) {
+        console.log(`🚧 DEV: Using bypass feature config for: ${slug}`);
+        
+        // Return mock config for knowledge-base feature
+        if (slug === 'knowledge-base') {
+          return {
+            id: 'mock-kb-config',
+            feature_slug: 'knowledge-base',
+            display_name: 'Knowledge Base',
+            description: 'AI-powered document search and chat',
+            icon_name: 'brain',
+            color_hex: '#3b82f6',
+            is_enabled_globally: true,
+            feature_pages: [
+              { path: 'manage-knowledgebases', component: 'ManageKnowledgeBases', title: 'Manage Knowledge Bases' },
+              { path: 'manage-files', component: 'ManageFiles', title: 'Manage Files' },
+              { path: 'chat', component: 'KBChat', title: 'Chat' }
+            ],
+            navigation_config: {
+              menu_items: [
+                { label: 'Manage Knowledgebases', path: 'manage-knowledgebases', icon: 'database' },
+                { label: 'Manage Files', path: 'manage-files', icon: 'files' },
+                { label: 'Chat', path: 'chat', icon: 'message-circle' }
+              ]
+            }
+          };
+        }
+        
+        // Return basic config for other features
+        return {
+          id: `mock-${slug}-config`,
+          feature_slug: slug,
+          display_name: slug.charAt(0).toUpperCase() + slug.slice(1),
+          description: `Mock ${slug} feature for development`,
+          is_enabled_globally: true,
+          feature_pages: [],
+          navigation_config: {}
+        };
+      }
+
       const { data, error } = await supabase
         .from('system_feature_configs')
         .select('*')

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useStableLoading } from '@/hooks/useLoadingState';
 import { knowledgeBaseApi, KnowledgeBase } from '../services/knowledgeBaseApi';
 import { CreateKnowledgeBaseModal } from '../components/CreateKnowledgeBaseModal';
 import { EditKnowledgeBaseModal } from '../components/EditKnowledgeBaseModal';
@@ -29,15 +30,12 @@ import { format } from 'date-fns';
 
 export default function ManageKnowledgeBases() {
   const { currentOrganization } = useOrganization();
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKB, setSelectedKB] = useState<KnowledgeBase | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
-  // Check if user has admin access
-  const canManageKB = role === 'super_admin' || role === 'admin';
 
   const {
     data: knowledgeBases = [],
@@ -50,6 +48,30 @@ export default function ManageKnowledgeBases() {
     enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Check if user has admin access
+  // Development bypass: Always allow access in dev mode for bypass users
+  const canManageKB = import.meta.env.DEV && (globalThis as any).__devBypassActive 
+    ? true 
+    : (role === 'super_admin' || role === 'admin');
+
+  // Use stable loading to prevent access denied flash during role loading
+  const isCurrentlyLoading = roleLoading || isLoading;
+  const stableLoading = useStableLoading(isCurrentlyLoading, 600);
+
+  // Debug logging to track the access check timing
+  if (import.meta.env.DEV) {
+    console.log(`🔍 ManageKnowledgeBases - Access Check:`, {
+      role,
+      roleLoading,
+      isLoading,
+      stableLoading,
+      canManageKB,
+      currentOrganization: currentOrganization?.id,
+      bypassActive: (globalThis as any).__devBypassActive,
+      timestamp: new Date().toISOString()
+    });
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => knowledgeBaseApi.deleteKnowledgeBase(id),
@@ -102,6 +124,18 @@ export default function ManageKnowledgeBases() {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  // Show stable loading to prevent access denied flash during role loading
+  if (stableLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!canManageKB) {
     return (

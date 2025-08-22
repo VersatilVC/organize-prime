@@ -55,7 +55,7 @@ export function AuthGuard({
     return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
 
-  // Handle organization loading and requirements
+  // Handle organization loading and requirements (only for authenticated users)
   if (requireOrganization) {
     if (orgLoading) {
       return <LoadingScreen message="Loading organization..." />;

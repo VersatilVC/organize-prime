@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { useFeatureConfig } from '@/hooks/useFeatureConfig';
 import { usePermissions } from '@/contexts/PermissionContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { SimpleFeatureProvider, FeatureContextIsolation } from '@/contexts/SimpleFeatureContext';
 import { SimpleFeatureNavigation } from '@/components/SimpleFeatureNavigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, Lock, Home } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { createLazyRoute } from '@/lib/lazy-import';
+import { useStableLoading } from '@/hooks/useLoadingState';
 
 // Feature components mapping
 const featureComponents: Record<string, () => Promise<{ default: React.ComponentType }>> = {
@@ -252,9 +254,15 @@ const FeatureContent = React.memo(({ slug }: { slug: string }) => {
   } = useFeatureConfig(slug);
 
   const { hasFeatureAccess, isLoading: permissionLoading } = usePermissions();
+  const { loading: orgLoading } = useOrganization();
 
-  // Combined loading state
-  if (configLoading || permissionLoading) {
+  // Use stable loading to prevent permission checking flash - minimum 400ms
+  // Include organization loading to ensure permissions are properly loaded
+  const isCurrentlyLoading = configLoading || permissionLoading || orgLoading;
+  const stableLoading = useStableLoading(isCurrentlyLoading, 400);
+
+  // Show stable loading state to prevent any access denied flash
+  if (stableLoading) {
     return <FeatureLoadingState />;
   }
 
@@ -263,8 +271,11 @@ const FeatureContent = React.memo(({ slug }: { slug: string }) => {
     return <FeatureNotFound slug={slug} />;
   }
 
-  // Check permission
-  if (!hasFeatureAccess(slug)) {
+  // Check permission ONLY after both config and permissions are loaded
+  // Development bypass: Skip permission check entirely for bypass users
+  if (import.meta.env.DEV && (globalThis as any).__devBypassActive) {
+    console.log(`🚧 DEV: Bypassing feature access check for: ${slug}`);
+  } else if (!hasFeatureAccess(slug)) {
     return <FeatureAccessDenied slug={slug} />;
   }
 

@@ -58,9 +58,20 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
 
     return {
       hasFeatureAccess: (featureSlug: string) => {
+        // Development bypass: Grant access to all features for bypass user
+        if (import.meta.env.DEV && (globalThis as any).__devBypassActive) {
+          console.log(`🚧 DEV: Bypass granting access to feature: ${featureSlug}`);
+          return true;
+        }
+        
+        // During loading, return true to prevent flash - let stable loading handle the timing
+        if (finalLoading) {
+          return true;
+        }
+        
         // If we have an error but no cached data, be permissive for core features
         if (finalError && finalData.length === 0) {
-          const coreFeatures = ['dashboard', 'users', 'settings'];
+          const coreFeatures = ['dashboard', 'users', 'settings', 'knowledge-base'];
           return coreFeatures.includes(featureSlug);
         }
         return featureSet.has(featureSlug);
