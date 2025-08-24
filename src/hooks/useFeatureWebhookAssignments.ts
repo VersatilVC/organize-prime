@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/auth/AuthProvider';
 
 export interface WebhookAssignment {
   id: string;
@@ -30,6 +31,7 @@ export function useFeatureWebhookAssignments(featureSlug: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
 
   // Query for webhook assignments for this feature
   const {
@@ -73,22 +75,36 @@ export function useFeatureWebhookAssignments(featureSlug: string) {
       feature_page: string;
       button_position: string;
       webhook_id: string;
+      label?: string;
+      description?: string;
       button_data?: any;
     }) => {
       if (!currentOrganization?.id) {
         throw new Error('Organization ID is required');
       }
+      
+      if (!user?.id) {
+        throw new Error('User ID is required');
+      }
+
+      // Generate a label if not provided
+      const label = input.label || `${input.feature_page} - ${input.button_position}`;
 
       const { data, error } = await supabase
         .from('webhook_button_assignments')
         .insert({
           organization_id: currentOrganization.id,
+          user_id: user.id,
           feature_slug: featureSlug,
           feature_page: input.feature_page,
           button_position: input.button_position,
           webhook_id: input.webhook_id,
+          label: label,
+          description: input.description,
           button_data: input.button_data,
           is_active: true,
+          created_by: user.id,
+          updated_by: user.id,
         })
         .select()
         .single();
@@ -208,6 +224,8 @@ export function useFeatureWebhookAssignments(featureSlug: string) {
       feature_page: string;
       button_position: string;
       webhook_id: string;
+      label?: string;
+      description?: string;
       button_data?: any;
     }) => createAssignmentMutation.mutate(input),
     

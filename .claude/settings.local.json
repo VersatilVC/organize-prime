@@ -77,6 +77,8 @@
       "mcp__playwright__browser_console_messages",
       "Bash(cmd /c:*)",
       "mcp__playwright__browser_file_upload",
+      "Read(/c:\\Users\\ilanh\\Downloads/**)",
+      "Read(/c:\\Users\\ilanh\\Downloads/**)",
       "Read(/c:\\Users\\ilanh\\Downloads/**)"
     ],
     "deny": [],

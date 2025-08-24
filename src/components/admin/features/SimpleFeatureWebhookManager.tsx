@@ -5,12 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useFeatureWebhookAssignments } from '@/hooks/useFeatureWebhookAssignments';
 import { useWebhooks } from '@/hooks/useWebhooks';
+import { WebhookAssignmentDiagnostics } from '@/components/admin/WebhookAssignmentDiagnostics';
 import type { SystemFeature } from '@/types/features';
 import { 
   Webhook, 
@@ -18,7 +21,9 @@ import {
   Trash2, 
   CheckCircle, 
   XCircle,
-  ExternalLink
+  ExternalLink,
+  Globe,
+  Building
 } from 'lucide-react';
 
 interface SimpleFeatureWebhookManagerProps {
@@ -36,17 +41,23 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
     deleteAssignment,
     isCreating,
     isDeleting
-  } = useFeatureWebhookAssignments(feature.feature_slug);
+  } = useFeatureWebhookAssignments(feature.slug);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     feature_page: '',
     button_position: '',
     webhook_id: '',
+    custom_position: '',
   });
 
   const handleCreateAssignment = async () => {
-    if (!newAssignment.feature_page || !newAssignment.button_position || !newAssignment.webhook_id) {
+    // Use custom_position if "custom-position" is selected
+    const finalButtonPosition = newAssignment.button_position === 'custom-position' 
+      ? newAssignment.custom_position 
+      : newAssignment.button_position;
+
+    if (!newAssignment.feature_page || !finalButtonPosition || !newAssignment.webhook_id) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields.',
@@ -56,9 +67,13 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
     }
 
     try {
-      await createAssignment(newAssignment);
+      await createAssignment({
+        feature_page: newAssignment.feature_page,
+        button_position: finalButtonPosition,
+        webhook_id: newAssignment.webhook_id
+      });
       setIsAddModalOpen(false);
-      setNewAssignment({ feature_page: '', button_position: '', webhook_id: '' });
+      setNewAssignment({ feature_page: '', button_position: '', webhook_id: '', custom_position: '' });
     } catch (error) {
       // Error handled by hook
     }
@@ -103,7 +118,20 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
 
   return (
     <>
-      <Card>
+      <Tabs defaultValue="assignments" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="assignments" className="flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            Assignments
+          </TabsTrigger>
+          <TabsTrigger value="diagnostics" className="flex items-center gap-2">
+            <Webhook className="h-4 w-4" />
+            Diagnostics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assignments">
+          <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -115,7 +143,15 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
                 Assign webhooks to specific pages and button positions in this feature.
               </p>
             </div>
-            <Button onClick={() => setIsAddModalOpen(true)} disabled={availableWebhooks.length === 0}>
+            <Button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsAddModalOpen(true);
+              }} 
+              disabled={availableWebhooks.length === 0}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Assignment
             </Button>
@@ -129,7 +165,15 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
               <p className="text-sm text-muted-foreground mb-4">
                 Create webhooks first in the Webhook Management section before assigning them to features.
               </p>
-              <Button variant="outline" onClick={() => window.open('/webhooks', '_blank')}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open('/webhooks', '_blank');
+                }}
+              >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Go to Webhook Management
               </Button>
@@ -143,7 +187,14 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
               <p className="text-sm text-muted-foreground mb-4">
                 Assign webhooks to specific pages and button positions to enable webhook triggers.
               </p>
-              <Button onClick={() => setIsAddModalOpen(true)}>
+              <Button 
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsAddModalOpen(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Assignment
               </Button>
@@ -240,34 +291,126 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
       </Card>
 
       {/* Add Assignment Modal */}
-      <AlertDialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add Webhook Assignment</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Webhook Assignment</DialogTitle>
+            <DialogDescription>
               Assign a webhook to a specific page and button position in {feature.display_name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="feature_page">Feature Page</Label>
-              <Input
-                id="feature_page"
-                placeholder="e.g., ManageFiles, AIChatSettings"
+              <Select
                 value={newAssignment.feature_page}
-                onChange={(e) => setNewAssignment(prev => ({ ...prev, feature_page: e.target.value }))}
-              />
+                onValueChange={(value) => setNewAssignment(prev => ({ 
+                  ...prev, 
+                  feature_page: value, 
+                  button_position: '',
+                  custom_position: ''
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a feature page" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ManageFiles">Manage Files</SelectItem>
+                  <SelectItem value="AIChatSettings">AI Chat Settings</SelectItem>
+                  <SelectItem value="KnowledgeBaseDashboard">Knowledge Base Dashboard</SelectItem>
+                  <SelectItem value="KnowledgeBaseChat">Knowledge Base Chat</SelectItem>
+                  <SelectItem value="KnowledgeBaseManagement">Knowledge Base Management</SelectItem>
+                  <SelectItem value="FeatureDashboard">Feature Dashboard</SelectItem>
+                  <SelectItem value="FeatureSettings">Feature Settings</SelectItem>
+                  <SelectItem value="UserDashboard">User Dashboard</SelectItem>
+                  <SelectItem value="AdminPanel">Admin Panel</SelectItem>
+                  <SelectItem value="NotificationCenter">Notification Center</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="grid gap-2">
               <Label htmlFor="button_position">Button Position</Label>
-              <Input
-                id="button_position"
-                placeholder="e.g., upload-section, chat-input"
+              <Select
                 value={newAssignment.button_position}
-                onChange={(e) => setNewAssignment(prev => ({ ...prev, button_position: e.target.value }))}
-              />
+                onValueChange={(value) => setNewAssignment(prev => ({ 
+                  ...prev, 
+                  button_position: value,
+                  custom_position: value === 'custom-position' ? prev.custom_position : ''
+                }))}
+                disabled={!newAssignment.feature_page}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a button position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {newAssignment.feature_page === 'ManageFiles' && (
+                    <>
+                      <SelectItem value="upload-section">Upload Section</SelectItem>
+                      <SelectItem value="file-actions">File Actions</SelectItem>
+                      <SelectItem value="bulk-operations">Bulk Operations</SelectItem>
+                      <SelectItem value="file-preview">File Preview</SelectItem>
+                    </>
+                  )}
+                  {newAssignment.feature_page === 'AIChatSettings' && (
+                    <>
+                      <SelectItem value="chat-input">Chat Input</SelectItem>
+                      <SelectItem value="message-actions">Message Actions</SelectItem>
+                      <SelectItem value="conversation-header">Conversation Header</SelectItem>
+                      <SelectItem value="settings-panel">Settings Panel</SelectItem>
+                    </>
+                  )}
+                  {newAssignment.feature_page === 'KnowledgeBaseDashboard' && (
+                    <>
+                      <SelectItem value="dashboard-header">Dashboard Header</SelectItem>
+                      <SelectItem value="stats-section">Stats Section</SelectItem>
+                      <SelectItem value="quick-actions">Quick Actions</SelectItem>
+                      <SelectItem value="recent-activity">Recent Activity</SelectItem>
+                    </>
+                  )}
+                  {newAssignment.feature_page === 'KnowledgeBaseChat' && (
+                    <>
+                      <SelectItem value="chat-input">Chat Input</SelectItem>
+                      <SelectItem value="message-send">Message Send</SelectItem>
+                      <SelectItem value="conversation-start">Conversation Start</SelectItem>
+                      <SelectItem value="file-upload">File Upload</SelectItem>
+                    </>
+                  )}
+                  {newAssignment.feature_page === 'KnowledgeBaseManagement' && (
+                    <>
+                      <SelectItem value="create-kb">Create Knowledge Base</SelectItem>
+                      <SelectItem value="manage-documents">Manage Documents</SelectItem>
+                      <SelectItem value="configuration">Configuration</SelectItem>
+                      <SelectItem value="analytics">Analytics</SelectItem>
+                    </>
+                  )}
+                  {(newAssignment.feature_page === 'FeatureDashboard' || 
+                    newAssignment.feature_page === 'FeatureSettings' ||
+                    newAssignment.feature_page === 'UserDashboard' ||
+                    newAssignment.feature_page === 'AdminPanel' ||
+                    newAssignment.feature_page === 'NotificationCenter') && (
+                    <>
+                      <SelectItem value="header-actions">Header Actions</SelectItem>
+                      <SelectItem value="main-content">Main Content</SelectItem>
+                      <SelectItem value="sidebar">Sidebar</SelectItem>
+                      <SelectItem value="footer-actions">Footer Actions</SelectItem>
+                      <SelectItem value="form-submit">Form Submit</SelectItem>
+                      <SelectItem value="bulk-actions">Bulk Actions</SelectItem>
+                    </>
+                  )}
+                  {/* Common positions for any page */}
+                  <SelectItem value="custom-position">Custom Position</SelectItem>
+                </SelectContent>
+              </Select>
+              {newAssignment.button_position === 'custom-position' && (
+                <Input
+                  placeholder="Enter custom position name"
+                  value={newAssignment.custom_position || ''}
+                  onChange={(e) => setNewAssignment(prev => ({ ...prev, custom_position: e.target.value }))}
+                  className="mt-2"
+                />
+              )}
             </div>
             
             <div className="grid gap-2">
@@ -295,17 +438,39 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
             </div>
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCreateAssignment}
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsAddModalOpen(false);
+                setNewAssignment({ feature_page: '', button_position: '', webhook_id: '', custom_position: '' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCreateAssignment();
+              }}
               disabled={isCreating}
             >
               {isCreating ? 'Creating...' : 'Create Assignment'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+        </TabsContent>
+
+        <TabsContent value="diagnostics">
+          <WebhookAssignmentDiagnostics />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

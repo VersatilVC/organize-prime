@@ -11,7 +11,6 @@ import { useFileUpload } from '../hooks/useFileUpload';
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
 import { ProcessingProgress } from './ProcessingProgress';
 import { cn } from '@/lib/utils';
-import { WebhookTriggerButton } from '@/components/webhooks/WebhookTriggerButton';
 
 interface FileUploadAreaProps {
   selectedKbId?: string;
@@ -209,29 +208,6 @@ export function FileUploadArea({ selectedKbId, onKbChange, className }: FileUplo
                 >
                   {isUploading ? 'Uploading...' : `Upload ${validFilesCount} files`}
                 </Button>
-                
-                {/* Webhook trigger button - database-driven assignment */}
-                <WebhookTriggerButton
-                  featurePage="ManageFiles"
-                  buttonPosition="upload-section"
-                  context={{
-                    event_type: 'file_upload_ready',
-                    knowledgeBaseId: currentKbId,
-                    selectedFilesCount: validFilesCount,
-                    hasValidFiles: validFilesCount > 0,
-                    isUploading: isUploading,
-                    files: selectedFiles.map(f => ({
-                      name: f.file.name,
-                      size: f.file.size,
-                      type: f.file.type,
-                      hasError: !!f.error
-                    }))
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  Trigger Webhook
-                </WebhookTriggerButton>
               </div>
             </div>
 

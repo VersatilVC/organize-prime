@@ -117,6 +117,7 @@ export default function ManageFiles() {
             />
           </FileManagementErrorBoundary>
           
+          
           {/* Recent uploads preview */}
           <Card>
             <CardHeader>

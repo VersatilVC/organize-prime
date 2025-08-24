@@ -41,8 +41,85 @@ export interface WebhookTriggerContext {
  */
 export class UnifiedWebhookService {
   
+  
   /**
-   * Log webhook events for monitoring and debugging
+   * Comprehensive audit logging for webhook events
+   */
+  private static async logAuditEvent(
+    eventType: 'assignment_created' | 'assignment_updated' | 'assignment_deleted' | 
+              'webhook_triggered' | 'security_violation' | 'rate_limit_exceeded' | 
+              'webhook_success' | 'webhook_failure',
+    details: {
+      organizationId: string;
+      userId?: string;
+      webhookId?: string;
+      assignmentId?: string;
+      featurePage?: string;
+      buttonPosition?: string;
+      error?: string;
+      duration?: number;
+      responseStatus?: number;
+      responseSize?: number;
+      securityLevel?: 'normal' | 'warning' | 'critical';
+      riskFactors?: string[];
+      eventDetails?: any;
+      metadata?: any;
+    }
+  ): Promise<void> {
+    try {
+      // Determine event category
+      let eventCategory: string;
+      if (eventType.includes('assignment')) {
+        eventCategory = 'assignment';
+      } else if (eventType.includes('security') || eventType.includes('rate_limit')) {
+        eventCategory = 'security';
+      } else if (eventType.includes('webhook')) {
+        eventCategory = 'trigger';
+      } else {
+        eventCategory = 'system';
+      }
+
+      // Insert audit log
+      await supabase.from('webhook_audit_logs').insert({
+        organization_id: details.organizationId,
+        user_id: details.userId,
+        webhook_id: details.webhookId,
+        assignment_id: details.assignmentId,
+        event_type: eventType,
+        event_category: eventCategory,
+        feature_page: details.featurePage,
+        button_position: details.buttonPosition,
+        event_details: details.eventDetails,
+        security_level: details.securityLevel || 'normal',
+        risk_factors: details.riskFactors,
+        duration_ms: details.duration,
+        response_status: details.responseStatus,
+        response_size: details.responseSize,
+        metadata: details.metadata
+      });
+
+      // Also log to console in development
+      if (import.meta.env.DEV) {
+        const emoji = eventType.includes('success') ? '✅' : 
+                     eventType.includes('failure') || eventType.includes('violation') ? '❌' : 
+                     eventType.includes('warning') ? '⚠️' : '📝';
+        console.log(`${emoji} AUDIT: ${eventType}`, {
+          org: details.organizationId,
+          user: details.userId,
+          webhook: details.webhookId,
+          security: details.securityLevel,
+          ...(details.error && { error: details.error })
+        });
+      }
+
+    } catch (logError) {
+      // Never let audit logging errors break the main flow
+      console.warn('Failed to create audit log:', logError);
+    }
+  }
+
+  /**
+   * Log webhook events for monitoring and debugging (LEGACY - kept for compatibility)
    */
   private static async logWebhookEvent(
     type: 'trigger' | 'success' | 'failure' | 'assignment_not_found',
@@ -59,37 +136,231 @@ export class UnifiedWebhookService {
     }
   ): Promise<void> {
     try {
-      // In development, log to console for immediate feedback
+      // Convert to new audit logging system
+      let eventType: any = type;
+      let securityLevel: 'normal' | 'warning' | 'critical' = 'normal';
+      
+      if (type === 'trigger') eventType = 'webhook_triggered';
+      if (type === 'success') eventType = 'webhook_success';
+      if (type === 'failure') {
+        eventType = 'webhook_failure';
+        securityLevel = details.error?.includes('Security') ? 'critical' : 'warning';
+      }
+      if (type === 'assignment_not_found') {
+        eventType = 'webhook_failure';
+        securityLevel = 'warning';
+      }
+
+      // Use new audit logging
+      await this.logAuditEvent(eventType, {
+        organizationId: details.organizationId,
+        userId: details.userId,
+        webhookId: details.webhookId,
+        assignmentId: details.assignmentId,
+        featurePage: details.page,
+        buttonPosition: details.position,
+        duration: details.duration,
+        securityLevel,
+        eventDetails: {
+          error: details.error,
+          hasPayload: !!details.payload,
+          payloadSize: details.payload ? JSON.stringify(details.payload).length : 0
+        }
+      });
+
+      // Also maintain console logging for development
       if (import.meta.env.DEV) {
         const emoji = type === 'success' ? '✅' : type === 'failure' ? '❌' : type === 'assignment_not_found' ? '⚠️' : '🚀';
         console.log(`${emoji} WEBHOOK ${type.toUpperCase()}:`, {
           timestamp: new Date().toISOString(),
           type,
           ...details,
-          // Don't log full payload in production for security
           payload: import.meta.env.DEV ? details.payload : undefined
         });
       }
 
-      // TODO: Add database logging for production monitoring
-      // This would insert into a webhook_logs table for analytics
-      /*
-      await supabase.from('webhook_logs').insert({
-        event_type: type,
-        assignment_id: details.assignmentId,
-        webhook_id: details.webhookId,
-        organization_id: details.organizationId,
-        user_id: details.userId,
-        page: details.page,
-        position: details.position,
-        error_message: details.error,
-        duration_ms: details.duration,
-        created_at: new Date().toISOString()
-      });
-      */
     } catch (logError) {
       // Never let logging errors break the main flow
       console.warn('Failed to log webhook event:', logError);
+    }
+  }
+
+  /**
+   * Check rate limiting for organization/webhook combination
+   * Returns true if request should be allowed, false if rate limited
+   */
+  private static async checkRateLimit(
+    organizationId: string,
+    webhookId: string,
+    maxRequestsPerMinute: number = 60
+  ): Promise<{ allowed: boolean; currentCount: number; resetTime?: Date }> {
+    try {
+      const now = new Date();
+      const currentMinute = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 
+                                   now.getHours(), now.getMinutes());
+
+      // Use upsert to handle concurrent requests safely
+      const { data, error } = await supabase
+        .from('webhook_rate_limits')
+        .upsert({
+          organization_id: organizationId,
+          webhook_id: webhookId,
+          time_window: currentMinute.toISOString(),
+          request_count: 1,
+          last_request_at: now.toISOString(),
+          updated_at: now.toISOString()
+        }, {
+          onConflict: 'organization_id,webhook_id,time_window',
+          ignoreDuplicates: false
+        })
+        .select('request_count')
+        .single();
+
+      if (error) {
+        // If we can't check rate limits, allow the request but log the error
+        console.warn('⚠️ Rate limit check failed, allowing request:', error);
+        return { allowed: true, currentCount: 0 };
+      }
+
+      // If this was an insert, request_count will be 1
+      // If this was an update, we need to increment the count
+      if (data.request_count === 1) {
+        // This was a new record, so we're good
+        return { 
+          allowed: true, 
+          currentCount: 1,
+          resetTime: new Date(currentMinute.getTime() + 60000) // Next minute
+        };
+      } else {
+        // This was an update, increment the counter
+        const { data: updatedData, error: updateError } = await supabase
+          .from('webhook_rate_limits')
+          .update({
+            request_count: data.request_count + 1,
+            last_request_at: now.toISOString(),
+            updated_at: now.toISOString()
+          })
+          .eq('organization_id', organizationId)
+          .eq('webhook_id', webhookId)
+          .eq('time_window', currentMinute.toISOString())
+          .select('request_count')
+          .single();
+
+        if (updateError) {
+          console.warn('⚠️ Rate limit update failed, allowing request:', updateError);
+          return { allowed: true, currentCount: 0 };
+        }
+
+        const newCount = updatedData.request_count;
+        return {
+          allowed: newCount <= maxRequestsPerMinute,
+          currentCount: newCount,
+          resetTime: new Date(currentMinute.getTime() + 60000)
+        };
+      }
+
+    } catch (error) {
+      // If rate limiting fails, allow the request but log the error
+      console.warn('⚠️ Rate limiting system error, allowing request:', error);
+      return { allowed: true, currentCount: 0 };
+    }
+  }
+
+  /**
+   * Clean up old rate limit records (call periodically)
+   */
+  private static async cleanupOldRateLimits(): Promise<void> {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      
+      await supabase
+        .from('webhook_rate_limits')
+        .delete()
+        .lt('created_at', oneHourAgo.toISOString());
+        
+    } catch (error) {
+      console.warn('Failed to cleanup old rate limit records:', error);
+    }
+  }
+
+  /**
+   * Enhanced security validation for multi-tenant isolation
+   */
+  private static async validateMultiTenantSecurity(
+    assignment: WebhookAssignment | null,
+    organizationId: string,
+    userId?: string
+  ): Promise<{ isValid: boolean; error?: string; warnings?: string[] }> {
+    const warnings: string[] = [];
+
+    try {
+      if (!assignment) {
+        return { isValid: true }; // No assignment means no security risk
+      }
+
+      // 1. Validate organization boundary isolation
+      if (assignment.organization_id && assignment.organization_id !== organizationId) {
+        return {
+          isValid: false,
+          error: `Security violation: Webhook assignment belongs to different organization`
+        };
+      }
+
+      // 2. Validate user membership in organization (if user provided)
+      if (userId) {
+        const { data: membership, error: membershipError } = await supabase
+          .from('memberships')
+          .select('organization_id, status, role')
+          .eq('user_id', userId)
+          .eq('organization_id', organizationId)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (membershipError) {
+          warnings.push(`Could not verify user membership: ${membershipError.message}`);
+        } else if (!membership) {
+          return {
+            isValid: false,
+            error: `Security violation: User not authorized for organization`
+          };
+        }
+      }
+
+      // 3. Validate webhook URL safety (basic checks)
+      if (assignment.webhook?.webhook_url) {
+        const webhookUrl = assignment.webhook.webhook_url;
+        
+        // Check for obviously unsafe URLs
+        if (webhookUrl.includes('localhost') && !import.meta.env.DEV) {
+          warnings.push('Webhook points to localhost in production environment');
+        }
+        
+        // Ensure HTTPS in production
+        if (!webhookUrl.startsWith('https://') && !import.meta.env.DEV) {
+          warnings.push('Webhook URL is not using HTTPS');
+        }
+        
+        // Basic URL format validation
+        try {
+          new URL(webhookUrl);
+        } catch {
+          return {
+            isValid: false,
+            error: `Invalid webhook URL format: ${webhookUrl}`
+          };
+        }
+      }
+
+      return {
+        isValid: true,
+        warnings: warnings.length > 0 ? warnings : undefined
+      };
+
+    } catch (error) {
+      return {
+        isValid: false,
+        error: `Security validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
     }
   }
 
@@ -134,9 +405,10 @@ export class UnifiedWebhookService {
     page: string,
     position: string
   ): Promise<WebhookAssignment | null> {
-    console.log('🔍 WEBHOOK LOOKUP:', { organizationId, page, position });
+    
     try {
-      const { data, error } = await supabase
+      // First, try to find organization-specific assignment
+      const { data: orgData, error: orgError } = await supabase
         .from('webhook_button_assignments')
         .select(`
           *,
@@ -151,22 +423,138 @@ export class UnifiedWebhookService {
         .eq('feature_page', page)
         .eq('button_position', position)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.log(`❌ Database error for ${page}:${position}`, error.message);
+      if (orgError) {
+        console.error(`❌ Database error for org-specific ${page}:${position}`, {
+          code: orgError.code,
+          message: orgError.message
+        });
+      }
+
+      // If organization-specific assignment found, return it
+      if (orgData) {
+        console.log(`✅ Found org-specific webhook assignment for ${page}:${position}`);
+        return orgData as WebhookAssignment;
+      }
+
+      // If no organization-specific assignment, check for global assignment
+      const { data: globalData, error: globalError } = await supabase
+        .from('webhook_button_assignments')
+        .select(`
+          *,
+          webhook:webhooks(
+            id,
+            name,
+            webhook_url,
+            is_active
+          )
+        `)
+        .is('organization_id', null) // Global assignment
+        .eq('feature_page', page)
+        .eq('button_position', position)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (globalError) {
+        console.error(`❌ Database error for global ${page}:${position}`, {
+          code: globalError.code,
+          message: globalError.message
+        });
         return null;
       }
 
-      if (data) {
-        console.log('✅ WEBHOOK FOUND:', data);
-        return data as WebhookAssignment;
-      } else {
-        console.log(`⚠️ No webhook assignment found for ${page}:${position}`);
-        return null;
+      if (globalData) {
+        console.log(`✅ Found global webhook assignment for ${page}:${position}`);
+        return globalData as WebhookAssignment;
       }
+
+      console.log(`⚠️ No webhook assignment found (org-specific or global) for ${page}:${position}`);
+      
+      // Auto-create default assignment for critical features if none exists
+      if (page === 'ManageFiles' && position === 'upload-section') {
+        console.log(`🔧 Auto-creating default global webhook assignment for ${page}:${position}`);
+        return await this.createDefaultGlobalAssignment(page, position);
+      }
+      
+      return null;
+
     } catch (error) {
       console.error('Error fetching webhook assignment:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Auto-create default global webhook assignment for critical features
+   * This ensures system continuity when administrators haven't set up assignments
+   */
+  private static async createDefaultGlobalAssignment(
+    page: string,
+    position: string
+  ): Promise<WebhookAssignment | null> {
+    try {
+      // First, try to find a suitable webhook to assign
+      const { data: availableWebhooks, error: webhookError } = await supabase
+        .from('webhooks')
+        .select('id, name, webhook_url')
+        .eq('is_active', true)
+        .or('name.ilike.*upload*,name.ilike.*file*,name.ilike.*process*')
+        .limit(1);
+
+      if (webhookError || !availableWebhooks || availableWebhooks.length === 0) {
+        console.warn('⚠️ No suitable webhooks found for auto-assignment creation');
+        return null;
+      }
+
+      const webhook = availableWebhooks[0];
+      
+      // Get current user session for created_by field
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+
+      if (!userId) {
+        console.warn('⚠️ No authenticated user for auto-assignment creation');
+        return null;
+      }
+
+      // Create the global assignment
+      const { data: newAssignment, error: createError } = await supabase
+        .from('webhook_button_assignments')
+        .insert({
+          organization_id: null, // Global assignment
+          user_id: userId,
+          feature_slug: 'knowledge-base',
+          feature_page: page,
+          button_position: position,
+          webhook_id: webhook.id,
+          label: `Auto-created: ${page} ${position}`,
+          description: `Automatically created global webhook assignment for ${page}:${position} to ensure system continuity`,
+          is_active: true,
+          created_by: userId,
+          updated_by: userId,
+        })
+        .select(`
+          *,
+          webhook:webhooks(
+            id,
+            name,
+            webhook_url,
+            is_active
+          )
+        `)
+        .single();
+
+      if (createError) {
+        console.error('❌ Failed to auto-create webhook assignment:', createError);
+        return null;
+      }
+
+      console.log(`✅ Auto-created global webhook assignment using webhook "${webhook.name}"`);
+      return newAssignment as WebhookAssignment;
+
+    } catch (error) {
+      console.error('❌ Error in auto-assignment creation:', error);
       return null;
     }
   }
@@ -222,7 +610,67 @@ export class UnifiedWebhookService {
 
       const webhook = assignment.webhook;
       
-      // Validate assignment and webhook
+      // Enhanced security validation (NEW - preserves existing functionality)
+      const securityValidation = await this.validateMultiTenantSecurity(
+        assignment as any,
+        context.organization_id,
+        context.user_id
+      );
+
+      if (!securityValidation.isValid) {
+        await this.logWebhookEvent('failure', {
+          assignmentId,
+          webhookId: webhook.id,
+          organizationId: context.organization_id,
+          userId: context.user_id,
+          page: context.page,
+          position: context.position,
+          error: `Security validation failed: ${securityValidation.error}`,
+          duration: Date.now() - startTime
+        });
+        throw new Error(`Security validation failed: ${securityValidation.error}`);
+      }
+
+      // Log security warnings (non-blocking)
+      if (securityValidation.warnings && securityValidation.warnings.length > 0) {
+        console.warn('🔒 Webhook security warnings:', {
+          assignmentId,
+          warnings: securityValidation.warnings
+        });
+      }
+
+      // Rate limiting check (NEW - preserves existing functionality)
+      const rateLimitCheck = await this.checkRateLimit(
+        context.organization_id,
+        webhook.id,
+        60 // 60 requests per minute per organization
+      );
+
+      if (!rateLimitCheck.allowed) {
+        await this.logWebhookEvent('failure', {
+          assignmentId,
+          webhookId: webhook.id,
+          organizationId: context.organization_id,
+          userId: context.user_id,
+          page: context.page,
+          position: context.position,
+          error: `Rate limit exceeded: ${rateLimitCheck.currentCount} requests this minute (max 60)`,
+          duration: Date.now() - startTime
+        });
+        throw new Error(`Rate limit exceeded. You have made ${rateLimitCheck.currentCount} requests this minute. Please wait until ${rateLimitCheck.resetTime?.toLocaleTimeString()} and try again.`);
+      }
+
+      // Log rate limit status (for monitoring)
+      if (rateLimitCheck.currentCount > 40) { // Warn when approaching limit
+        console.warn('🚦 Webhook rate limit warning:', {
+          organizationId: context.organization_id,
+          webhookId: webhook.id,
+          currentCount: rateLimitCheck.currentCount,
+          resetTime: rateLimitCheck.resetTime
+        });
+      }
+      
+      // Existing validation (preserved exactly as before)
       const validation = this.validateTriggerContext(
         assignment as any,
         context.organization_id,
@@ -336,9 +784,20 @@ export class UnifiedWebhookService {
 
       if (!assignment) {
         console.log('ℹ️ No webhook assignment found for file processing - skipping automatic processing');
+        
+        // Provide helpful guidance for administrators
+        const errorMessage = `File processing webhook not configured. 
+        
+Solutions:
+1. Go to Admin → Feature Management → Knowledge Base → Manage Webhooks
+2. Create a webhook assignment for "ManageFiles" page at "upload-section" position
+3. Or create a global webhook assignment to handle all organizations
+        
+Files were uploaded successfully and can be processed manually or after webhook setup.`;
+        
         return {
           success: false,
-          error: 'No webhook assigned for file processing. Files uploaded successfully but require manual processing setup.'
+          error: errorMessage
         };
       }
 
@@ -512,6 +971,101 @@ export class UnifiedWebhookService {
       return {
         success: false,
         error: errorMessage
+      };
+    }
+  }
+
+  /**
+   * Validate webhook assignment health and provide diagnostics
+   */
+  static async validateAssignmentHealth(
+    organizationId: string,
+    page: string,
+    position: string
+  ): Promise<{
+    isValid: boolean;
+    hasAssignment: boolean;
+    hasGlobalFallback: boolean;
+    webhookActive: boolean;
+    issues: string[];
+    suggestions: string[];
+  }> {
+    const issues: string[] = [];
+    const suggestions: string[] = [];
+    let hasAssignment = false;
+    let hasGlobalFallback = false;
+    let webhookActive = false;
+
+    try {
+      // Check organization-specific assignment
+      const { data: orgAssignment } = await supabase
+        .from('webhook_button_assignments')
+        .select(`*, webhook:webhooks(is_active, webhook_url)`)
+        .eq('organization_id', organizationId)
+        .eq('feature_page', page)
+        .eq('button_position', position)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (orgAssignment) {
+        hasAssignment = true;
+        webhookActive = orgAssignment.webhook?.is_active || false;
+        
+        if (!webhookActive) {
+          issues.push('Organization-specific webhook is inactive');
+          suggestions.push('Reactivate the webhook or assign a different active webhook');
+        }
+      }
+
+      // Check global fallback
+      const { data: globalAssignment } = await supabase
+        .from('webhook_button_assignments')
+        .select(`*, webhook:webhooks(is_active, webhook_url)`)
+        .is('organization_id', null)
+        .eq('feature_page', page)
+        .eq('button_position', position)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (globalAssignment) {
+        hasGlobalFallback = true;
+        if (!hasAssignment) {
+          webhookActive = globalAssignment.webhook?.is_active || false;
+        }
+        
+        if (!globalAssignment.webhook?.is_active) {
+          issues.push('Global fallback webhook is inactive');
+          suggestions.push('Contact system administrator to fix global webhook configuration');
+        }
+      }
+
+      // Generate recommendations
+      if (!hasAssignment && !hasGlobalFallback) {
+        issues.push('No webhook assignment found (organization-specific or global)');
+        suggestions.push('Create a webhook assignment in Admin → Feature Management');
+        suggestions.push('Contact administrator to set up global webhook assignments');
+      }
+
+      const isValid = (hasAssignment || hasGlobalFallback) && webhookActive;
+
+      return {
+        isValid,
+        hasAssignment,
+        hasGlobalFallback,
+        webhookActive,
+        issues,
+        suggestions
+      };
+
+    } catch (error) {
+      issues.push(`Validation error: ${error}`);
+      return {
+        isValid: false,
+        hasAssignment: false,
+        hasGlobalFallback: false,
+        webhookActive: false,
+        issues,
+        suggestions: ['Contact system administrator for technical support']
       };
     }
   }
