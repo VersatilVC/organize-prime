@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
 import { ForgotPasswordForm } from '../components/ForgotPasswordForm';
@@ -16,6 +17,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
   const handleSwitchToRegister = () => setCurrentTab('register');
   const handleSwitchToLogin = () => setCurrentTab('login');
   const handleSwitchToReset = () => setCurrentTab('reset');
+
 
   if (currentTab === 'reset') {
     return (
@@ -51,6 +53,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                 <RegisterForm onSwitchToLogin={handleSwitchToLogin} />
               </TabsContent>
             </Tabs>
+            
           </CardContent>
         </Card>
       </div>

@@ -8,13 +8,11 @@ import { visualizer } from 'rollup-plugin-visualizer';
 export default defineConfig(({ mode }) => ({
   server: {
     host: "localhost",
-    port: 5174,
-    // Re-enable HMR with proper configuration
-    hmr: {
-      port: 24679,
-    },
+    port: 5173,
+    // Disable HMR to prevent infinite reload loops
+    hmr: false,
     // Use strict port to prevent conflicts
-    strictPort: true,
+    strictPort: false,
     fs: {
       strict: false,
     },
@@ -35,36 +33,16 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: mode === 'production' ? [] : undefined,
       output: {
-        // Strategic chunking for better caching and performance
-        manualChunks: mode === 'production' ? {
-          // Vendor chunk for stable dependencies - better caching
-          vendor: [
-            'react', 
-            'react-dom', 
-            'react-router-dom',
-            '@tanstack/react-query'
-          ],
-          // UI chunk for design system components
-          ui: [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
-            'lucide-react'
-          ],
-          // Supabase chunk for API functionality
-          supabase: ['@supabase/supabase-js'],
-          // Utils chunk for utility libraries
-          utils: ['lodash', 'date-fns', 'zod', 'clsx', 'tailwind-merge'],
-          // Charts chunk for visualization
-          charts: ['recharts'],
-          // KB specific chunk for knowledge base features
-          knowledge: [
-            '@hello-pangea/dnd',
-            'react-dropzone',
-            'jspdf'
-          ]
+        // Simplified chunking to prevent React instance splitting
+        manualChunks: mode === 'production' ? (id) => {
+          // Keep React together in main bundle
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor';
+          }
+          // Group other vendor dependencies
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         } : undefined,
         
         // Optimize chunk file names for better caching
@@ -115,70 +93,45 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Ensure single React instance
-      "react": path.resolve(__dirname, "./node_modules/react"),
-      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
     },
+    dedupe: ['react', 'react-dom'],
   },
-  // Enhanced dependency optimization
+  // Enhanced dependency optimization with React deduplication
   optimizeDeps: {
     include: [
-      // Core React dependencies
+      // Core React dependencies - must be first
       'react',
       'react-dom',
       'react-router-dom',
       
       // State management
       '@tanstack/react-query',
-      '@tanstack/react-query-persist-client',
-      '@tanstack/query-sync-storage-persister',
       
       // UI components (frequently used)
       '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-dropdown-menu', 
       '@radix-ui/react-select',
       '@radix-ui/react-tabs',
       '@radix-ui/react-toast',
       'lucide-react',
       
       // Utility libraries
-      'class-variance-authority',
       'clsx',
       'tailwind-merge',
-      'date-fns',
-      'zod',
-      'lodash',
-      
-      // Supabase ecosystem - DISABLED to prevent auto-loading
-      // '@supabase/supabase-js',
-      // '@supabase/postgrest-js',
-      // '@supabase/realtime-js',
-      // '@supabase/storage-js',
-      
-      // Knowledge Base specific
-      'react-dropzone',
-      '@hello-pangea/dnd',
       
       // Forms and validation
       'react-hook-form',
-      '@hookform/resolvers',
     ],
-    // Force re-optimization when dependencies change
-    force: mode === 'development',
-    // Pre-bundle entries for faster startup - DISABLED auto-discovery to prevent unwanted imports
-    entries: [
-      'src/main.tsx',
-      // 'src/apps/**/index.ts',     // Disabled - might auto-import Supabase
-      // 'src/features/**/index.ts'  // Disabled - might auto-import Supabase
-    ],
-    // Exclude problematic dependencies
-    exclude: mode === 'production' ? ['@testing-library/*'] : [],
-    // Enable esbuild optimizations
+    // Force re-optimization to fix React issues
+    force: true,
+    // Exclude problematic dependencies that might duplicate React
+    exclude: ['@testing-library/*'],
+    // Ensure React compatibility
     esbuildOptions: {
       target: 'es2020',
-      supported: {
-        'top-level-await': true,
-      },
+      define: {
+        'process.env.NODE_ENV': mode === 'production' ? '"production"' : '"development"'
+      }
     },
   },
   // Fix ESM/CommonJS compatibility issues

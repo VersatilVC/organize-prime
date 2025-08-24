@@ -46,46 +46,6 @@ export interface UpdateKnowledgeBaseData {
 export const knowledgeBaseApi = {
   // Get all knowledge bases for an organization
   async getKnowledgeBases(orgId: string): Promise<KnowledgeBase[]> {
-    // Development bypass: Return mock knowledge bases for bypass user/org
-    if (import.meta.env.DEV && (globalThis as any).__devBypassActive && orgId === '8aa2da2b-d344-4ff2-beca-d8d34c8d5262') {
-      console.log('🚧 DEV: Using bypass knowledge bases data');
-      return [
-        {
-          id: 'mock-kb-1',
-          organization_id: orgId,
-          name: 'company_kb',
-          display_name: 'Company Knowledge Base',
-          description: 'Main company documentation and procedures',
-          embedding_model: 'text-embedding-ada-002',
-          chunk_size: 1000,
-          chunk_overlap: 200,
-          is_default: true,
-          is_premium: false,
-          status: 'active',
-          file_count: 5,
-          total_vectors: 1247,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'mock-kb-2',
-          organization_id: orgId,
-          name: 'product_kb',
-          display_name: 'Product Documentation',
-          description: 'Product guides and technical documentation',
-          embedding_model: 'text-embedding-ada-002',
-          chunk_size: 1000,
-          chunk_overlap: 200,
-          is_default: false,
-          is_premium: true,
-          status: 'active',
-          file_count: 12,
-          total_vectors: 3891,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      ];
-    }
 
     const { data, error } = await supabase
       .from('kb_configurations')

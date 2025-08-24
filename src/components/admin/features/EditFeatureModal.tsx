@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
 import { useFeatureValidation } from '@/hooks/database/useFeatureValidation';
 import { FeaturePageManager } from './FeaturePageManager';
-import { FeatureWebhookManager } from './FeatureWebhookManager';
+// Legacy webhook manager removed - use new webhook management system
 import { Icons } from '@/components/ui/icons';
 import { 
   Package, 
@@ -390,7 +390,10 @@ export function EditFeatureModal({ open, onOpenChange, feature }: EditFeatureMod
 
           {currentStep === 3 && feature && (
             <div className="space-y-4">
-              <FeatureWebhookManager feature={feature} />
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Webhook management has been moved to the new dedicated Webhook Management system.</p>
+                <p className="text-sm mt-2">Access it from the main navigation under "Webhook Management".</p>
+              </div>
             </div>
           )}
 

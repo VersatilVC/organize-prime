@@ -34,6 +34,8 @@ const LazyFeatureContent = createLazyRoute(() => import('@/pages/features/Featur
 const LazyManageKnowledgeBases = createLazyRoute(() => import('@/features/knowledge-base/pages/ManageKnowledgeBases'));
 const LazyManageFiles = createLazyRoute(() => import('@/features/knowledge-base/pages/ManageFiles'));
 const LazyChatPage = createLazyRoute(() => import('@/apps/knowledge-base/components/KBChat'));
+// Temporarily make this non-lazy for debugging
+const LazyAIChatSettings = React.lazy(() => import('@/apps/knowledge-base/pages/KnowledgeBaseAIChatSettings'));
 // ChatSettingsPage removed - now using simple chat interface
 
 interface FeatureRouteParams {
@@ -50,6 +52,7 @@ const componentMap: Record<string, React.ComponentType> = {
   'ManageKnowledgeBases': LazyManageKnowledgeBases,
   'ManageFiles': LazyManageFiles,
   'Chat': LazyChatPage,
+  'AIChatSettings': LazyAIChatSettings,
   // ChatSettings removed - now using simple chat interface
 };
 
@@ -210,12 +213,14 @@ const DynamicFeatureRoutes = React.memo(({ slug, featureConfig }: { slug: string
         
         const Component = componentMap[page.component] || LazyFeatureContent;
         
-        // ✅ Reduced debugging - only log missing components or in development
-        if (import.meta.env.DEV && !componentMap[page.component]) {
-          console.warn('⚠️ Missing component mapping:', {
+        // ✅ Debug component mapping
+        if (import.meta.env.DEV) {
+          console.log('🔍 Component mapping debug:', {
             component: page.component,
             relativePath,
-            willFallback: true
+            hasMapping: !!componentMap[page.component],
+            availableComponents: Object.keys(componentMap),
+            willFallback: !componentMap[page.component]
           });
         }
         
@@ -272,10 +277,8 @@ const FeatureContent = React.memo(({ slug }: { slug: string }) => {
   }
 
   // Check permission ONLY after both config and permissions are loaded
-  // Development bypass: Skip permission check entirely for bypass users
-  if (import.meta.env.DEV && (globalThis as any).__devBypassActive) {
-    console.log(`🚧 DEV: Bypassing feature access check for: ${slug}`);
-  } else if (!hasFeatureAccess(slug)) {
+  // BYPASS MECHANISM DISABLED PER USER REQUEST
+  if (!hasFeatureAccess(slug)) {
     return <FeatureAccessDenied slug={slug} />;
   }
 

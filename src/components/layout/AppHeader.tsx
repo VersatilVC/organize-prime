@@ -25,7 +25,7 @@ import { Search } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { MobileNavTrigger } from './MobileNav';
 import { OrganizationSwitcher } from '../OrganizationSwitcher';
-import { PreviewToggle } from '@/components/preview/PreviewToggle';
+// Preview system removed
 
 // Memoized role badge component to prevent re-calculations
 const RoleBadge = React.memo(({ role }: { role: string }) => {
@@ -245,7 +245,7 @@ export const AppHeader = React.memo(() => {
           </AdvancedSearchDialog>
           
           {/* Preview Mode Toggle (Super Admin Only) */}
-          <PreviewToggle />
+          {/* Preview system removed */}
           
           {/* Theme Toggle */}
           <ThemeToggle />

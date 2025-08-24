@@ -41,6 +41,7 @@ const SidebarInsetContent = React.memo(({ children }: { children: React.ReactNod
 SidebarInsetContent.displayName = 'SidebarInsetContent';
 
 export const AppLayout = React.memo(({ children }: AppLayoutProps) => {
+
   // Memoize sidebar provider props to prevent unnecessary re-renders
   const sidebarProviderProps = React.useMemo(() => ({
     defaultOpen: true

@@ -5,6 +5,12 @@ import { KBPlaceholderPage } from '@/apps/knowledge-base/components/KBPlaceholde
 const ManageKnowledgeBases = React.lazy(() => import('@/features/knowledge-base/pages/ManageKnowledgeBases'));
 const ManageFiles = React.lazy(() => import('@/features/knowledge-base/pages/ManageFiles'));
 const Chat = React.lazy(() => import('@/apps/knowledge-base/components/KBChat'));
+// Direct import to ensure component loads properly
+const AIChatSettings = React.lazy(() => 
+  import('@/apps/knowledge-base/pages/KnowledgeBaseAIChatSettings').then(module => ({ 
+    default: module.default 
+  }))
+);
 // ChatSettings removed - now using simple chat interface
 
 // Only implemented components - everything else gets placeholder
@@ -13,6 +19,7 @@ export const IMPLEMENTED_COMPONENTS: Set<string> = new Set([
   'Chat',      // KB Chat page is implemented
   'ManageKnowledgeBases', // KB management page
   'ManageFiles', // KB file management page
+  'AIChatSettings', // AI Chat Settings page is implemented
   // Analytics, Settings are NOT implemented - will show placeholders
 ]);
 
@@ -21,20 +28,23 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   'ManageKnowledgeBases': ManageKnowledgeBases,
   'ManageFiles': ManageFiles,
   'Chat': Chat,
+  'AIChatSettings': AIChatSettings,
 };
 
 export function getComponent(componentName: string): React.ComponentType<any> {
   const isDev = import.meta.env.DEV;
   
-  // Reduced logging to prevent flashing - only log when component not found
-  // if (isDev) {
-  //   console.log('🔍 ComponentRegistry: Looking for component:', componentName);
-  //   console.log('🔍 ComponentRegistry: IMPLEMENTED_COMPONENTS:', Array.from(IMPLEMENTED_COMPONENTS));
-  // }
+  // Enhanced debugging
+  if (isDev) {
+    console.log('🔍 ComponentRegistry: Looking for component:', componentName);
+    console.log('🔍 ComponentRegistry: IMPLEMENTED_COMPONENTS:', Array.from(IMPLEMENTED_COMPONENTS));
+    console.log('🔍 ComponentRegistry: Has component?', IMPLEMENTED_COMPONENTS.has(componentName));
+    console.log('🔍 ComponentRegistry: Available components:', Object.keys(COMPONENT_REGISTRY));
+  }
   
   // Always return placeholder unless explicitly marked as implemented
   if (!IMPLEMENTED_COMPONENTS.has(componentName)) {
-    if (isDev) console.log(`🔍 ComponentRegistry: Component "${componentName}" not implemented, using placeholder`);
+    if (isDev) console.log(`❌ ComponentRegistry: Component "${componentName}" not implemented, using placeholder`);
     const PlaceholderComponent = () => {
       // Reduced logging to prevent excessive re-renders
       return React.createElement(KBPlaceholderPage, {
@@ -48,7 +58,7 @@ export function getComponent(componentName: string): React.ComponentType<any> {
   
   const Component = COMPONENT_REGISTRY[componentName];
   if (!Component) {
-    if (isDev) console.log(`🔍 ComponentRegistry: Component "${componentName}" marked as implemented but not found in registry, using placeholder`);
+    if (isDev) console.log(`❌ ComponentRegistry: Component "${componentName}" marked as implemented but not found in registry, using placeholder`);
     const PlaceholderComponent = () => {
       // Reduced logging to prevent excessive re-renders
       return React.createElement(KBPlaceholderPage, {
@@ -61,6 +71,7 @@ export function getComponent(componentName: string): React.ComponentType<any> {
   }
   
   // Component found successfully
+  if (isDev) console.log(`✅ ComponentRegistry: Component "${componentName}" found successfully`);
   return Component;
 }
 

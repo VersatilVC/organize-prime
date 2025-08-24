@@ -141,8 +141,8 @@ export class KBFileProcessingService {
       
       // First, let's check what webhooks exist in the database
       const { data: allWebhooks, error: listError } = await supabase
-        .from('feature_webhooks')
-        .select('id, name, url, feature_id, is_active')
+        .from('webhooks')
+        .select('id, name, webhook_url, is_active')
         .limit(10);
         
       if (listError) {
@@ -153,8 +153,8 @@ export class KBFileProcessingService {
 
       // Now try to find the specific webhook we need
       const { data, error } = await supabase
-        .from('feature_webhooks')
-        .select('id, name, url, secret_key, headers, timeout_seconds, retry_attempts, is_active')
+        .from('webhooks')
+        .select('id, name, webhook_url, headers, is_active')
         .eq('name', this.WEBHOOK_NAME)
         .single();
 
@@ -163,22 +163,38 @@ export class KBFileProcessingService {
         
         // Try a broader search without feature_slug restriction
         const { data: fallbackData, error: fallbackError } = await supabase
-          .from('feature_webhooks')
-          .select('id, name, url, secret_key, headers, timeout_seconds, retry_attempts, is_active')
+          .from('webhooks')
+          .select('id, name, webhook_url, headers, is_active')
           .eq('is_active', true)
           .limit(1)
           .single();
           
         if (!fallbackError && fallbackData) {
           console.log('✅ Found active webhook as fallback:', fallbackData.name);
-          return fallbackData as WebhookConfig;
+          return {
+            id: fallbackData.id,
+            name: fallbackData.name,
+            url: fallbackData.webhook_url,
+            headers: fallbackData.headers || {},
+            timeout_seconds: 120, // Default timeout
+            retry_attempts: 3, // Default retries
+            is_active: fallbackData.is_active
+          } as WebhookConfig;
         }
         
         return null;
       }
 
-      console.log('✅ Found webhook config:', data.name, data.url);
-      return data as WebhookConfig;
+      console.log('✅ Found webhook config:', data.name, data.webhook_url);
+      return {
+        id: data.id,
+        name: data.name,
+        url: data.webhook_url,
+        headers: data.headers || {},
+        timeout_seconds: 120, // Default timeout
+        retry_attempts: 3, // Default retries
+        is_active: data.is_active
+      } as WebhookConfig;
     } catch (error) {
       console.error('❌ Error fetching webhook config:', error);
       return null;
@@ -214,21 +230,42 @@ export class KBFileProcessingService {
     }
 
     const payload = {
+      // Event identification
       event_type: 'file_uploaded',
       file_id: fileData.fileId,
       kb_id: fileData.kbId,
+      
+      // Organization context
       organization_id: fileData.organizationId,
+      
+      // File details
       file_name: fileData.fileName,
       file_path: fileData.filePath,
       file_size: fileData.fileSize,
       mime_type: fileData.mimeType,
+      
+      // User context
       uploaded_by: fileData.uploadedBy,
+      user_id: fileData.uploadedBy,
+      
+      // Timing
       uploaded_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      triggered_at: new Date().toISOString(),
+      
+      // Processing
       download_url: downloadUrl, // Direct download URL for N8N processing
+      user_triggered: false, // This is automatic file processing
+      
+      // Additional context
       webhook_config: {
         retry_attempts: config.retry_attempts,
         timeout_seconds: config.timeout_seconds
-      }
+      },
+      
+      // Browser context (if available from global)
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Server',
+      page_url: '/file-upload'
     };
 
     console.log('📋 Webhook payload prepared:', {
@@ -351,36 +388,21 @@ export class KBFileProcessingService {
     responseTime?: number
   ): Promise<void> {
     try {
-      const updateData: any = {
-        total_calls: supabase.sql`total_calls + 1`,
-        last_triggered: new Date().toISOString()
-      };
-
-      if (success) {
-        updateData.success_calls = supabase.sql`success_calls + 1`;
-        updateData.success_count = supabase.sql`success_count + 1`;
-      } else {
-        updateData.failed_calls = supabase.sql`failed_calls + 1`;
-        updateData.failure_count = supabase.sql`failure_count + 1`;
-      }
-
-      if (responseTime) {
-        // Update average response time
-        updateData.avg_response_time = supabase.sql`
-          CASE 
-            WHEN total_calls = 0 THEN ${responseTime}
-            ELSE ((avg_response_time * (total_calls - 1)) + ${responseTime}) / total_calls
-          END
-        `;
-      }
-
+      // Update last test status in the webhooks table
       const { error } = await supabase
-        .from('feature_webhooks')
-        .update(updateData)
+        .from('webhooks')
+        .update({
+          last_tested_at: new Date().toISOString(),
+          last_test_status: success ? 'success' : 'error',
+          last_error_message: success ? null : `HTTP ${statusCode}`,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', webhookId);
 
       if (error) {
         console.error('Failed to update webhook stats:', error);
+      } else {
+        console.log(`✅ Updated webhook stats for ${webhookId}: ${success ? 'success' : 'error'}`);
       }
     } catch (error) {
       console.error('Error updating webhook stats:', error);
@@ -411,8 +433,8 @@ export class KBFileProcessingService {
       }
 
       const { data: stats, error } = await supabase
-        .from('feature_webhooks')
-        .select('total_calls, success_calls, failed_calls, avg_response_time, last_triggered')
+        .from('webhooks')
+        .select('last_tested_at, last_test_status, last_error_message')
         .eq('id', config.id)
         .single();
 
@@ -426,16 +448,18 @@ export class KBFileProcessingService {
         };
       }
 
-      const totalCalls = stats.total_calls || 0;
-      const successCalls = stats.success_calls || 0;
-      const successRate = totalCalls > 0 ? (successCalls / totalCalls) * 100 : 0;
+      const isHealthy = config.is_active && stats.last_test_status === 'success';
+      const lastSuccessful = stats.last_tested_at && stats.last_test_status === 'success' 
+        ? new Date(stats.last_tested_at) 
+        : undefined;
 
       return {
-        isHealthy: config.is_active && successRate >= 50, // Healthy if >50% success rate
-        lastSuccessful: stats.last_triggered ? new Date(stats.last_triggered) : undefined,
-        totalCalls,
-        successRate,
-        avgResponseTime: stats.avg_response_time || 0
+        isHealthy,
+        lastSuccessful,
+        totalCalls: 0, // Not tracked in simplified table
+        successRate: stats.last_test_status === 'success' ? 100 : 0,
+        avgResponseTime: 0, // Not tracked in simplified table
+        lastError: stats.last_error_message || undefined
       };
     } catch (error) {
       console.error('Error getting webhook health:', error);

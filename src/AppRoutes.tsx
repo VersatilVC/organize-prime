@@ -1,266 +1,112 @@
 import * as React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { AuthGuard, GuestGuard } from '@/components/auth/AuthGuard';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { LoadingScreen, LayoutLoadingScreen } from '@/components/ui/loading-screen';
-import { createLazyRoute, lazyImportNamed } from '@/lib/lazy-import';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Enhanced lazy load components with retry mechanism
-const Index = createLazyRoute(() => import('@/pages/Index'));
-const AuthPage = lazyImportNamed(() => import('@/auth/pages/AuthPage'), 'AuthPage');
-const Dashboard = createLazyRoute(() => import('@/pages/Dashboard'));
-const Users = createLazyRoute(() => import('@/pages/Users'));
-const Organizations = createLazyRoute(() => import('@/pages/Organizations'));
-const ProfileSettings = createLazyRoute(() => import('@/pages/ProfileSettings'));
-const CompanySettings = createLazyRoute(() => import('@/pages/CompanySettings'));
-const SystemSettings = createLazyRoute(() => import('@/pages/SystemSettings'));
-const Feedback = createLazyRoute(() => import('@/pages/Feedback'));
-const MyFeedback = createLazyRoute(() => import('@/pages/MyFeedback'));
-const Notifications = createLazyRoute(() => import('@/pages/Notifications'));
-const Billing = createLazyRoute(() => import('@/pages/Billing'));
-const Help = createLazyRoute(() => import('@/pages/Help'));
-const FeedbackManagement = createLazyRoute(() => import('@/pages/admin/FeedbackManagement'));
-const WebhookManagement = createLazyRoute(() => import('@/pages/admin/WebhookManagement'));
-const SimpleFeatureRouter = lazyImportNamed(() => import('@/components/SimpleFeatureRouter'), 'SimpleFeatureRouter');
-const WebhookServiceTester = lazyImportNamed(() => import('@/test/WebhookServiceTester'), 'WebhookServiceTester');
-const NotFound = createLazyRoute(() => import('@/pages/NotFound'));
+// Import existing auth components - using relative paths to avoid resolution issues
+import { AuthGuard, GuestGuard } from './components/auth/AuthGuard';
+import { AppLayout } from './components/layout/AppLayout';
 
-// Use the new optimized loading components
-const RouteLoadingFallback: React.FC = () => <LoadingScreen message="Loading page..." />;
-const LayoutLoadingFallback: React.FC = () => <LayoutLoadingScreen />;
+// Simple lazy loading without complex retry logic
+const Index = React.lazy(() => import('./pages/Index'));
+const AuthPage = React.lazy(() => import('./auth/pages/AuthPage').then(m => ({ default: m.AuthPage })));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Users = React.lazy(() => import('./pages/Users'));
+const Organizations = React.lazy(() => import('./pages/Organizations'));
+const Feedback = React.lazy(() => import('./pages/Feedback'));
+const MyFeedback = React.lazy(() => import('./pages/MyFeedback'));
+const FeedbackManagement = React.lazy(() => import('./pages/admin/FeedbackManagement'));
+const WebhookManagement = React.lazy(() => import('./pages/WebhookManagement'));
+const AdminWebhookManagement = React.lazy(() => import('./pages/WebhookManagement'));
+const Notifications = React.lazy(() => import('./pages/Notifications'));
+const ProfileSettings = React.lazy(() => import('./pages/ProfileSettings'));
+const CompanySettings = React.lazy(() => import('./pages/CompanySettings'));
+const SystemSettings = React.lazy(() => import('./pages/SystemSettings'));
+const Help = React.lazy(() => import('./pages/Help'));
+const Billing = React.lazy(() => import('./pages/Billing'));
+
+// Feature router for dynamic feature routing
+const SimpleFeatureRouter = React.lazy(() => import('./components/SimpleFeatureRouter').then(m => ({ default: m.SimpleFeatureRouter })));
+
+// Simple loading fallback
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
+
+// Wrapper for protected pages with AppLayout
+const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
+  <React.Suspense fallback={<LoadingFallback />}>
+    <AuthGuard>
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </AuthGuard>
+  </React.Suspense>
+);
 
 export function AppRoutes() {
   return (
-    <ErrorBoundary>
-      <Routes>
-        {/* Public routes - no layout */}
-        <Route 
-          path="/" 
-          element={
-            <React.Suspense fallback={<RouteLoadingFallback />}>
-              <Index />
-            </React.Suspense>
-          } 
-        />
-        
-        <Route 
-          path="/auth" 
-          element={
-            <React.Suspense fallback={<RouteLoadingFallback />}>
-              <GuestGuard>
-                <AuthPage />
-              </GuestGuard>
-            </React.Suspense>
-          } 
-        />
+    <Routes>
+      {/* Public home page with auth logic built-in */}
+      <Route 
+        path="/" 
+        element={
+          <React.Suspense fallback={<LoadingFallback />}>
+            <Index />
+          </React.Suspense>
+        } 
+      />
+      
+      {/* Auth routes - only accessible when not logged in */}
+      <Route 
+        path="/auth" 
+        element={
+          <React.Suspense fallback={<LoadingFallback />}>
+            <GuestGuard>
+              <AuthPage />
+            </GuestGuard>
+          </React.Suspense>
+        } 
+      />
 
-        {/* Protected routes with layout */}
-        <Route 
-          path="/dashboard" 
-          element={
+      {/* Protected routes with sidebar */}
+      <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
+      <Route path="/users" element={<ProtectedPage><Users /></ProtectedPage>} />
+      <Route path="/organizations" element={<ProtectedPage><Organizations /></ProtectedPage>} />
+      <Route path="/feedback" element={<ProtectedPage><Feedback /></ProtectedPage>} />
+      <Route path="/feedback/my" element={<ProtectedPage><MyFeedback /></ProtectedPage>} />
+      <Route path="/admin/feedback" element={<ProtectedPage><FeedbackManagement /></ProtectedPage>} />
+      <Route path="/webhooks" element={<ProtectedPage><WebhookManagement /></ProtectedPage>} />
+      <Route path="/admin/webhooks" element={<ProtectedPage><AdminWebhookManagement /></ProtectedPage>} />
+      <Route path="/notifications" element={<ProtectedPage><Notifications /></ProtectedPage>} />
+      <Route path="/settings/profile" element={<ProtectedPage><ProfileSettings /></ProtectedPage>} />
+      <Route path="/settings/company" element={<ProtectedPage><CompanySettings /></ProtectedPage>} />
+      <Route path="/settings/system" element={<ProtectedPage><SystemSettings /></ProtectedPage>} />
+      <Route path="/help" element={<ProtectedPage><Help /></ProtectedPage>} />
+      <Route path="/billing" element={<ProtectedPage><Billing /></ProtectedPage>} />
+
+      {/* Feature routes - dynamic feature system */}
+      <Route 
+        path="/features/:slug/*" 
+        element={
+          <React.Suspense fallback={<LoadingFallback />}>
             <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Dashboard />
-                </React.Suspense>
-              </AppLayout>
+              <SimpleFeatureRouter />
             </AuthGuard>
-          } 
-        />
+          </React.Suspense>
+        } 
+      />
 
-        <Route 
-          path="/users" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Users />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
+      {/* Legacy route redirects */}
+      <Route path="/app" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/login" element={<Navigate to="/auth" replace />} />
+      <Route path="/register" element={<Navigate to="/auth" replace />} />
 
-        <Route 
-          path="/organizations" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Organizations />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/settings/profile" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <ProfileSettings />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/settings/company" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <CompanySettings />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/settings/system" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <SystemSettings />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/feedback" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Feedback />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/feedback/my" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <MyFeedback />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/admin/feedback" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <FeedbackManagement />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/admin/webhooks" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <WebhookManagement />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/notifications" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Notifications />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/billing" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Billing />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        <Route 
-          path="/help" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <Help />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        {/* Development/Testing Routes */}
-        <Route 
-          path="/test/webhook-services" 
-          element={
-            <AuthGuard>
-              <AppLayout>
-                <React.Suspense fallback={<LayoutLoadingFallback />}>
-                  <WebhookServiceTester />
-                </React.Suspense>
-              </AppLayout>
-            </AuthGuard>
-          } 
-        />
-
-        {/* Feature routes - simplified dynamic feature system */}
-        <Route 
-          path="/features/:slug/*" 
-          element={
-            <AuthGuard>
-              <React.Suspense fallback={<LayoutLoadingFallback />}>
-                <SimpleFeatureRouter />
-              </React.Suspense>
-            </AuthGuard>
-          } 
-        />
-
-        {/* Catch all route */}
-        <Route 
-          path="*" 
-          element={
-            <React.Suspense fallback={<RouteLoadingFallback />}>
-              <NotFound />
-            </React.Suspense>
-          } 
-        />
-      </Routes>
-    </ErrorBoundary>
+      {/* Catch all route - redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

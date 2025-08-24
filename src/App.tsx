@@ -9,13 +9,12 @@ import { AccessibilityProvider, SkipToContent } from './components/accessibility
 import { AccessibilityChecker } from './components/accessibility/AccessibilityChecker';
 import { ProgressiveEnhancementDemo } from './components/ProgressiveEnhancementDemo';
 import { AppRoutes } from './AppRoutes';
-import { registerServiceWorker } from './utils/serviceWorker';
+// import { registerServiceWorker } from './utils/serviceWorker'; // Temporarily disabled
 import { useRoutePreloader } from './hooks/useResourcePreloader';
 import { useBundlePerformance, useMemoryOptimization } from './hooks/usePerformanceMonitor';
 import { usePerformanceMonitoring, useLifecycleMonitoring } from './hooks/usePerformanceMonitoring';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { PreviewProvider } from '@/components/preview/PreviewController';
-import { ElementScanner } from '@/components/preview/ElementScanner';
+// Preview system removed - using simplified webhook management
 import { emergencyCircuitBreaker } from './lib/emergency-circuit-breaker';
 import './index.css';
 
@@ -33,11 +32,7 @@ const AppContent = React.memo(() => (
             <OrganizationProvider>
               <ErrorBoundary>
                 <PermissionProvider>
-                  <PreviewProvider>
-                    <ElementScanner>
-                      <AppRoutes />
-                    </ElementScanner>
-                  </PreviewProvider>
+                  <AppRoutes />
                 </PermissionProvider>
               </ErrorBoundary>
             </OrganizationProvider>
@@ -50,25 +45,24 @@ const AppContent = React.memo(() => (
 
 AppContent.displayName = 'AppContent';
 
+
 function App() {
+  // BYPASS MECHANISM DISABLED PER USER REQUEST
+  // User requested: "let's cancel the bypass it is causing too many issues"
+  // const isDevelopmentBypass = false; // Always disabled now
+
+
   // Initialize service worker only (feature configs handled server-side)
   React.useEffect(() => {
     try {
-      // Register service worker for progressive enhancement
-      registerServiceWorker({
-        onUpdate: (registration) => {
-          console.log('Service worker updated. New content will be available after refresh.');
-        },
-        onSuccess: (registration) => {
-          console.log('Service worker registered successfully.');
-        },
-        onOffline: () => {
-          console.log('App is working offline.');
-        },
-        onOnline: () => {
-          console.log('App is back online.');
-        }
-      });
+      // Disable service worker in development to prevent fetch errors
+      if (import.meta.env.PROD) {
+        // Register service worker for progressive enhancement (production only)
+        // Service worker temporarily disabled for debugging
+        console.log('Service worker registration skipped for debugging');
+      } else {
+        console.log('Service worker disabled in development to prevent caching issues.');
+      }
     } catch (error) {
       console.error('Failed to initialize app:', error);
     }

@@ -11,6 +11,7 @@ import { useFileUpload } from '../hooks/useFileUpload';
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
 import { ProcessingProgress } from './ProcessingProgress';
 import { cn } from '@/lib/utils';
+import { WebhookTriggerButton } from '@/components/webhooks/WebhookTriggerButton';
 
 interface FileUploadAreaProps {
   selectedKbId?: string;
@@ -191,19 +192,47 @@ export function FileUploadArea({ selectedKbId, onKbChange, className }: FileUplo
 
       {/* Selected Files List */}
       {selectedFiles.length > 0 && (
-        <Card>
+        <Card className="file-upload-section">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium">
                 Selected Files ({validFilesCount} valid)
               </h4>
-              <Button
-                onClick={handleUpload}
-                disabled={!currentKbId || validFilesCount === 0 || isUploading}
-                size="sm"
-              >
-                {isUploading ? 'Uploading...' : `Upload ${validFilesCount} files`}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleUpload}
+                  disabled={!currentKbId || validFilesCount === 0 || isUploading}
+                  size="sm"
+                  data-testid="file-upload-button"
+                  data-action="upload"
+                  className="file-upload-submit"
+                >
+                  {isUploading ? 'Uploading...' : `Upload ${validFilesCount} files`}
+                </Button>
+                
+                {/* Webhook trigger button - database-driven assignment */}
+                <WebhookTriggerButton
+                  featurePage="ManageFiles"
+                  buttonPosition="upload-section"
+                  context={{
+                    event_type: 'file_upload_ready',
+                    knowledgeBaseId: currentKbId,
+                    selectedFilesCount: validFilesCount,
+                    hasValidFiles: validFilesCount > 0,
+                    isUploading: isUploading,
+                    files: selectedFiles.map(f => ({
+                      name: f.file.name,
+                      size: f.file.size,
+                      type: f.file.type,
+                      hasError: !!f.error
+                    }))
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Trigger Webhook
+                </WebhookTriggerButton>
+              </div>
             </div>
 
             <div className="space-y-2">

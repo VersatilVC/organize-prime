@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { SimpleChat } from '@/components/SimpleChat';
-import { DebugSimpleChat } from '@/components/DebugSimpleChat';
+// Debug component removed for production
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConversationCRUD } from '@/hooks/useConversationCRUD';
@@ -11,7 +11,7 @@ import { Plus, MessageSquare, Loader2 } from 'lucide-react';
 export function KBChat() {
   const { role } = useUserRole();
   const isSuperAdmin = role === 'super_admin';
-  const [showDebug, setShowDebug] = useState(false);
+  // Debug mode removed for production
   const [activeConversationId, setActiveConversationId] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { createConversation } = useConversationCRUD();
@@ -96,16 +96,7 @@ export function KBChat() {
             </div>
             
             {/* Debug toggle - only for super admins */}
-            {isSuperAdmin && (
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => setShowDebug(!showDebug)}
-                className="ml-4 border-2 border-primary/20 bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/40 transition-all duration-300 font-semibold"
-              >
-                {showDebug ? '🔧 Production' : '🐛 Debug'} Mode
-              </Button>
-            )}
+            {/* Debug mode removed for production */}
           </div>
         </div>
 
@@ -113,14 +104,10 @@ export function KBChat() {
         <div className="flex-1 p-6 min-h-0">
           <div className="max-w-4xl mx-auto h-full">
             {activeConversationId ? (
-              showDebug && isSuperAdmin ? (
-                <DebugSimpleChat />
-              ) : (
                 <SimpleChat 
                   conversationId={activeConversationId}
                   onConversationCreated={handleConversationCreate}
                 />
-              )
             ) : (
               <div className="h-full flex items-center justify-center animate-fade-in">
                 <div className="text-center max-w-md mx-auto p-8">

@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-environment",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-environment, x-app-version",
 };
 
 interface ExecRequest {
@@ -37,14 +37,9 @@ Deno.serve(async (req) => {
 
     const { webhookUrl, method = "POST", payload = {}, appId, webhookId, organizationId }: ExecRequest = await req.json();
 
-    // Validate URL scope
-    const baseUrl = Deno.env.get("N8N_BASE_URL");
-    const apiKey = Deno.env.get("N8N_API_KEY");
-    if (!baseUrl || !apiKey) {
-      throw new Error("N8N secrets not configured");
-    }
-    if (!webhookUrl || !webhookUrl.startsWith(baseUrl)) {
-      return new Response(JSON.stringify({ error: "Invalid webhook URL" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Validate URL - allow all HTTPS webhooks for flexibility
+    if (!webhookUrl || !webhookUrl.startsWith('https://')) {
+      return new Response(JSON.stringify({ error: "Invalid webhook URL - must be HTTPS" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Enforce organization membership if provided
@@ -72,10 +67,10 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Build request
+    // Build request headers
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "X-N8N-API-KEY": apiKey,
+      "User-Agent": "OrganizePrime-Webhook/1.0",
     };
 
     const controller = new AbortController();

@@ -50,10 +50,7 @@ export default function ManageKnowledgeBases() {
   });
 
   // Check if user has admin access
-  // Development bypass: Always allow access in dev mode for bypass users
-  const canManageKB = import.meta.env.DEV && (globalThis as any).__devBypassActive 
-    ? true 
-    : (role === 'super_admin' || role === 'admin');
+  const canManageKB = (role === 'super_admin' || role === 'admin');
 
   // Use stable loading to prevent access denied flash during role loading
   const isCurrentlyLoading = roleLoading || isLoading;
@@ -68,7 +65,6 @@ export default function ManageKnowledgeBases() {
       stableLoading,
       canManageKB,
       currentOrganization: currentOrganization?.id,
-      bypassActive: (globalThis as any).__devBypassActive,
       timestamp: new Date().toISOString()
     });
   }

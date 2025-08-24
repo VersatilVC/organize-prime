@@ -27,20 +27,19 @@ import { AvailableFeaturesSection } from './features/AvailableFeaturesSection';
 import { AddFeatureModal } from './features/AddFeatureModal';
 import { FeatureConfigurationPanel } from './features/FeatureConfigurationPanel';
 import { WebhooksManagementSection } from './features/WebhooksManagementSection';
-import { AddWebhookModal } from './features/AddWebhookModal';
+// Legacy webhook components removed for production
 import { useSystemFeatures } from '@/hooks/database/useSystemFeatures';
-import { useFeatureWebhooks } from '@/hooks/database/useFeatureWebhooks';
 
 export function FeatureManagement() {
   const { toast } = useToast();
   const [selectedFeature, setSelectedFeature] = React.useState<string | null>(null);
   const [isAddFeatureOpen, setIsAddFeatureOpen] = React.useState(false);
-  const [isAddWebhookOpen, setIsAddWebhookOpen] = React.useState(false);
+  // Legacy webhook state removed
   
   const { features, isLoading: featuresLoading } = useSystemFeatures();
-  const { webhooks, isLoading: webhooksLoading } = useFeatureWebhooks();
+  // Legacy webhook loading removed
 
-  const isLoading = featuresLoading || webhooksLoading;
+  const isLoading = featuresLoading;
 
   if (isLoading) {
     return (
@@ -61,16 +60,7 @@ export function FeatureManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <AddWebhookModal 
-            open={isAddWebhookOpen}
-            onOpenChange={setIsAddWebhookOpen}
-            trigger={
-              <Button variant="outline" size="sm">
-                <Webhook className="h-4 w-4 mr-2" />
-                Add Webhook
-              </Button>
-            }
-          />
+          {/* Legacy webhook modal removed - use new webhook management system */}
           <AddFeatureModal 
             open={isAddFeatureOpen}
             onOpenChange={setIsAddFeatureOpen}

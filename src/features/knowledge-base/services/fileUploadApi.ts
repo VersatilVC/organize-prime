@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { KBFileProcessingService } from './KBFileProcessingService';
+import { UnifiedWebhookService } from '@/services/UnifiedWebhookService';
 
 export interface KBFile {
   id: string;
@@ -109,33 +109,45 @@ export async function uploadFileToKB(
       throw new Error(`Failed to save file record: ${dbError.message}`);
     }
 
-    // Trigger file processing webhook if configured
+    // Trigger webhook processing if assigned (replaces hardcoded webhook system)
     try {
-      await KBFileProcessingService.triggerFileProcessing({
-        fileId: fileRecord.id,
-        filePath: storagePath,
-        fileName: file.name,
-        kbId: kbId,
-        organizationId: organizationId,
-        mimeType: file.type,
-        fileSize: file.size,
-        uploadedBy: fileRecord.uploaded_by
-      });
-      console.log('✅ File processing webhook triggered successfully');
+      const webhookResult = await UnifiedWebhookService.triggerFileProcessingWebhook(
+        organizationId,
+        fileRecord.uploaded_by || '',
+        {
+          fileId: fileRecord.id,
+          fileName: file.name,
+          filePath: storagePath,
+          fileSize: file.size,
+          mimeType: file.type,
+          kbId: kbId
+        }
+      );
+
+      if (webhookResult.success) {
+        console.log('✅ File processing webhook triggered via dynamic assignment');
+      } else {
+        console.log('ℹ️ No file processing webhook assigned:', webhookResult.error);
+        // Update file status to indicate webhook setup needed
+        await supabase
+          .from('kb_files')
+          .update({
+            status: 'pending',
+            processing_error: webhookResult.error || 'No webhook assigned for automatic processing',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', fileRecord.id);
+      }
     } catch (webhookError) {
-      console.warn('File processing webhook not configured or failed:', webhookError);
-      
-      // Update file status to indicate manual processing needed
+      console.warn('File processing webhook failed:', webhookError);
       await supabase
         .from('kb_files')
         .update({
-          processing_status: 'pending',
-          processing_error: 'File processing webhook not configured. File uploaded successfully but requires manual processing.',
+          status: 'pending',
+          processing_error: 'Webhook processing failed - manual intervention required',
           updated_at: new Date().toISOString()
         })
         .eq('id', fileRecord.id);
-        
-      console.log('📋 File uploaded successfully, but automatic processing is not available. Manual processing may be required.');
     }
 
     return fileRecord as KBFile;
@@ -270,16 +282,65 @@ export async function deleteKBFile(fileId: string): Promise<void> {
 }
 
 /**
- * Retry processing for a failed file
+ * Retry processing for a failed file using dynamic webhook assignments
  */
 export async function retryFileProcessing(fileId: string): Promise<void> {
   try {
-    // Use the enhanced processing service for retry
-    const result = await KBFileProcessingService.retryFileProcessing(fileId);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Retry failed');
+    // Get file data
+    const { data: file, error } = await supabase
+      .from('kb_files')
+      .select(`
+        *,
+        kb_configuration:kb_configurations(id, name, display_name)
+      `)
+      .eq('id', fileId)
+      .single();
+
+    if (error || !file) {
+      throw new Error('File not found');
     }
+
+    console.log(`🔄 Retrying file processing for: ${file.file_name}`);
+
+    // Reset file status
+    await supabase
+      .from('kb_files')
+      .update({
+        status: 'pending',
+        processing_error: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', fileId);
+
+    // Trigger webhook processing using unified service
+    const webhookResult = await UnifiedWebhookService.triggerFileProcessingWebhook(
+      file.organization_id,
+      file.uploaded_by || '',
+      {
+        fileId: file.id,
+        fileName: file.file_name,
+        filePath: file.file_path,
+        fileSize: file.file_size,
+        mimeType: file.mime_type,
+        kbId: file.kb_id
+      }
+    );
+
+    if (!webhookResult.success) {
+      // Update status to show retry failed
+      await supabase
+        .from('kb_files')
+        .update({
+          status: 'error',
+          processing_error: webhookResult.error || 'Retry failed - no webhook assigned',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', fileId);
+        
+      throw new Error(webhookResult.error || 'Retry failed');
+    }
+
+    console.log('✅ File processing retry triggered via dynamic webhook assignment');
 
   } catch (error) {
     console.error('Error retrying file processing:', error);

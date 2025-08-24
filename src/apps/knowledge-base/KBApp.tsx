@@ -20,7 +20,10 @@ interface RouteConfig {
 }
 
 function DynamicRoute({ route }: { route: RouteConfig }) {
+  console.log('🔍 DynamicRoute: Looking for component:', route.component);
+  console.log('🔍 DynamicRoute: Route config:', route);
   const Component = getComponent(route.component);
+  console.log('🔍 DynamicRoute: Got component:', Component);
   const isAdminRoute = route.permissions?.includes('admin') || route.permissions?.includes('super_admin');
   
   const element = React.createElement(Component);

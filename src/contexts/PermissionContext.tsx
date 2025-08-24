@@ -58,11 +58,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
 
     return {
       hasFeatureAccess: (featureSlug: string) => {
-        // Development bypass: Grant access to all features for bypass user
-        if (import.meta.env.DEV && (globalThis as any).__devBypassActive) {
-          console.log(`🚧 DEV: Bypass granting access to feature: ${featureSlug}`);
-          return true;
-        }
+        // BYPASS MECHANISM DISABLED PER USER REQUEST
         
         // During loading, return true to prevent flash - let stable loading handle the timing
         if (finalLoading) {
