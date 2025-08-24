@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Webhook, Globe, TestTube, Info, Settings } from 'lucide-react';
 import { WebhookPanel } from '@/components/webhooks/WebhookPanel';
-import { SimpleWebhookAssignments } from '@/components/webhooks/SimpleWebhookAssignments';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useWebhooks } from '@/hooks/useWebhooks';
 
@@ -122,7 +121,33 @@ export default function WebhookManagement() {
           </TabsContent>
 
           <TabsContent value="assignments" className="space-y-4">
-            <SimpleWebhookAssignments />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Webhook Assignments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Webhook assignments</strong> are now managed through the Feature Management system. 
+                    Go to <strong>Feature Management → Edit Feature → Step 3: Manage Webhooks</strong> to assign 
+                    webhooks to specific feature pages and button positions.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="text-center py-8 text-muted-foreground">
+                  <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">Feature-Based Assignments</h3>
+                  <p className="text-sm max-w-md mx-auto">
+                    Webhook assignments are now organized by feature to provide better control and organization. 
+                    Each feature can have its own set of webhook assignments for different pages and interactions.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
