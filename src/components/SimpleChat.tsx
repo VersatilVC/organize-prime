@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SimpleChatService, type ChatMessage } from '@/services/SimpleChatService';
 import { useSimpleChat } from '@/hooks/useSimpleChat';
 import { cn } from '@/lib/utils';
+import { useKBAIChatSettings } from '@/apps/knowledge-base/hooks/useKBAIChatSettings';
 
 interface SimpleChatProps {
   conversationId?: string;
@@ -18,6 +19,7 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
   const [currentConversationId, setCurrentConversationId] = useState(conversationId || '');
   const [messageInput, setMessageInput] = useState('');
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const { settings: chatSettings } = useKBAIChatSettings();
 
   const {
     messages,
@@ -39,7 +41,7 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
   useEffect(() => {
     if (!conversationId && !currentConversationId && !isCreatingConversation) {
       setIsCreatingConversation(true);
-      SimpleChatService.createConversation('New Chat')
+      SimpleChatService.createConversation('New Chat', chatSettings?.custom_greeting)
         .then((newConversationId) => {
           setCurrentConversationId(newConversationId);
           onConversationCreated?.(newConversationId);
@@ -95,22 +97,11 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
   }
 
   return (
-    <div className={cn("h-full flex flex-col bg-gradient-to-br from-background to-muted/10 border rounded-2xl shadow-xl backdrop-blur-sm", className)}>
-      {/* Header */}
-      <div className="flex items-center gap-2 p-4 border-b border-border/50 bg-gradient-to-r from-background/80 to-muted/20 backdrop-blur-lg rounded-t-2xl">
-        <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
-          <Bot className="h-4 w-4 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold tracking-tight">AI Assistant</h2>
-          <p className="text-xs text-muted-foreground">Ready to help you</p>
-        </div>
-      </div>
-      
+    <div className={cn("h-full flex flex-col bg-background", className)}>
       {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background via-background/50 to-muted/30"
+        className="flex-1 overflow-y-auto p-4 space-y-4"
       >
           {isLoading && messages.length === 0 ? (
             <div className="flex items-center justify-center h-full animate-fade-in">
@@ -151,7 +142,7 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
         </div>
 
       {/* Sticky Input Area */}
-      <div className="border-t border-border/50 bg-gradient-to-r from-background/95 via-background to-background/95 backdrop-blur-lg p-4 sticky bottom-0 rounded-b-2xl">
+      <div className="border-t border-border/50 bg-background p-4 sticky bottom-0">
         <div className="flex gap-3 items-end">
           <div className="flex-1">
             <Input
@@ -160,14 +151,14 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything..."
               disabled={isProcessing}
-              className="min-h-[40px] resize-none border-2 border-border/50 bg-background/50 backdrop-blur-sm focus:border-primary/50 focus:bg-background/80 transition-all duration-300 text-sm px-4 py-3 rounded-xl shadow-inner"
+              className="min-h-[40px] resize-none border border-border focus:border-primary transition-colors text-sm px-4 py-3"
             />
           </div>
           <Button
             onClick={handleSendMessage}
             disabled={!messageInput.trim() || isProcessing}
             size="default"
-            className="h-[40px] w-[40px] p-0 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 bg-gradient-to-r from-primary to-primary/90"
+            className="h-[40px] w-[40px] p-0"
           >
             {isProcessing ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -1059,4 +1059,212 @@ KBChat (Main Layout)
 - **Database Direct Access**: AI assistant can query and modify database directly
 - **Real-time Monitoring**: Live conversation and message status updates
 
+## Latest Update: Advanced AI Chat System Enhancement (August 25, 2025)
+
+### 🆕 Major Features Implemented
+
+#### 1. AI Prompts Database System
+**Purpose**: Store AI chat prompts for N8N workflow integration with multi-tenant, multi-feature support.
+
+**New Database Table: `ai_prompts`**
+```sql
+CREATE TABLE ai_prompts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  feature_slug TEXT NOT NULL, -- 'knowledge-base', 'content', etc.
+  prompt_type TEXT NOT NULL, -- 'system', 'user_template', 'assistant_instructions'
+  name TEXT NOT NULL,
+  description TEXT,
+  system_prompt TEXT,
+  user_prompt_template TEXT,
+  assistant_instructions TEXT,
+  variables JSONB DEFAULT '{}',
+  settings JSONB DEFAULT '{}',
+  version INTEGER NOT NULL DEFAULT 1,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(organization_id, feature_slug, prompt_type, name, version)
+);
+```
+
+**Features:**
+- **Multi-tenant isolation**: Organization-scoped prompts with RLS policies
+- **Feature-specific**: Different prompts for knowledge-base, content, etc.
+- **Version control**: Track prompt versions and maintain history
+- **Flexible structure**: Support system prompts, user templates, and assistant instructions
+- **Audit trail**: Created/updated by tracking with timestamps
+- **Variable substitution**: JSONB field for dynamic prompt variables
+
+#### 2. AI Chat Settings Page Enhancement
+**Implemented Changes:**
+- **Removed legacy components**: Test webhook button and duplicate webhooks card
+- **Added additional_chat_instructions field**: 500-character limit for custom AI behavior
+- **Enhanced form validation**: Real-time character counting and validation
+- **Auto-save functionality**: Seamless settings persistence
+
+**Database Schema Update:**
+```sql
+ALTER TABLE kb_ai_chat_settings 
+ADD COLUMN additional_chat_instructions TEXT;
+```
+
+**Key Features:**
+- **Custom Instructions Field**: Allow users to add specific AI behavior guidelines
+- **Character Limiting**: Real-time validation with visual feedback
+- **Form Integration**: Seamless integration with existing settings form
+- **Webhook Integration**: Settings trigger N8N workflows for prompt generation
+
+#### 3. Dynamic Assistant Name System
+**Implementation**: Dynamic display of custom assistant names across chat interface
+
+**Code Changes:**
+- **KBChat.tsx**: Dynamic header with assistant name from settings
+- **Real-time Updates**: Assistant name changes reflect immediately
+- **Fallback Handling**: Graceful degradation to default "AI Chat" name
+
+```typescript
+// Dynamic assistant name implementation
+const { settings: chatSettings } = useKBAIChatSettings();
+const assistantName = chatSettings?.assistant_name || 'AI Chat';
+const chatSubtitle = `Chat with ${chatSettings?.assistant_name || 'AI'} to get instant answers and insights.`;
+```
+
+**Features:**
+- **Live Updates**: Name changes appear instantly without page refresh
+- **Context-Aware**: Different names for different organizations/features
+- **User Experience**: Personalized chat interface with custom branding
+
+#### 4. Custom Greeting System
+**Purpose**: Automatically display custom greetings when users start new conversations
+
+**Implementation Details:**
+- **SimpleChatService Enhancement**: Modified `createConversation()` to accept greeting parameter
+- **Auto-insertion**: Custom greeting inserted as first assistant message
+- **Metadata Tracking**: Greeting messages marked with `is_greeting: true` metadata
+- **Settings Integration**: Greetings sourced from `kb_ai_chat_settings.custom_greeting`
+
+```typescript
+// Custom greeting implementation
+static async createConversation(title: string, customGreeting?: string): Promise<string> {
+  // ... create conversation logic ...
+  
+  if (customGreeting && customGreeting.trim()) {
+    await supabase.from('kb_messages').insert({
+      conversation_id: conversation.id,
+      organization_id: membershipResult.data.organization_id,
+      message_type: 'assistant',
+      content: customGreeting.trim(),
+      processing_status: 'completed',
+      metadata: { is_greeting: true }
+    });
+  }
+  return conversation.id;
+}
+```
+
+**Features:**
+- **Automatic Display**: Greetings appear immediately when new conversations start
+- **Persistent Storage**: Greetings saved in message history for reference
+- **Customizable**: Each organization can set unique greeting messages
+- **Seamless Integration**: Works with existing conversation management system
+
+#### 5. SimpleChat UI/UX Overhaul
+**Major Design Improvements:**
+- **Removed card styling**: Eliminated borders, shadows, and rounded corners from chat container
+- **Full-width layout**: Chat interface now fills entire conversation area
+- **Streamlined input**: Simplified input area without card-like appearance
+- **Clean aesthetics**: Removed excessive gradients and visual effects
+
+**Code Changes:**
+```typescript
+// Before: Card-wrapped with heavy styling
+<div className="h-full flex flex-col bg-gradient-to-br from-background to-muted/10 border rounded-2xl shadow-xl backdrop-blur-sm">
+
+// After: Clean, full-width layout  
+<div className="h-full flex flex-col bg-background">
+```
+
+**UI Improvements:**
+- **Removed internal header**: Eliminated redundant "AI Assistant" title
+- **Simplified input styling**: Clean, minimal input field design
+- **Better space utilization**: Chat messages fill entire available area
+- **Improved readability**: Enhanced text formatting and spacing
+
+### 🔧 Technical Implementation Summary
+
+#### Database Enhancements
+1. **New `ai_prompts` table** with comprehensive prompt management
+2. **Enhanced `kb_ai_chat_settings`** with additional_chat_instructions field
+3. **RLS policies applied** for multi-tenant isolation
+4. **Indexes and constraints** for optimal performance
+5. **Audit triggers** for tracking changes
+
+#### Service Layer Updates
+- **SimpleChatService.createConversation()**: Enhanced with custom greeting support
+- **Comprehensive logging**: Step-by-step debugging for webhook integration
+- **Error handling**: Robust error reporting and recovery mechanisms
+- **90-second timeouts**: Extended processing time for complex workflows
+
+#### Frontend Architecture
+- **useKBAIChatSettings hook**: Real-time settings integration across components
+- **Dynamic UI updates**: Settings changes reflect immediately
+- **Enhanced form validation**: Real-time character counting and validation
+- **Improved UX**: Streamlined, card-free chat interface
+
+#### React Query Integration
+- **Optimistic updates**: Immediate UI feedback for all operations
+- **Smart caching**: Efficient data fetching and invalidation
+- **Error boundaries**: Graceful error handling with user feedback
+- **Real-time subscriptions**: Live updates across sessions
+
+### 🚀 Production Status
+
+#### Live Features (August 25, 2025)
+- **AI Prompts System**: Ready for N8N workflow integration
+- **Enhanced Settings Page**: Clean, user-friendly configuration
+- **Dynamic Assistant Names**: Personalized chat experience
+- **Custom Greetings**: Automatic welcome messages
+- **Streamlined Chat UI**: Modern, clean interface design
+
+#### Database Migrations Applied
+```sql
+-- AI Prompts table with full feature set
+CREATE TABLE ai_prompts (...);
+ALTER TABLE ai_prompts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_isolation" ON ai_prompts ...;
+
+-- Enhanced chat settings
+ALTER TABLE kb_ai_chat_settings 
+ADD COLUMN additional_chat_instructions TEXT;
+
+-- Optimized indexes
+CREATE INDEX idx_ai_prompts_org_feature ON ai_prompts(organization_id, feature_slug);
+CREATE INDEX idx_ai_prompts_active ON ai_prompts(is_active) WHERE is_active = true;
+```
+
+#### System Architecture Updates
+```
+KBChat (Enhanced Layout)
+├── Dynamic Header (with custom assistant name)
+├── ConversationSidebar (existing)
+└── SimpleChat (streamlined UI)
+    ├── Custom Greeting (auto-inserted)
+    ├── Message Display (full-width)
+    └── Clean Input Area (simplified styling)
+
+Settings Integration Flow:
+AI Chat Settings → Database → N8N Webhook → AI Prompts → Chat Experience
+```
+
+#### Next Development Priorities
+1. **N8N Workflow Testing**: Validate prompt generation workflows
+2. **AI Prompts UI**: Admin interface for managing prompts
+3. **Advanced Personalization**: Role-based prompt variations
+4. **Analytics Integration**: Track prompt effectiveness and usage
+5. **Multi-language Support**: Internationalization for prompts and greetings
+
 This document serves as the primary reference for understanding the OrganizePrime application architecture and should be updated as the system evolves.

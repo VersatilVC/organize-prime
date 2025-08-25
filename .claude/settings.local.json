@@ -79,6 +79,7 @@
       "mcp__playwright__browser_file_upload",
       "Read(/c:\\Users\\ilanh\\Downloads/**)",
       "Read(/c:\\Users\\ilanh\\Downloads/**)",
+      "Read(/c:\\Users\\ilanh\\Downloads/**)",
       "Read(/c:\\Users\\ilanh\\Downloads/**)"
     ],
     "deny": [],

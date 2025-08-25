@@ -5,6 +5,7 @@ import { SimpleChat } from '@/components/SimpleChat';
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConversationCRUD } from '@/hooks/useConversationCRUD';
+import { useKBAIChatSettings } from '../hooks/useKBAIChatSettings';
 import { cn } from '@/lib/utils';
 import { Plus, MessageSquare, Loader2 } from 'lucide-react';
 
@@ -15,6 +16,11 @@ export function KBChat() {
   const [activeConversationId, setActiveConversationId] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { createConversation } = useConversationCRUD();
+  const { settings: chatSettings, isLoading: isLoadingSettings } = useKBAIChatSettings();
+
+  // Dynamic assistant name with fallback
+  const assistantName = chatSettings?.assistant_name || 'AI Chat';
+  const chatSubtitle = `Chat with ${chatSettings?.assistant_name || 'AI'} to get instant answers and insights.`;
 
   const handleConversationSelect = (conversationId: string) => {
     setActiveConversationId(conversationId);
@@ -82,7 +88,7 @@ export function KBChat() {
               <div>
                 <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
                   <h1 className="text-lg md:text-2xl font-bold tracking-wide bg-gradient-to-r from-foreground via-primary/80 to-foreground/80 bg-clip-text text-transparent">
-                    AI Chat
+                    {assistantName}
                   </h1>
                   <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
@@ -90,7 +96,7 @@ export function KBChat() {
                   </div>
                 </div>
                 <p className="text-muted-foreground text-xs md:text-sm font-medium leading-relaxed">
-                  Chat with AI to get instant answers and insights.
+                  {chatSubtitle}
                 </p>
               </div>
             </div>

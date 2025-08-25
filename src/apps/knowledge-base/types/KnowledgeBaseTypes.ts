@@ -38,6 +38,7 @@ export interface KBAIChatSettings {
   communication_style: AIChatCommunicationStyle;
   response_preferences: AIChatResponsePreferences;
   custom_greeting?: string;
+  additional_chat_instructions?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -49,6 +50,7 @@ export interface KBAIChatSettingsInput {
   communication_style: AIChatCommunicationStyle;
   response_preferences: AIChatResponsePreferences;
   custom_greeting?: string;
+  additional_chat_instructions?: string;
 }
 
 // AI Chat Settings validation schema compatible with Zod
@@ -70,5 +72,9 @@ export const AIChatSettingsValidation = {
   custom_greeting: {
     required: false,
     maxLength: 200,
+  },
+  additional_chat_instructions: {
+    required: false,
+    maxLength: 500,
   },
 } as const;

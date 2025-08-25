@@ -16,8 +16,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useKBAIChatSettings } from '../hooks/useKBAIChatSettings';
 import { KBPermissionGuard } from '../components/shared/KBPermissionGuard';
-import { WebhookPanel } from '@/components/webhooks/WebhookPanel';
-import { WebhookTriggerButton } from '@/components/webhooks/WebhookTriggerButton';
 import type { KBAIChatSettingsInput, AIChatTone, AIChatCommunicationStyle } from '../types/KnowledgeBaseTypes';
 
 // Zod validation schema
@@ -33,6 +31,11 @@ const settingsSchema = z.object({
   
   custom_greeting: z.string()
     .max(200, 'Greeting must be 200 characters or less')
+    .optional()
+    .or(z.literal('')),
+  
+  additional_chat_instructions: z.string()
+    .max(500, 'Additional instructions must be 500 characters or less')
     .optional()
     .or(z.literal('')),
   
@@ -179,6 +182,7 @@ export default function KnowledgeBaseAIChatSettings() {
         communication_style: settings.communication_style,
         response_preferences: settings.response_preferences,
         custom_greeting: settings.custom_greeting || '',
+        additional_chat_instructions: settings.additional_chat_instructions || '',
       });
     }
   }, [settings, isLoading, reset]);
@@ -218,6 +222,7 @@ export default function KnowledgeBaseAIChatSettings() {
         communication_style: data.communication_style,
         response_preferences: data.response_preferences,
         custom_greeting: data.custom_greeting || undefined,
+        additional_chat_instructions: data.additional_chat_instructions || undefined,
       };
 
       await saveSettings(settingsInput);
@@ -248,6 +253,7 @@ export default function KnowledgeBaseAIChatSettings() {
   // Character counters
   const assistantNameLength = watch('assistant_name')?.length || 0;
   const greetingLength = watch('custom_greeting')?.length || 0;
+  const instructionsLength = watch('additional_chat_instructions')?.length || 0;
 
   if (isLoading) {
     return (
@@ -453,6 +459,30 @@ export default function KnowledgeBaseAIChatSettings() {
                   </p>
                 )}
               </div>
+
+              <Separator />
+
+              {/* Additional Chat Instructions */}
+              <div className="space-y-2">
+                <Label htmlFor="additional_chat_instructions">Additional Chat Instructions (Optional)</Label>
+                <Textarea
+                  id="additional_chat_instructions"
+                  placeholder="Add any specific instructions for how the AI should behave, what topics to focus on, or any special guidelines..."
+                  className="min-h-[100px] resize-none"
+                  {...register('additional_chat_instructions')}
+                />
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-muted-foreground">
+                    Provide additional context or specific instructions for the AI assistant
+                  </p>
+                  <CharacterCounter current={instructionsLength} max={500} />
+                </div>
+                {errors.additional_chat_instructions && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.additional_chat_instructions.message}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -490,31 +520,11 @@ export default function KnowledgeBaseAIChatSettings() {
                     )}
                     {isSaving ? 'Saving...' : 'Save Settings'}
                   </Button>
-                  
-                  <WebhookTriggerButton
-                    featurePage="AIChatSettings"
-                    buttonPosition="header-actions"
-                    context={{
-                      event_type: 'settings_updated',
-                      settings: watch(),
-                    }}
-                    variant="outline"
-                  >
-                    Test Webhook
-                  </WebhookTriggerButton>
                 </div>
               </div>
             </CardContent>
           </Card>
         </form>
-
-        {/* Simple Webhook Configuration */}
-        <section className="space-y-6">
-          <WebhookPanel 
-            title="Webhooks"
-            description="Add your N8N webhook URLs and assign them to buttons"
-          />
-        </section>
       </section>
     </KBPermissionGuard>
   );

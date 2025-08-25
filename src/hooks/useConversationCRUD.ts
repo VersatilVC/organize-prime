@@ -2,16 +2,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SimpleChatService } from '@/services/SimpleChatService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKBAIChatSettings } from '@/apps/knowledge-base/hooks/useKBAIChatSettings';
 
 export function useConversationCRUD() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { settings: chatSettings } = useKBAIChatSettings();
 
   const conversationsQueryKey = ['conversations', user?.id];
 
   const createConversation = useMutation({
-    mutationFn: (title: string) => SimpleChatService.createConversation(title),
+    mutationFn: (title: string) => SimpleChatService.createConversation(title, chatSettings?.custom_greeting),
     onSuccess: (conversationId) => {
       queryClient.invalidateQueries({ queryKey: conversationsQueryKey });
       toast({

@@ -265,7 +265,7 @@ export class SimpleChatService {
   /**
    * Create a new conversation
    */
-  static async createConversation(title: string): Promise<string> {
+  static async createConversation(title: string, customGreeting?: string): Promise<string> {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error('User not authenticated');
 
@@ -305,6 +305,32 @@ export class SimpleChatService {
       .single();
 
     if (error) throw new Error(`Failed to create conversation: ${error.message}`);
+
+    // If custom greeting provided, insert it as first assistant message
+    if (customGreeting && customGreeting.trim()) {
+      try {
+        await supabase
+          .from('kb_messages')
+          .insert({
+            conversation_id: conversation.id,
+            organization_id: membershipResult.data.organization_id,
+            message_type: 'assistant',
+            content: customGreeting.trim(),
+            processing_status: 'completed',
+            sources: [],
+            metadata: { 
+              is_greeting: true,
+              timestamp: new Date().toISOString() 
+            }
+          });
+        
+        console.log('✅ Custom greeting message inserted for conversation:', conversation.id);
+      } catch (greetingError) {
+        // Don't fail conversation creation if greeting fails
+        console.warn('⚠️ Failed to insert custom greeting:', greetingError);
+      }
+    }
+
     return conversation.id;
   }
 
