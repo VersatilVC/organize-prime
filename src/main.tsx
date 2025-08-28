@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
 import { initializeEnvironment } from './lib/env-validation'
+import './lib/fix-feature-ordering' // Initialize feature ordering utilities
 
 // Switch between minimal and full app for debugging
 const USE_MINIMAL_APP = false; // Now using full app

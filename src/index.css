@@ -102,8 +102,25 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
+  /* Default: Allow scrolling for regular pages */
+  html, body {
     @apply bg-background text-foreground;
+    height: 100vh;
+  }
+  
+  #root {
+    height: 100vh;
+  }
+
+  /* Chat mode: Fixed viewport height with no scrolling */
+  html.chat-mode, body.chat-mode {
+    overflow: hidden;
+    max-height: 100vh;
+  }
+
+  #root.chat-mode {
+    overflow: hidden;
+    max-height: 100vh;
   }
 }
 

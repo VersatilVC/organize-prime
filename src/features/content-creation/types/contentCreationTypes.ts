@@ -170,3 +170,151 @@ export const CONTENT_STATUSES = [
   { value: 'approved', label: 'Approved' },
   { value: 'published', label: 'Published' }
 ] as const;
+
+// Content Creation Settings Types
+export interface ContentType {
+  id: string;
+  organization_id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  type_category: 'major' | 'derivative' | 'both';
+  target_word_count?: number | null;
+  word_count_range: Record<string, any>;
+  examples: Array<{ type: 'file' | 'url'; value: string; description?: string }>;
+  style_guidelines?: string | null;
+  tone_preferences: string[];
+  prompt_template_id?: string | null;
+  custom_instructions?: string | null;
+  required_sections: string[];
+  usage_count: number;
+  last_used_at?: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TargetAudience {
+  id: string;
+  organization_id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  company_types: string[];
+  industries: string[];
+  company_sizes: string[];
+  job_titles: string[];
+  job_levels: string[];
+  departments: string[];
+  demographics: Record<string, any>;
+  interests: string[];
+  pain_points: string[];
+  goals: string[];
+  preferred_content_formats: string[];
+  communication_style?: string | null;
+  content_consumption_habits: Record<string, any>;
+  ai_segments: Record<string, any>;
+  segment_analysis?: string | null;
+  usage_count: number;
+  last_used_at?: string | null;
+  is_active: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Form types for content creation settings
+export interface CreateContentTypeForm {
+  name: string;
+  description?: string;
+  type_category: 'major' | 'derivative' | 'both';
+  target_word_count?: number;
+  examples?: Array<{ type: 'file' | 'url'; value: string; description?: string }>;
+  style_guidelines?: string;
+  custom_instructions?: string;
+  required_sections?: string[];
+  is_active?: boolean;
+  is_default?: boolean;
+}
+
+export interface UpdateContentTypeForm extends Partial<CreateContentTypeForm> {
+  id: string;
+}
+
+export interface CreateTargetAudienceForm {
+  name: string;
+  description?: string;
+  company_types?: string[];
+  industries?: string[];
+  company_sizes?: string[];
+  job_titles?: string[];
+  job_levels?: string[];
+  departments?: string[];
+  demographics?: Record<string, any>;
+  interests?: string[];
+  pain_points?: string[];
+  goals?: string[];
+  preferred_content_formats?: string[];
+  communication_style?: string;
+  content_consumption_habits?: Record<string, any>;
+  ai_segments?: Record<string, any>;
+  segment_analysis?: string;
+  is_active?: boolean;
+}
+
+export interface UpdateTargetAudienceForm extends Partial<CreateTargetAudienceForm> {
+  id: string;
+}
+
+// Constants for the settings forms
+export const CONTENT_TYPE_CATEGORIES = [
+  { value: 'major', label: 'Major Content Type' },
+  { value: 'derivative', label: 'Derivative Content Type' },
+  { value: 'both', label: 'Both Major & Derivative' }
+] as const;
+
+export const COMPANY_SIZES = [
+  { value: '1-10', label: '1-10 employees' },
+  { value: '11-50', label: '11-50 employees' },
+  { value: '51-200', label: '51-200 employees' },
+  { value: '201-1000', label: '201-1000 employees' },
+  { value: '1000+', label: '1000+ employees' }
+] as const;
+
+export const JOB_LEVELS = [
+  { value: 'entry', label: 'Entry Level' },
+  { value: 'mid', label: 'Mid Level' },
+  { value: 'senior', label: 'Senior Level' },
+  { value: 'executive', label: 'Executive Level' }
+] as const;
+
+export const COMMUNICATION_STYLES = [
+  { value: 'direct', label: 'Direct & Concise' },
+  { value: 'detailed', label: 'Detailed & Comprehensive' },
+  { value: 'conversational', label: 'Conversational' },
+  { value: 'formal', label: 'Formal & Professional' },
+  { value: 'technical', label: 'Technical & Precise' },
+  { value: 'storytelling', label: 'Story-driven' }
+] as const;
+
+export const COMMON_INDUSTRIES = [
+  'Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing',
+  'Retail', 'Real Estate', 'Consulting', 'Legal', 'Marketing',
+  'Non-profit', 'Government', 'Energy', 'Transportation', 'Media'
+] as const;
+
+export const COMMON_DEPARTMENTS = [
+  'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'IT',
+  'Customer Service', 'Product', 'Engineering', 'Design',
+  'Legal', 'Executive', 'Business Development'
+] as const;
+
+export const CONTENT_FORMATS = [
+  'Blog Posts', 'Social Media', 'Email Campaigns', 'White Papers',
+  'Case Studies', 'Infographics', 'Videos', 'Podcasts', 'Webinars',
+  'Newsletters', 'Press Releases', 'Product Descriptions'
+] as const;

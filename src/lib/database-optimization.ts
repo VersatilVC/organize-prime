@@ -300,7 +300,8 @@ export async function fetchOrganizationFeatures(organizationId: string): Promise
       key: 'org_features',
       table: 'organization_feature_configs',
       select: 'id, organization_id, feature_slug, is_enabled, is_user_accessible, org_menu_order, created_at, updated_at',
-      filters: { organization_id: organizationId, is_enabled: true, is_user_accessible: true }
+      filters: { organization_id: organizationId, is_enabled: true, is_user_accessible: true },
+      options: { orderBy: { column: 'org_menu_order', ascending: true } }
     }
   ]);
   
@@ -311,6 +312,10 @@ export async function fetchOrganizationFeatures(organizationId: string): Promise
   
   // Cache for 15 minutes
   setCachedResult(cacheKey, filteredFeatures, 15 * 60 * 1000);
+  
+  // Debug logging to check ordering
+  console.log('🔍 fetchOrganizationFeatures result for', organizationId, ':', 
+    filteredFeatures.map(f => ({ slug: f.feature_slug, order: f.org_menu_order })));
   
   return filteredFeatures;
 }
@@ -339,4 +344,10 @@ export function getCacheStats(): { size: number; keys: string[] } {
     size: queryCache.size,
     keys: Array.from(queryCache.keys())
   };
+}
+
+// Make cache functions globally available in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).clearQueryCache = clearQueryCache;
+  (window as any).getCacheStats = getCacheStats;
 }

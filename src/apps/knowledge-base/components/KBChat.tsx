@@ -41,7 +41,7 @@ export function KBChat() {
   };
 
   return (
-    <div className="h-screen flex relative">
+    <div className="h-[calc(100vh-81px)] flex flex-col relative overflow-hidden">
       {/* Mobile Overlay */}
       {!isSidebarCollapsed && (
         <div 
@@ -50,65 +50,66 @@ export function KBChat() {
         />
       )}
       
-      {/* Conversation Sidebar */}
-      <ConversationSidebar
-        activeConversationId={activeConversationId}
-        onConversationSelect={handleConversationSelect}
-        onConversationCreate={handleConversationCreate}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        className={cn(
-          "flex-shrink-0 transition-all duration-300 ease-in-out z-50",
-          "md:relative md:translate-x-0",
-          isSidebarCollapsed 
-            ? "md:w-20 -translate-x-full md:translate-x-0" 
-            : "md:w-64 translate-x-0 fixed md:relative left-0 top-0 h-full md:h-auto"
-        )}
-      />
+      {/* Main Content Area */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Conversation Sidebar */}
+        <ConversationSidebar
+          activeConversationId={activeConversationId}
+          onConversationSelect={handleConversationSelect}
+          onConversationCreate={handleConversationCreate}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className={cn(
+            "flex-shrink-0 transition-all duration-300 ease-in-out z-50 h-full",
+            "md:relative md:translate-x-0",
+            isSidebarCollapsed 
+              ? "md:w-20 -translate-x-full md:translate-x-0" 
+              : "md:w-64 translate-x-0 fixed md:relative left-0 top-0"
+          )}
+        />
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="flex-shrink-0 p-3 md:p-4 border-b border-border/30 bg-gradient-to-r from-background/80 via-background/95 to-muted/20 backdrop-blur-2xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-3">
-              {/* Mobile Menu Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSidebarCollapsed(false)}
-                className="md:hidden p-2 border-2 border-primary/20 bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/40 transition-all duration-300"
-              >
-                <MessageSquare className="h-5 w-5 text-primary" />
-              </Button>
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Header */}
+          <div className="flex-shrink-0 p-3 md:p-4 border-b border-border/30 bg-gradient-to-r from-background/80 via-background/95 to-muted/20 backdrop-blur-2xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 md:gap-3">
+                {/* Mobile Menu Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="md:hidden p-2 border-2 border-primary/20 bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/40 transition-all duration-300"
+                >
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                </Button>
 
-              <div className="hidden md:block p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/30 shadow backdrop-blur-sm">
-                <MessageSquare className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
-                  <h1 className="text-lg md:text-2xl font-bold tracking-wide bg-gradient-to-r from-foreground via-primary/80 to-foreground/80 bg-clip-text text-transparent">
-                    {assistantName}
-                  </h1>
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-green-700">Online</span>
-                  </div>
+                <div className="hidden md:block p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/30 shadow backdrop-blur-sm">
+                  <MessageSquare className="h-5 w-5 text-primary" />
                 </div>
-                <p className="text-muted-foreground text-xs md:text-sm font-medium leading-relaxed">
-                  {chatSubtitle}
-                </p>
+                <div>
+                  <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                    <h1 className="text-lg md:text-2xl font-bold tracking-wide bg-gradient-to-r from-foreground via-primary/80 to-foreground/80 bg-clip-text text-transparent">
+                      {assistantName}
+                    </h1>
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-green-700">Online</span>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-xs md:text-sm font-medium leading-relaxed">
+                    {chatSubtitle}
+                  </p>
+                </div>
               </div>
+              
+              {/* Debug toggle - only for super admins */}
+              {/* Debug mode removed for production */}
             </div>
-            
-            {/* Debug toggle - only for super admins */}
-            {/* Debug mode removed for production */}
           </div>
-        </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 p-6 min-h-0">
-          <div className="max-w-4xl mx-auto h-full">
+          {/* Chat Area */}
+          <div className="flex-1 min-h-0 overflow-hidden w-full">
             {activeConversationId ? (
                 <SimpleChat 
                   conversationId={activeConversationId}

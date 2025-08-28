@@ -6,8 +6,6 @@ import { AuthProvider } from './auth/AuthProvider';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { AccessibilityProvider, SkipToContent } from './components/accessibility/AccessibilityProvider';
-import { AccessibilityChecker } from './components/accessibility/AccessibilityChecker';
-import { ProgressiveEnhancementDemo } from './components/ProgressiveEnhancementDemo';
 import { AppRoutes } from './AppRoutes';
 // import { registerServiceWorker } from './utils/serviceWorker'; // Temporarily disabled
 import { useRoutePreloader } from './hooks/useResourcePreloader';
@@ -104,8 +102,6 @@ function App() {
         }}
       >
         <AppContent />
-        <AccessibilityChecker />
-        <ProgressiveEnhancementDemo />
       </Router>
     </QueryClientProvider>
   );

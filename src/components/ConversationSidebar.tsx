@@ -110,8 +110,8 @@ export function ConversationSidebar({
   }
 
   return (
-    <Card className={cn("w-64 h-full border-r-2 border-l-4 border-l-primary/20 border-t-0 border-b-0 rounded-none bg-gradient-to-b from-background to-muted/5", className)}>
-      <CardHeader className="pb-3 border-b border-border/50">
+    <Card className={cn("w-64 h-full border-r-2 border-l-4 border-l-primary/20 border-t-0 border-b-0 rounded-none bg-gradient-to-b from-background to-muted/5 flex flex-col", className)}>
+      <CardHeader className="pb-3 border-b border-border/50 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
@@ -179,8 +179,8 @@ export function ConversationSidebar({
         </Button>
       </CardHeader>
 
-      <CardContent className="p-0 flex-1">
-        <ScrollArea className="h-[calc(100vh-14rem)]">
+      <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
+        <div className="h-full overflow-y-auto">
           <div className="p-1 space-y-1">
             {isLoading && !searchQuery ? (
               <div className="flex items-center justify-center py-6">
@@ -225,7 +225,7 @@ export function ConversationSidebar({
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

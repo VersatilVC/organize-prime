@@ -38,6 +38,9 @@ const LazyChatPage = createLazyRoute(() => import('@/apps/knowledge-base/compone
 const LazyAIChatSettings = React.lazy(() => import('@/apps/knowledge-base/pages/KnowledgeBaseAIChatSettings'));
 // ChatSettingsPage removed - now using simple chat interface
 
+// Content Creation specific components
+const LazyContentCreationSettings = createLazyRoute(() => import('@/pages/features/content-creation/ContentCreationSettings'));
+
 interface FeatureRouteParams {
   slug: string;
 }
@@ -54,6 +57,8 @@ const componentMap: Record<string, React.ComponentType> = {
   'Chat': LazyChatPage,
   'AIChatSettings': LazyAIChatSettings,
   // ChatSettings removed - now using simple chat interface
+  // Content Creation specific components
+  'ContentCreationSettings': LazyContentCreationSettings,
 };
 
 // Test component imports on load (development only)

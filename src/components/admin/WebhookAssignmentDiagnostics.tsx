@@ -26,7 +26,7 @@ export function WebhookAssignmentDiagnostics() {
 
   const commonFeatures = [
     { page: 'ManageFiles', position: 'upload-section', label: 'File Upload Processing' },
-    { page: 'AIChatSettings', position: 'chat-input', label: 'AI Chat Input' },
+    { page: 'AIChatSettings', position: 'settings-panel', label: 'AI Chat Settings Save' },
     { page: 'KnowledgeBaseDashboard', position: 'quick-actions', label: 'KB Dashboard Actions' },
     { page: 'KnowledgeBaseChat', position: 'message-send', label: 'KB Chat Messages' },
   ];

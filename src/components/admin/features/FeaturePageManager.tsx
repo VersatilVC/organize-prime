@@ -289,7 +289,11 @@ export function FeaturePageManager({ pages, onChange, featureSlug, disabled = fa
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditPage(page)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditPage(page);
+                            }}
                             disabled={disabled}
                           >
                             <Edit className="h-4 w-4" />

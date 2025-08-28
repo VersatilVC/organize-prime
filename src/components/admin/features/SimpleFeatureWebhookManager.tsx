@@ -19,6 +19,7 @@ import {
   Webhook, 
   Plus, 
   Trash2, 
+  Edit,
   CheckCircle, 
   XCircle,
   ExternalLink,
@@ -40,10 +41,13 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
     updateAssignment,
     deleteAssignment,
     isCreating,
+    isUpdating,
     isDeleting
   } = useFeatureWebhookAssignments(feature.slug);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<any>(null);
   const [newAssignment, setNewAssignment] = useState({
     feature_page: '',
     button_position: '',
@@ -82,6 +86,37 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
       await deleteAssignment(assignmentId);
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  const handleEditAssignment = (assignment: any) => {
+    setEditingAssignment({
+      id: assignment.id,
+      feature_page: assignment.feature_page,
+      button_position: assignment.button_position,
+      webhook_id: assignment.webhook_id,
+      custom_position: ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateAssignment = async () => {
+    if (!editingAssignment) return;
+
+    const finalButtonPosition = editingAssignment.button_position === 'custom-position'
+      ? editingAssignment.custom_position
+      : editingAssignment.button_position;
+
+    try {
+      await updateAssignment(editingAssignment.id, {
+        feature_page: editingAssignment.feature_page,
+        button_position: finalButtonPosition,
+        webhook_id: editingAssignment.webhook_id,
+      });
+      setIsEditModalOpen(false);
+      setEditingAssignment(null);
     } catch (error) {
       // Error handled by hook
     }
@@ -256,12 +291,24 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
+                        <div className="flex gap-2 justify-end">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditAssignment(assignment);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Webhook Assignment</AlertDialogTitle>
@@ -280,6 +327,7 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -461,6 +509,117 @@ export function SimpleFeatureWebhookManager({ feature }: SimpleFeatureWebhookMan
               disabled={isCreating}
             >
               {isCreating ? 'Creating...' : 'Create Assignment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Assignment Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Webhook Assignment</DialogTitle>
+            <DialogDescription>
+              Update the webhook assignment for {feature.display_name}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit_feature_page">Feature Page</Label>
+              <Select
+                value={editingAssignment?.feature_page || ''}
+                onValueChange={(value) => setEditingAssignment(prev => ({ ...prev, feature_page: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a page" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AIChatSettings">AI Chat Settings</SelectItem>
+                  <SelectItem value="ManageFiles">Manage Files</SelectItem>
+                  <SelectItem value="KnowledgeBaseDashboard">KB Dashboard</SelectItem>
+                  <SelectItem value="KnowledgeBaseChat">KB Chat</SelectItem>
+                  <SelectItem value="ManageKnowledgeBases">Manage KBs</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit_button_position">Button Position</Label>
+              <Select
+                value={editingAssignment?.button_position || ''}
+                onValueChange={(value) => setEditingAssignment(prev => ({ ...prev, button_position: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editingAssignment?.feature_page === 'AIChatSettings' && (
+                    <>
+                      <SelectItem value="settings-panel">Settings Panel (Save Button)</SelectItem>
+                    </>
+                  )}
+                  {editingAssignment?.feature_page === 'ManageFiles' && (
+                    <>
+                      <SelectItem value="upload-section">Upload Section</SelectItem>
+                      <SelectItem value="file-actions">File Actions</SelectItem>
+                    </>
+                  )}
+                  <SelectItem value="custom-position">Custom Position</SelectItem>
+                </SelectContent>
+              </Select>
+              {editingAssignment?.button_position === 'custom-position' && (
+                <Input
+                  placeholder="Enter custom position name"
+                  value={editingAssignment?.custom_position || ''}
+                  onChange={(e) => setEditingAssignment(prev => ({ ...prev, custom_position: e.target.value }))}
+                  className="mt-2"
+                />
+              )}
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="edit_webhook_id">Webhook</Label>
+              <Select
+                value={editingAssignment?.webhook_id || ''}
+                onValueChange={(value) => setEditingAssignment(prev => ({ ...prev, webhook_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a webhook" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableWebhooks
+                    .filter(webhook => webhook.is_active)
+                    .map((webhook) => (
+                      <SelectItem key={webhook.id} value={webhook.id}>
+                        {webhook.name}
+                        <div className="text-xs text-muted-foreground">
+                          {webhook.webhook_url}
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setEditingAssignment(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleUpdateAssignment}
+              disabled={isUpdating}
+            >
+              {isUpdating ? 'Updating...' : 'Update Assignment'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -325,7 +325,11 @@ export function FeatureWebhookManager({ feature }: FeatureWebhookManagerProps) {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleEditWebhook(webhook)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEditWebhook(webhook);
+                                }}
                                 title="Edit webhook"
                               >
                                 <Edit className="h-4 w-4" />

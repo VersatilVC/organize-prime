@@ -101,10 +101,10 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
       {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto py-6 px-6 space-y-4 min-h-0"
       >
           {isLoading && messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full animate-fade-in">
+            <div className="flex items-center justify-center min-h-full animate-fade-in">
               <div className="text-center">
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/20 mb-4 animate-scale-in">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
@@ -113,7 +113,7 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
               </div>
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center h-full text-red-500 animate-fade-in">
+            <div className="flex items-center justify-center min-h-full text-red-500 animate-fade-in">
               <div className="text-center p-8 rounded-2xl border border-red-200 bg-red-50/50">
                 <div className="p-4 rounded-2xl bg-red-100 inline-block mb-4">
                   <Bot className="h-8 w-8 text-red-600" />
@@ -123,7 +123,7 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
               </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full animate-fade-in">
+            <div className="flex items-center justify-center min-h-full animate-fade-in">
               <div className="text-center">
                 <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-muted/20 border border-primary/20 mb-4 animate-scale-in">
                   <Bot className="h-12 w-12 mx-auto text-primary animate-pulse" />
@@ -142,8 +142,8 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
         </div>
 
       {/* Sticky Input Area */}
-      <div className="border-t border-border/50 bg-background p-4 sticky bottom-0">
-        <div className="flex gap-3 items-end">
+      <div className="flex-shrink-0 border-t border-border/50 bg-background p-6">
+        <div className="flex gap-3 items-end w-full">
           <div className="flex-1">
             <Input
               value={messageInput}
@@ -151,7 +151,7 @@ export function SimpleChat({ conversationId, onConversationCreated, className }:
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything..."
               disabled={isProcessing}
-              className="min-h-[40px] resize-none border border-border focus:border-primary transition-colors text-sm px-4 py-3"
+              className="min-h-[40px] resize-none border border-border focus:border-primary transition-colors text-base px-4 py-3"
             />
           </div>
           <Button
@@ -194,7 +194,7 @@ function ChatMessageComponent({ message }: ChatMessageComponentProps) {
   const hasError = message.processing_status === 'error';
 
   return (
-    <div className={cn("flex gap-3 group animate-slide-up", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex gap-3 group animate-slide-up w-full", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
         <Avatar className="h-8 w-8 border border-primary/30 shadow bg-gradient-to-br from-primary/10 to-primary/20">
           <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/30 text-primary">
@@ -204,7 +204,7 @@ function ChatMessageComponent({ message }: ChatMessageComponentProps) {
       )}
       
       <div className={cn(
-        "max-w-[80%] rounded-2xl px-4 py-3 shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02]",
+        "max-w-[85%] rounded-2xl px-4 py-3 shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02]",
         "word-wrap break-words overflow-wrap-anywhere backdrop-blur-sm", // Better text wrapping
         isUser 
           ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-br-lg shadow-primary/20" 

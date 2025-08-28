@@ -80,7 +80,15 @@
       "Read(/c:\\Users\\ilanh\\Downloads/**)",
       "Read(/c:\\Users\\ilanh\\Downloads/**)",
       "Read(/c:\\Users\\ilanh\\Downloads/**)",
-      "Read(/c:\\Users\\ilanh\\Downloads/**)"
+      "Read(/c:\\Users\\ilanh\\Downloads/**)",
+      "Read(/C:\\Users\\ilanh\\Downloads/**)",
+      "Read(/C:\\Users\\ilanh\\Downloads/**)",
+      "mcp__playwright__browser_press_key",
+      "Read(/C:\\Users\\ilanh\\Downloads/**)",
+      "Read(/C:\\Users\\ilanh\\Downloads/**)",
+      "WebFetch(domain:docs.convertapi.com)",
+      "WebFetch(domain:v2.convertapi.com)",
+      "Bash(supabase functions:*)"
     ],
     "deny": [],
     "ask": [],

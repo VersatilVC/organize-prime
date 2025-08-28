@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Upload, FileText, BarChart3, Activity } from 'lucide-react';
+import { Upload, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUploadArea } from '../components/FileUploadArea';
 import { FileList } from '../components/FileList';
 import { FileStats } from '../components/FileStats';
-import { FileAnalytics } from '../components/FileAnalytics';
 import { FileManagementErrorBoundary } from '../components/FileManagementErrorBoundary';
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -96,14 +95,6 @@ export default function ManageFiles() {
             <FileText className="h-4 w-4" />
             File Library
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="monitoring" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Monitoring
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload" className="space-y-6">
@@ -143,14 +134,6 @@ export default function ManageFiles() {
           </FileManagementErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
-          <FileManagementErrorBoundary 
-            fallbackTitle="Analytics Error"
-            fallbackDescription="Unable to load analytics data."
-          >
-            <FileAnalytics selectedKbId={selectedKbId} />
-          </FileManagementErrorBoundary>
-        </TabsContent>
 
         <TabsContent value="monitoring" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

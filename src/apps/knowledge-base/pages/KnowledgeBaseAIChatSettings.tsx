@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useKBAIChatSettings } from '../hooks/useKBAIChatSettings';
 import { KBPermissionGuard } from '../components/shared/KBPermissionGuard';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import type { KBAIChatSettingsInput, AIChatTone, AIChatCommunicationStyle } from '../types/KnowledgeBaseTypes';
 
 // Zod validation schema
@@ -140,6 +141,7 @@ const UnsavedChangesIndicator = React.memo(({ hasChanges }: { hasChanges: boolea
 
 export default function KnowledgeBaseAIChatSettings() {
   const { toast } = useToast();
+  const { currentOrganization } = useOrganization();
   const {
     settings,
     defaultSettings,
@@ -213,7 +215,7 @@ export default function KnowledgeBaseAIChatSettings() {
     };
   }, [formValues, isDirty]);
 
-  // Form submission handler
+  // Form submission handler - saves to database, Postgres trigger handles N8N workflow
   const onSubmit = useCallback(async (data: FormData) => {
     try {
       const settingsInput: KBAIChatSettingsInput = {
@@ -225,8 +227,10 @@ export default function KnowledgeBaseAIChatSettings() {
         additional_chat_instructions: data.additional_chat_instructions || undefined,
       };
 
+      // Save to database - Postgres trigger will automatically handle N8N workflow
       await saveSettings(settingsInput);
       setHasUnsavedChanges(false);
+
     } catch (error) {
       console.error('Failed to save settings:', error);
     }

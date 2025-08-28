@@ -1,41 +1,17 @@
 # OrganizePrime - Application & Database Reference
 
-This document provides comprehensive context about the OrganizePrime application architecture, database structure, and implementation patterns for AI assistants.
-
-## Application Overview
-
 OrganizePrime is a multi-tenant SaaS platform built with React/TypeScript and Supabase, featuring:
-- **Multi-tenant architecture** with organization-based isolation
+- **Multi-tenant architecture** with organization-based isolation  
 - **Feature-based access control** at system, organization, and user levels
-- **Knowledge Base system** with AI-powered document processing
+- **Knowledge Base system** with AI-powered document processing and content extraction
 - **Comprehensive feedback/support system**
 - **Real-time notifications and webhooks**
 
 ## Technology Stack
 
-### Frontend
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **State Management**: TanStack Query (React Query) for server state
-- **Routing**: React Router v6
-- **Forms**: React Hook Form with Zod validation
-
-### Backend
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth with Google OAuth
-- **Real-time**: Supabase Realtime subscriptions
-- **Edge Functions**: Deno-based serverless functions
-- **File Storage**: Supabase Storage with organization-scoped buckets
-
-### Key Libraries
-- `@tanstack/react-query` - Server state management
-- `@supabase/supabase-js` - Database client
-- `react-router-dom` - Client-side routing
-- `react-hook-form` - Form management
-- `zod` - Schema validation
-- `lucide-react` - Icon library
-- `sonner` - Toast notifications
+**Frontend**: React 18 + TypeScript, Vite, Tailwind CSS, TanStack Query, React Router v6
+**Backend**: Supabase (PostgreSQL), Supabase Auth, Edge Functions (Deno), Real-time subscriptions
+**Content Extraction**: ConvertAPI integration, Edge Functions with web scraping, multi-format support
 
 ## Database Architecture
 
@@ -139,1132 +115,159 @@ user_feature_access {
 }
 ```
 
-#### Knowledge Base System
+#### Knowledge Base & Content Extraction System
 ```sql
--- Knowledge base configurations
-kb_configurations {
+-- Content types for extraction
+content_types {
   id: UUID PRIMARY KEY
   organization_id: UUID REFERENCES organizations(id)
   name: TEXT NOT NULL
-  display_name: TEXT NOT NULL
   description: TEXT
-  embedding_model: TEXT DEFAULT 'text-embedding-ada-002'
-  chunk_size: INTEGER DEFAULT 1000
-  chunk_overlap: INTEGER DEFAULT 200
-  is_default: BOOLEAN DEFAULT FALSE
-  is_premium: BOOLEAN DEFAULT FALSE
-  status: TEXT DEFAULT 'active'
-  file_count: INTEGER DEFAULT 0
-  total_vectors: INTEGER DEFAULT 0
-  created_by: UUID REFERENCES auth.users(id)
-  updated_by: UUID REFERENCES auth.users(id)
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
+  extracted_content: JSONB -- Full markdown content (truncated if >10KB)
+  extraction_status: TEXT DEFAULT 'pending' -- 'pending', 'processing', 'completed', 'error'
+  extraction_error: TEXT
+  last_extracted_at: TIMESTAMP
+  extraction_metadata: JSONB
 }
 
--- Document storage
-kb_documents {
+-- Content extraction logs (with CASCADE DELETE)
+content_extraction_logs {
   id: UUID PRIMARY KEY
   organization_id: UUID REFERENCES organizations(id)
-  title: TEXT NOT NULL
-  content: TEXT NOT NULL
-  file_path: TEXT -- Supabase storage path
-  file_type: TEXT -- 'text', 'pdf', 'docx', etc.
-  category: TEXT DEFAULT 'general'
-  tags: TEXT[]
-  processing_status: TEXT DEFAULT 'pending' -- 'pending', 'processing', 'completed', 'error'
-  embedding_status: TEXT DEFAULT 'pending'
-  file_size: BIGINT
-  word_count: INTEGER
-  created_by: UUID REFERENCES auth.users(id)
-  updated_by: UUID REFERENCES auth.users(id)
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
-}
-
--- File management
-kb_files {
-  id: UUID PRIMARY KEY
-  organization_id: UUID REFERENCES organizations(id)
-  kb_config_id: UUID REFERENCES kb_configurations(id)
+  content_type_id: UUID REFERENCES content_types(id) ON DELETE CASCADE
   file_name: TEXT NOT NULL
-  original_name: TEXT NOT NULL
-  file_path: TEXT NOT NULL
-  file_size: BIGINT NOT NULL
-  mime_type: TEXT
-  file_hash: TEXT
-  processing_status: TEXT DEFAULT 'pending'
-  processing_progress: INTEGER DEFAULT 0
-  processing_started_at: TIMESTAMP
-  processing_completed_at: TIMESTAMP
-  processing_error: TEXT
-  extracted_text_length: INTEGER
-  chunk_count: INTEGER
-  vector_count: INTEGER
-  metadata: JSONB
-  uploaded_by: UUID REFERENCES auth.users(id)
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
-}
-
--- Chat conversations
-kb_conversations {
-  id: UUID PRIMARY KEY
-  organization_id: UUID REFERENCES organizations(id)
-  kb_config_id: UUID REFERENCES kb_configurations(id)
-  user_id: UUID REFERENCES auth.users(id)
-  title: TEXT
-  summary: TEXT
-  model: TEXT DEFAULT 'gpt-3.5-turbo'
-  temperature: DECIMAL DEFAULT 0.7
-  max_tokens: INTEGER DEFAULT 2000
-  message_count: INTEGER DEFAULT 0
-  total_tokens_used: INTEGER DEFAULT 0
-  last_message_at: TIMESTAMP
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
-}
-
--- Chat messages
-kb_messages {
-  id: UUID PRIMARY KEY
-  conversation_id: UUID REFERENCES kb_conversations(id)
-  organization_id: UUID REFERENCES organizations(id)
-  message_type: TEXT NOT NULL -- 'user', 'assistant'
-  content: TEXT NOT NULL
-  sources: JSONB -- Source documents referenced
-  source_count: INTEGER DEFAULT 0
-  confidence_score: DECIMAL
-  model_used: TEXT
-  temperature_used: DECIMAL
-  tokens_used: INTEGER
-  response_time_ms: INTEGER
-  context_length: INTEGER
-  metadata: JSONB
-  created_at: TIMESTAMP
-}
-```
-
-#### Feedback & Support System
-```sql
--- Feedback/support tickets
-feedback {
-  id: UUID PRIMARY KEY
-  organization_id: UUID REFERENCES organizations(id)
-  user_id: UUID REFERENCES auth.users(id)
-  subject: TEXT NOT NULL
-  description: TEXT NOT NULL
-  type: TEXT NOT NULL -- 'bug', 'feature', 'improvement', 'other'
-  category: TEXT
-  priority: TEXT DEFAULT 'medium' -- 'low', 'medium', 'high', 'critical'
-  status: TEXT DEFAULT 'pending' -- 'pending', 'reviewing', 'in_progress', 'resolved', 'closed'
-  attachments: TEXT[] -- File URLs
-  admin_response: TEXT
-  internal_notes: TEXT
-  resolution_notes: TEXT
-  responded_by: UUID REFERENCES auth.users(id)
-  responded_at: TIMESTAMP
-  status_history: JSONB
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
-}
-
--- Notifications system
-notifications {
-  id: UUID PRIMARY KEY
-  user_id: UUID REFERENCES auth.users(id)
-  organization_id: UUID REFERENCES organizations(id)
-  type: TEXT NOT NULL -- 'feedback_update', 'system_announcement', etc.
-  category: TEXT
-  title: TEXT NOT NULL
-  message: TEXT NOT NULL
-  data: JSONB -- Additional context data
-  action_url: TEXT -- Deep link for actions
-  read: BOOLEAN DEFAULT FALSE
-  read_at: TIMESTAMP
-  created_at: TIMESTAMP
-}
-
--- Invitations system
-invitations {
-  id: UUID PRIMARY KEY
-  organization_id: UUID REFERENCES organizations(id)
-  email: TEXT NOT NULL
-  role: TEXT DEFAULT 'user'
-  token: TEXT NOT NULL UNIQUE
-  message: TEXT
-  invited_by: UUID REFERENCES auth.users(id)
-  expires_at: TIMESTAMP NOT NULL
-  accepted_at: TIMESTAMP
-  created_at: TIMESTAMP
-}
-```
-
-#### Analytics & Logging
-```sql
--- Organization access audit logs
-organization_access_audit {
-  id: UUID PRIMARY KEY
-  user_id: UUID REFERENCES auth.users(id)
-  organization_id: UUID REFERENCES organizations(id)
-  action: TEXT NOT NULL
-  resource_type: TEXT
-  resource_id: TEXT
-  ip_address: INET
-  user_agent: TEXT
-  success: BOOLEAN DEFAULT TRUE
-  error_message: TEXT
-  created_at: TIMESTAMP
-}
-
--- Feature analytics
-feature_analytics {
-  id: UUID PRIMARY KEY
-  organization_id: UUID REFERENCES organizations(id)
-  user_id: UUID REFERENCES auth.users(id)
-  feature_slug: TEXT NOT NULL
-  event_type: TEXT NOT NULL -- 'page_view', 'action', 'error'
-  event_data: JSONB
-  ip_address: INET
-  user_agent: TEXT
-  created_at: TIMESTAMP
-}
-
--- KB analytics
-kb_analytics {
-  id: UUID PRIMARY KEY
-  organization_id: UUID REFERENCES organizations(id)
-  kb_config_id: UUID REFERENCES kb_configurations(id)
-  user_id: UUID REFERENCES auth.users(id)
-  event_type: TEXT NOT NULL -- 'search', 'chat', 'upload', 'download'
+  file_type: TEXT -- pdf, docx, txt, url, etc.
+  extraction_method: TEXT -- 'convertapi', 'web_scraping'
+  status: TEXT DEFAULT 'started' -- 'started', 'processing', 'completed', 'failed'
+  markdown_content: TEXT -- Full content (no size limit)
+  extraction_metadata: JSONB
   processing_time_ms: INTEGER
-  tokens_consumed: INTEGER
-  created_at: TIMESTAMP
+  error_message: TEXT
 }
+
+-- KB configurations, conversations, messages (structure preserved)
+-- Chat system with conversation management, real-time updates, CRUD operations
 ```
 
-### Row Level Security (RLS) Policies
+#### Support & Analytics
+Standard tables for feedback, notifications, invitations, audit logs, and analytics with organization-based RLS isolation.
 
-All tables implement organization-based RLS policies ensuring data isolation:
+### Security & Key Functions
 
-```sql
--- Example RLS pattern used across all tables
-CREATE POLICY "org_isolation" ON table_name
-FOR ALL USING (
-  organization_id IN (
-    SELECT organization_id FROM memberships 
-    WHERE user_id = auth.uid() AND status = 'active'
-  )
-  OR is_super_admin(auth.uid())
-);
-```
+**RLS Pattern**: All tables use organization-based isolation via `organization_id IN (SELECT organization_id FROM memberships WHERE user_id = auth.uid())`
 
-### Key Database Functions
-
-```sql
--- Check if user is super admin
-is_super_admin() RETURNS boolean
-
--- Check if user is org admin for specific organization
-is_org_admin(org_id UUID) RETURNS boolean
-
--- Get user's effective features for an organization
-get_user_effective_features(user_id UUID, org_id UUID) RETURNS TABLE(...)
-
--- Validate organization access with logging
-validate_organization_access(org_id UUID, action TEXT) RETURNS boolean
-
--- Rate limiting
-check_rate_limit(identifier TEXT, action_type TEXT, limit INTEGER, window_minutes INTEGER) RETURNS boolean
-```
+**Key Functions**: `is_super_admin()`, `is_org_admin()`, `get_user_effective_features()`, `safe_update_content_types_no_triggers()`
 
 ## Frontend Architecture
 
-### Directory Structure
-```
-src/
-├── auth/                     # Authentication components and providers
-│   ├── AuthProvider.tsx     # Main auth context
-│   └── components/          # Login, register forms
-├── components/              # Reusable UI components
-│   ├── ui/                 # shadcn/ui base components
-│   ├── layout/             # Layout components (header, sidebar)
-│   ├── features/           # Feature-specific components
-│   └── admin/              # Admin-only components
-├── contexts/               # React contexts
-│   ├── AuthContext.tsx     # Authentication state
-│   └── OrganizationContext.tsx # Current organization state
-├── hooks/                  # Custom React hooks
-│   ├── database/           # Database query hooks
-│   └── use*.tsx           # Various utility hooks
-├── integrations/           # External service integrations
-│   └── supabase/          # Supabase client and types
-├── lib/                   # Utility libraries
-│   ├── query-client.ts    # TanStack Query configuration
-│   └── utils.ts           # General utilities
-├── pages/                 # Page components
-│   ├── admin/             # Admin pages
-│   └── *.tsx             # Application pages
-└── types/                 # TypeScript type definitions
-```
+Standard React/TypeScript structure with:
+- **Components**: shadcn/ui, feature-specific, admin components
+- **Hooks**: TanStack Query with query key factories, role-based access control
+- **Services**: ContentExtractionService, SimpleChatService for business logic
+- **Contexts**: Auth, Organization state management
 
-### Key Patterns
+## Edge Functions & Content Extraction
 
-#### Query Key Factory
-```typescript
-export const queryKeys = {
-  users: ['users'] as const,
-  user: (id: string) => [...queryKeys.users, id] as const,
-  organizations: ['organizations'] as const,
-  organization: (id: string) => [...queryKeys.organizations, id] as const,
-  // ... more query keys
-}
-```
+### 1. content-extraction (NEW - August 28, 2025)
+**Purpose**: Extract text content from files (PDF, DOCX, etc.) and URLs using ConvertAPI + web scraping
+**Key Features**:
+- **File Processing**: ConvertAPI integration for PDF, DOCX, PPT, XLS formats
+- **URL Processing**: Web scraping with HTML-to-markdown conversion
+- **Database Logging**: Full extraction logs with cascade delete on content type removal
+- **Status Updates**: Uses `safe_update_content_types_no_triggers()` function for reliable status management
+- **Content Truncation**: 10KB limit for content_types table, full content in extraction_logs
+- **Error Handling**: Comprehensive error reporting and 90-second timeout support
 
-#### Custom Hook Pattern
-```typescript
-export function useOrganizationFeatures() {
-  const { currentOrganization } = useOrganization();
-  
-  return useQuery({
-    queryKey: queryKeys.organizationFeatures(currentOrganization?.id),
-    queryFn: () => fetchFeatures(currentOrganization?.id),
-    enabled: !!currentOrganization?.id,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-}
-```
+**Recent Fixes (August 28, 2025)**:
+- ✅ Fixed database permission error: "session_replication_role" superuser requirement
+- ✅ Proper content type status updates from "pending" to "completed" 
+- ✅ Verified cascading delete: content_extraction_logs auto-delete with content_types
 
-#### Role-Based Access Control
-```typescript
-export function useUserRole() {
-  // Returns: { role: 'super_admin' | 'admin' | 'user', organizations: string[] }
-}
+### 2. exec-n8n-webhook
+N8N webhook execution with rate limiting (60 req/10min per user)
 
-// Usage in components
-const { role } = useUserRole();
-const canAccessAdmin = role === 'super_admin' || role === 'admin';
-```
+### 3. send-invitation-email  
+Organization invitations (admin-only, 50 req/hour per user)
 
-## Edge Functions
+## Security & Patterns
 
-### 1. exec-n8n-webhook
-**Purpose**: Secure proxy for N8N webhook execution
-**Security**: Bearer token auth, organization membership validation, rate limiting
-**Rate Limit**: 60 requests per 10 minutes per user
-
-### 2. send-invitation-email
-**Purpose**: Send organization invitation emails
-**Security**: Org admin or super admin only
-**Rate Limit**: 50 requests per hour per user
-
-### 3. send-feedback-notification  
-**Purpose**: Notify users about feedback updates
-**Security**: Admin-only access
-**Rate Limit**: Standard rate limiting
-
-## Security Model
-
-### Authentication Flow
-1. **Login**: Email/password or Google OAuth
-2. **Session**: JWT tokens with auto-refresh
-3. **Authorization**: Role-based with organization scoping
-
-### Permission Hierarchy
-```
-Super Admin (Global)
-└── Organization Admin (Org-scoped)
-    └── User (Limited org access)
-```
-
-### Data Isolation
-- **Organization-based**: All data scoped to organizations via RLS
-- **Role-based**: Feature access controlled by role and configuration
-- **Audit logging**: All access attempts logged with IP and user agent
-
-## API Patterns
-
-### Database Queries
-```typescript
-// Standard pattern for org-scoped queries
-const { data } = await supabase
-  .from('table_name')
-  .select('*')
-  .eq('organization_id', organizationId)
-  .eq('status', 'active');
-```
-
-### Error Handling
-```typescript
-// Consistent error handling with toast notifications
-const mutation = useMutation({
-  mutationFn: async (data) => { /* ... */ },
-  onError: (error) => {
-    toast({
-      title: "Error",
-      description: error.message,
-      variant: "destructive",
-    });
-  },
-});
-```
-
-### Real-time Subscriptions
-```typescript
-// Organization-scoped real-time updates
-supabase
-  .channel(`org-${organizationId}`)
-  .on('postgres_changes', {
-    event: '*',
-    schema: 'public',
-    table: 'notifications',
-    filter: `organization_id=eq.${organizationId}`
-  }, handleNotificationUpdate)
-  .subscribe();
-```
+**Authentication**: Email/password + Google OAuth, JWT tokens with auto-refresh
+**Permissions**: Super Admin → Org Admin → User hierarchy
+**Data Isolation**: Organization-based RLS policies on all tables
+**API Patterns**: Organization-scoped queries, TanStack Query mutations, real-time subscriptions
 
 ## Environment Configuration
 
-### Required Environment Variables
 ```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key (Edge Functions only)
-RESEND_API_KEY=your-resend-key (Email service)
+# Core Supabase
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# Content Extraction (NEW)
+VITE_CONVERTAPI_SECRET=your-convertapi-secret-here
+
+# Integration Services  
 N8N_BASE_URL=your-n8n-instance
 N8N_API_KEY=your-n8n-api-key
+RESEND_API_KEY=your-resend-key
 ```
 
-## Deployment & Infrastructure
+## Deployment
 
-### Supabase Configuration
-- **Database**: PostgreSQL with extensions (vector, pg_trgm)
-- **Auth**: Email + Google OAuth configured
-- **Storage**: Organization-scoped buckets
-- **Edge Functions**: Deployed Deno functions
-- **Real-time**: Enabled for notifications and chat
-
-### Frontend Deployment (Updated August 2025)
-- **Build**: Vite production build with optimized React vendor chunking
-- **Hosting**: Vercel (configured for SPA routing)
-- **Environment**: Production environment variables
-- **Configuration**: `vercel.json` for client-side routing and security headers
-
-#### Vercel Configuration (`vercel.json`)
-```json
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
-    }
-  ]
-}
-```
-
-#### Vite Configuration (`vite.config.ts`)
-```typescript
-export default defineConfig(({ mode }) => ({
-  build: {
-    rollupOptions: {
-      output: {
-        // React bundling fix for production
-        manualChunks: mode === 'production' ? {
-          'vendor': ['react', 'react-dom', 'react-router-dom']
-        } : undefined,
-      },
-    },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      // Ensure single React instance
-      "react": path.resolve(__dirname, "./node_modules/react"),
-      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
-    },
-  },
-  // ... other optimizations
-}));
-```
+**Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions + Real-time)  
+**Frontend**: Vercel with SPA routing, optimized React vendor chunking, security headers  
+**Production**: https://organize-prime.vercel.app/ ✅ Live (August 28, 2025)
 
 ## AI Assistant Database Management
 
-The AI assistant has direct access to the Supabase database through MCP (Model Context Protocol) capabilities and can:
+The AI assistant has direct Supabase database access via MCP (Model Context Protocol):
+- **Direct Operations**: Execute SQL, apply migrations, manage tables, deploy Edge Functions
+- **Schema Changes**: Create tables with proper RLS policies and organization isolation  
+- **Performance**: Add indexes, optimize queries, monitor with logs/advisors
+- **Workflow**: Analysis → Migration → Security validation → Performance optimization → Verification
 
-### Available Database Operations
-- **Execute SQL queries**: Direct read/write access via `mcp__supabase__execute_sql`
-- **Apply migrations**: Create and apply database migrations via `mcp__supabase__apply_migration`
-- **Manage tables**: List, inspect, and modify table structures
-- **Branch management**: Create, merge, and manage Supabase development branches
-- **Monitor performance**: Access logs, advisors, and health monitoring
-- **Deploy Edge Functions**: Create and deploy Deno-based serverless functions
+## Development Patterns
 
-### When to Use Direct Database Access
-The AI assistant can directly handle:
-- Creating new tables, indexes, or database functions
-- Adding or modifying RLS policies
-- Applying schema changes and migrations
-- Fixing database constraint issues
-- Optimizing query performance
-- Creating or updating stored procedures
-- Managing database permissions and security
+**New Feature Workflow**: AI creates migrations + RLS policies → Update TypeScript types → Create hooks → Implement UI → Add to feature config
 
-### Database Change Workflow
-1. **Analysis**: AI examines existing schema and identifies requirements
-2. **Migration Creation**: Generates appropriate SQL migrations with proper naming
-3. **Security Validation**: Ensures RLS policies maintain organization isolation
-4. **Performance Optimization**: Adds necessary indexes and constraints
-5. **Verification**: Tests changes and validates functionality
+**Migration Pattern**: Always include `organization_id` with CASCADE delete, enable RLS, add org isolation policy
 
-### Important Notes
-- All changes maintain the multi-tenant architecture with organization-based isolation
-- RLS policies are automatically applied to new tables following the established patterns
-- Migrations are properly named and timestamped for version control
-- Database changes are immediately available without requiring manual intervention
+**Testing**: Separate Supabase project, mock auth context, test organizations
 
-## Common Development Patterns
+## Performance Optimizations (Applied August 2025)
 
-### Adding a New Feature
-1. **AI can directly**: Create migration for any new tables
-2. **AI can directly**: Add RLS policies for organization isolation
-3. Update TypeScript types (auto-generated from Supabase)
-4. Create custom hooks for data access
-5. Implement UI components
-6. Add to feature configuration system
+**Database**: Composite indexes, optimized query functions, connection pooling, materialized views  
+**Frontend**: React Query caching, code splitting, React.memo, optimized vendor chunking  
+**Real-time**: Organization-scoped subscriptions, connection pooling, graceful degradation  
+**Results**: 50-80% query improvement, 60-90% faster dashboard loading, 10x user scalability
 
-### Database Migration Pattern
-```sql
--- Always include organization_id for multi-tenancy
-CREATE TABLE new_feature_table (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  -- ... other fields
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+## 🚨 Critical Development Guidelines
 
--- Enable RLS
-ALTER TABLE new_feature_table ENABLE ROW LEVEL SECURITY;
+**Infinite Loop Prevention**: Only ONE Vite dev server at a time! Kill existing: `taskkill /F /IM node.exe`, clear cache: `rm -rf node_modules/.vite`, then `npm run dev`
 
--- Add org isolation policy
-CREATE POLICY "org_isolation" ON new_feature_table
-FOR ALL USING (
-  organization_id IN (
-    SELECT organization_id FROM memberships 
-    WHERE user_id = auth.uid() AND status = 'active'
-  )
-  OR is_super_admin(auth.uid())
-);
-```
+## Latest Updates Summary
 
-### Testing Considerations
-- **Database**: Use separate Supabase project for testing
-- **Authentication**: Mock auth context for component testing
-- **API**: Mock Supabase client calls
-- **E2E**: Use test organizations and users
+### Content Extraction System (August 28, 2025)
+- ✅ **ConvertAPI Integration**: PDF, DOCX, PPT, XLS file processing
+- ✅ **Web Scraping**: URL content extraction with HTML-to-markdown
+- ✅ **Database Fixes**: Fixed permission errors, proper status updates, cascading deletes
+- ✅ **Edge Function**: `content-extraction` with 90s timeout, comprehensive error handling
 
-## Performance Optimizations
+### Chat System Enhancements (August 25, 2025) 
+- ✅ **AI Prompts Database**: Multi-tenant prompt management system
+- ✅ **Dynamic Assistant Names**: Personalized chat interface
+- ✅ **Custom Greetings**: Auto-inserted welcome messages
+- ✅ **Streamlined UI**: Clean, card-free chat interface
 
-### Database
-- Composite indexes on frequently queried columns
-- Proper query optimization with `explain analyze`
-- Connection pooling for high-traffic scenarios
+### Previous Major Updates (August 2025)
+- **Conversation Management System**: Full CRUD with real-time sync, sidebar interface
+- **Performance Optimizations**: 50-80% query improvement, optimized hooks, React.memo
+- **Production Deployment**: Vercel fixes, React bundling, security headers  
+- **Security Enhancements**: Environment variables, enhanced RLS policies, audit logging
+---
 
-### Frontend
-- React Query caching with appropriate stale times
-- Code splitting with lazy loading
-- Image optimization and CDN usage
-- Bundle analysis and tree shaking
+## Summary
 
-### Real-time
-- Selective subscriptions (organization-scoped)
-- Connection pooling and reconnection handling
-- Graceful degradation when offline
+OrganizePrime is a **production-ready multi-tenant SaaS platform** with comprehensive content extraction, AI chat, and feature management systems. The latest content extraction system (August 28, 2025) successfully processes files and URLs with proper database management and cascading deletes.
 
-## ⚠️ CRITICAL DEVELOPMENT GUIDELINES (August 2025)
-
-### 🚨 Infinite Loop Prevention
-**MANDATORY:** Always ensure only ONE localhost development server is running at a time.
-
-**Root Cause Identified (August 18, 2025):**
-- **Multiple Vite dev servers** on different ports cause WebSocket connection conflicts
-- **HMR (Hot Module Replacement)** tries to connect to wrong ports causing infinite reload loops
-- **Module dependency chains** auto-import Supabase client causing auth state loops
-
-**Prevention Rules:**
-1. **Kill existing servers** before starting new ones: `taskkill /F /IM node.exe` (Windows)
-2. **Clear Vite cache** when switching configurations: `rm -rf node_modules/.vite`
-3. **Use consistent ports** - don't let Vite auto-increment to different ports
-4. **Monitor console** for WebSocket connection errors indicating port conflicts
-5. **Disable HMR temporarily** if experiencing infinite loops: `hmr: false` in vite.config.ts
-
-**Emergency Recovery:**
-```bash
-# Kill all Node processes
-taskkill /F /IM node.exe
-
-# Clear all Vite caches
-rm -rf node_modules/.vite
-rm -rf .vite
-
-# Check for remaining processes
-netstat -ano | findstr :5173
-netstat -ano | findstr :8080
-
-# Start clean single server
-npm run dev
-```
-
-## Recent Optimizations Applied (August 2025)
-
-### 🔒 Security Enhancements
-- **Removed hardcoded API keys**: Moved to environment variables for production security
-- **Enhanced RLS policies**: Improved organization isolation with cached validation functions
-- **Advanced authentication**: Added session security validation and enhanced admin checks
-- **Comprehensive audit logging**: All organizational access attempts are logged with context
-
-### ⚡ Performance Optimizations (Phase 2 - August 15, 2025)
-- **Critical database indexes**: Added 20+ composite indexes for frequent query patterns
-- **Optimized query functions**: Database-side functions reduce client-server round trips
-- **Advanced caching**: Increased cache times and added offline-first strategies
-- **Batch operations**: Bulk insert/update functions for large-scale operations
-
-**Phase 2 Specific Optimizations:**
-- **Conditional Development Logging**: Created `src/lib/dev-logger.ts` for environment-aware logging
-- **useUserRole Hook Optimization**: Converted from useEffect to React Query with 10-minute cache
-- **TypeScript Type Safety**: Eliminated `any` types in Dashboard and Users components
-- **React.memo Optimizations**: Added memoization to heavy components (Feedback, AvailableFeaturesSection)
-- **Database Performance**: Added critical indexes for notifications, webhooks, analytics
-- **Webhook Statistics**: Optimized function replacing 22+ separate queries with single call
-
-### 📊 Monitoring & Observability
-- **Query performance tracking**: All database queries are monitored and logged
-- **Error tracking system**: Comprehensive error logging with severity levels
-- **Application metrics**: Custom metrics collection for business intelligence
-- **Health monitoring**: Automated system health checks and alerting
-- **Real-time monitoring**: Live performance dashboards and alerts
-
-### 🚀 Scalability Improvements
-- **Background job system**: Queue-based processing for heavy operations
-- **Connection pooling**: Optimized database connection management
-- **Materialized views**: Pre-computed analytics for instant dashboard loading
-- **Horizontal scaling ready**: Architecture prepared for read replicas and load balancing
-
-### 🔧 Production Deployment Fixes (August 15, 2025)
-- **React Bundling Issues**: Fixed useLayoutEffect undefined errors in production
-- **Vite Configuration**: Optimized vendor chunking and React path aliases
-- **Vercel Configuration**: Added proper SPA routing with `vercel.json`
-- **Dependency Alignment**: Clean reinstall resolved React version conflicts
-- **GitHub-Remote Sync**: Ensured 100% alignment between local and remote repositories
-
-### Performance Improvements Achieved
-- **Query Performance**: 50-80% improvement on common operations
-- **Dashboard Loading**: 60-90% faster with optimized database functions
-- **Memory Usage**: 30-50% reduction through better caching strategies
-- **Scalability**: Now supports 10x more concurrent users
-- **React Performance**: Memoized components reduce unnecessary re-renders
-- **Bundle Size**: Optimized vendor chunking for better caching
-
-### New Monitoring Tables
-```sql
--- Performance monitoring
-query_performance_logs    -- Query execution metrics
-application_metrics      -- Custom application metrics
-error_logs              -- Centralized error tracking
-health_checks           -- System health monitoring
-
--- Scalability features  
-batch_operations        -- Large-scale operation tracking
-background_jobs         -- Async job processing queue
-query_cache_stats      -- Cache performance analytics
-organization_stats_mv  -- Pre-computed org statistics
-```
-
-### New Optimized Functions
-```sql
--- Dashboard optimization
-get_dashboard_data_optimized()           -- Single-query dashboard data
-get_organization_users_optimized()       -- Paginated user lists
-get_feedback_list_optimized()           -- Advanced feedback filtering
-
--- Knowledge base
-search_kb_content_optimized()           -- Relevance-scored search
-get_user_notifications_optimized()      -- Efficient notifications
-
--- Monitoring
-get_system_health_overview()            -- Comprehensive health status
-get_performance_insights()              -- Query performance analysis
-
--- Scalability
-bulk_upsert_users()                     -- Batch user operations
-broadcast_organization_notification()    -- Efficient notifications
-```
-
-### New Frontend Hooks
-```typescript
-// Optimized data access
-useOptimizedDashboard()      // Fast dashboard loading
-useOptimizedUsers()          // Paginated user management
-useOptimizedFeedback()       // Advanced feedback filtering
-useOptimizedKBSearch()       // Knowledge base search
-
-// Monitoring and analytics
-useSystemHealth()            // System status monitoring
-usePerformanceInsights()     // Performance analytics
-useErrorLogs()              // Error tracking
-useMonitoringDashboard()     // Comprehensive monitoring
-
-// Real-time features
-useRealTimeMonitoring()      // Live system monitoring
-useMonitoringAlerts()        // Critical system alerts
-
-// Phase 2 Optimized Hooks
-useUserRole()               // React Query optimized with 10min cache
-```
-
-### Development Utilities (Phase 2)
-
-#### Conditional Development Logging (`src/lib/dev-logger.ts`)
-```typescript
-const isDev = import.meta.env.DEV;
-
-export const devLog = {
-  log: (...args: unknown[]) => {
-    if (isDev) console.log(...args);
-  },
-  error: (...args: unknown[]) => {
-    if (isDev) console.error(...args);
-  },
-  warn: (...args: unknown[]) => {
-    if (isDev) console.warn(...args);
-  }
-};
-
-export const featureLog = {
-  access: (feature: string, user: string) => {
-    if (isDev) console.log(`🎯 Feature Access: ${feature} by ${user}`);
-  }
-};
-
-export const perfLog = {
-  time: (label: string) => {
-    if (isDev) console.time(label);
-  },
-  timeEnd: (label: string) => {
-    if (isDev) console.timeEnd(label);
-  }
-};
-```
-
-#### React.memo Optimized Components
-- **Feedback Page**: Memoized form components (PrioritySelector, FeedbackTypeSelector, CharacterCounter)
-- **AvailableFeaturesSection**: Memoized FeatureCard with stable callbacks
-- **Performance**: Prevents unnecessary re-renders on large forms and lists
-
-### Environment Variables Added
-```env
-# Core Supabase (now using env vars)
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-anon-key
-
-# Monitoring & Analytics
-VITE_ENABLE_MONITORING=true
-VITE_PERFORMANCE_TRACKING=true
-VITE_ERROR_REPORTING=true
-```
-
-## Troubleshooting Guide
-
-### Common Production Issues
-
-#### React Bundling Errors (Fixed August 2025)
-**Symptoms**: `Cannot read properties of undefined (reading 'useLayoutEffect')` in production
-**Cause**: React ecosystem split across multiple vendor chunks
-**Solution**: Use explicit vendor chunking in `vite.config.ts`:
-```typescript
-manualChunks: mode === 'production' ? {
-  'vendor': ['react', 'react-dom', 'react-router-dom']
-} : undefined,
-```
-
-#### Vercel Deployment Errors
-**Symptoms**: 404 errors on client-side routes, deployment configuration errors
-**Cause**: Missing or incorrect `vercel.json` configuration
-**Solution**: Ensure proper SPA routing configuration (see Frontend Deployment section)
-
-#### Local vs Remote Repository Misalignment
-**Symptoms**: Production differs from local, missing optimizations
-**Solution**: Always verify alignment with:
-```bash
-git status
-git fetch origin
-git log --oneline origin/main -5
-```
-
-### Development Best Practices
-
-#### Database Changes
-- Always use the AI assistant's MCP capabilities for schema changes
-- Ensure RLS policies are applied to new tables
-- Test migrations on development branches first
-- Maintain organization-based isolation patterns
-
-#### Performance Optimization
-- Use React.memo for heavy components with stable comparison functions
-- Implement conditional logging for development vs production
-- Leverage React Query caching with appropriate stale times
-- Add database indexes for frequently queried columns
-
-#### Deployment Workflow
-1. Ensure local and remote repositories are 100% aligned
-2. Test build locally: `npm run build`
-3. Verify all environment variables are configured
-4. Monitor Vercel deployment logs for any configuration issues
-5. Test all routes after deployment
-
-### Live Application
-- **Production URL**: https://organize-prime.vercel.app/
-- **Status**: ✅ Live and operational as of August 21, 2025
-- **Last Major Update**: Conversation Management System Implementation
-
-## Latest Update: Conversation Management System (August 21, 2025)
-
-### 🆕 New Features Implemented
-
-#### Comprehensive Chat Conversation Management
-- **Full CRUD Operations**: Create, read, update, delete conversations with optimistic UI updates
-- **Left Sidebar Interface**: Dedicated conversation management pane with search and filtering
-- **Real-time Synchronization**: Live updates across sessions using Supabase realtime subscriptions
-- **Cascading Delete**: Automatic deletion of all messages when conversation is deleted
-- **Smart Search**: Search conversations by title and message content preview
-
-#### Database Enhancements
-```sql
--- New conversation metadata fields
-ALTER TABLE kb_conversations ADD COLUMN 
-  last_activity_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  message_preview TEXT,
-  created_by_name TEXT,
-  is_archived BOOLEAN DEFAULT FALSE;
-
--- Cascading delete constraint
-ALTER TABLE kb_messages ADD CONSTRAINT kb_messages_conversation_id_fkey 
-FOREIGN KEY (conversation_id) REFERENCES kb_conversations(id) ON DELETE CASCADE;
-
--- Auto-update triggers for conversation activity
-CREATE FUNCTION update_conversation_activity() -- Updates last_activity_at and preview
-```
-
-#### New Service Layer (`SimpleChatService`)
-- **Conversation Management**: `getConversations()`, `createConversation()`, `updateConversation()`, `deleteConversation()`
-- **Search Functionality**: `searchConversations()` with content and title matching
-- **Archive Support**: `archiveConversation()` for soft deletion
-- **Enhanced Debugging**: Comprehensive logging for webhook integration troubleshooting
-
-#### New React Components & Hooks
-```typescript
-// Conversation management hooks
-useConversations()        // Real-time conversation list with caching
-useConversationCRUD()     // Optimistic CRUD operations with error handling
-useSimpleChat()          // Enhanced chat interface with proper conversation handling
-
-// UI Components
-ConversationSidebar      // Full-featured sidebar with search, create, collapse
-ConversationListItem     // Individual conversation with inline edit, context menu
-SimpleChat              // Streamlined chat interface (replaces complex chat system)
-```
-
-#### UI/UX Improvements
-- **Two-Panel Layout**: Responsive sidebar + chat interface design
-- **Fixed Scrolling Issues**: Proper height calculations for nested flex layouts
-- **Mobile Responsive**: Collapsible sidebar with overlay mode
-- **Enhanced Typography**: Better text wrapping and message formatting
-- **Loading States**: Comprehensive loading indicators and error handling
-- **Auto-scroll**: Smart scrolling to latest messages with proper timing
-
-#### Architecture Simplification
-- **Removed Legacy Code**: Eliminated 13,827 lines of complex chat components
-- **Consolidated Chat System**: Single `SimpleChat` component replaces multiple chat interfaces
-- **Cleaner Service Layer**: `SimpleChatService` replaces `ElementWebhookTriggerService`
-- **Improved State Management**: React Query with optimistic updates and proper error boundaries
-
-### 🔧 Technical Implementation Details
-
-#### Conversation Management Flow
-1. **Sidebar displays** user's conversations sorted by last activity
-2. **Real-time updates** sync conversation changes across sessions
-3. **Optimistic UI updates** provide instant feedback for CRUD operations
-4. **Error handling** with rollback capabilities and user notifications
-5. **Search integration** with debounced queries and result highlighting
-
-#### Webhook Integration Debugging
-- **Comprehensive Logging**: Step-by-step tracing through message sending process
-- **Error Isolation**: Detailed error reporting at each stage (auth, database, webhook)
-- **90-Second Timeout**: Extended timeout for long-running N8N workflows
-- **Status Tracking**: Real-time processing status updates with auto-fix for stuck messages
-
-#### Performance Optimizations
-- **Database Indexes**: Optimized queries for conversation lists and searches
-- **React Query Caching**: 2-minute stale time for conversations, smart invalidation
-- **Component Memoization**: Reduced re-renders in conversation list components
-- **Efficient Real-time**: Organization-scoped subscriptions with proper cleanup
-
-### 🔍 Current System Architecture
-
-The chat system now follows a simplified, maintainable architecture:
-
-```
-KBChat (Main Layout)
-├── ConversationSidebar
-│   ├── Search & Filter
-│   ├── Create New Conversation
-│   └── ConversationListItem (with CRUD context menu)
-└── SimpleChat (Active Conversation)
-    ├── Message Display (with auto-scroll)
-    ├── Real-time Updates
-    └── Sticky Input (with send functionality)
-```
-
-### 🚀 Next Steps & Maintenance
-
-#### Ready for Production
-- **All core functionality** is implemented and tested
-- **Database migrations** applied with proper constraints
-- **Real-time subscriptions** configured and optimized
-- **Error handling** comprehensive with user feedback
-- **Mobile responsive** design with proper touch interactions
-
-#### Debugging Tools Available
-- **Enhanced Logging**: Console logs trace exact failure points in message sending
-- **Super Admin Debug Mode**: Advanced debugging interface for troubleshooting
-- **Database Direct Access**: AI assistant can query and modify database directly
-- **Real-time Monitoring**: Live conversation and message status updates
-
-## Latest Update: Advanced AI Chat System Enhancement (August 25, 2025)
-
-### 🆕 Major Features Implemented
-
-#### 1. AI Prompts Database System
-**Purpose**: Store AI chat prompts for N8N workflow integration with multi-tenant, multi-feature support.
-
-**New Database Table: `ai_prompts`**
-```sql
-CREATE TABLE ai_prompts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  feature_slug TEXT NOT NULL, -- 'knowledge-base', 'content', etc.
-  prompt_type TEXT NOT NULL, -- 'system', 'user_template', 'assistant_instructions'
-  name TEXT NOT NULL,
-  description TEXT,
-  system_prompt TEXT,
-  user_prompt_template TEXT,
-  assistant_instructions TEXT,
-  variables JSONB DEFAULT '{}',
-  settings JSONB DEFAULT '{}',
-  version INTEGER NOT NULL DEFAULT 1,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  is_default BOOLEAN NOT NULL DEFAULT FALSE,
-  created_by UUID REFERENCES auth.users(id),
-  updated_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(organization_id, feature_slug, prompt_type, name, version)
-);
-```
-
-**Features:**
-- **Multi-tenant isolation**: Organization-scoped prompts with RLS policies
-- **Feature-specific**: Different prompts for knowledge-base, content, etc.
-- **Version control**: Track prompt versions and maintain history
-- **Flexible structure**: Support system prompts, user templates, and assistant instructions
-- **Audit trail**: Created/updated by tracking with timestamps
-- **Variable substitution**: JSONB field for dynamic prompt variables
-
-#### 2. AI Chat Settings Page Enhancement
-**Implemented Changes:**
-- **Removed legacy components**: Test webhook button and duplicate webhooks card
-- **Added additional_chat_instructions field**: 500-character limit for custom AI behavior
-- **Enhanced form validation**: Real-time character counting and validation
-- **Auto-save functionality**: Seamless settings persistence
-
-**Database Schema Update:**
-```sql
-ALTER TABLE kb_ai_chat_settings 
-ADD COLUMN additional_chat_instructions TEXT;
-```
-
-**Key Features:**
-- **Custom Instructions Field**: Allow users to add specific AI behavior guidelines
-- **Character Limiting**: Real-time validation with visual feedback
-- **Form Integration**: Seamless integration with existing settings form
-- **Webhook Integration**: Settings trigger N8N workflows for prompt generation
-
-#### 3. Dynamic Assistant Name System
-**Implementation**: Dynamic display of custom assistant names across chat interface
-
-**Code Changes:**
-- **KBChat.tsx**: Dynamic header with assistant name from settings
-- **Real-time Updates**: Assistant name changes reflect immediately
-- **Fallback Handling**: Graceful degradation to default "AI Chat" name
-
-```typescript
-// Dynamic assistant name implementation
-const { settings: chatSettings } = useKBAIChatSettings();
-const assistantName = chatSettings?.assistant_name || 'AI Chat';
-const chatSubtitle = `Chat with ${chatSettings?.assistant_name || 'AI'} to get instant answers and insights.`;
-```
-
-**Features:**
-- **Live Updates**: Name changes appear instantly without page refresh
-- **Context-Aware**: Different names for different organizations/features
-- **User Experience**: Personalized chat interface with custom branding
-
-#### 4. Custom Greeting System
-**Purpose**: Automatically display custom greetings when users start new conversations
-
-**Implementation Details:**
-- **SimpleChatService Enhancement**: Modified `createConversation()` to accept greeting parameter
-- **Auto-insertion**: Custom greeting inserted as first assistant message
-- **Metadata Tracking**: Greeting messages marked with `is_greeting: true` metadata
-- **Settings Integration**: Greetings sourced from `kb_ai_chat_settings.custom_greeting`
-
-```typescript
-// Custom greeting implementation
-static async createConversation(title: string, customGreeting?: string): Promise<string> {
-  // ... create conversation logic ...
-  
-  if (customGreeting && customGreeting.trim()) {
-    await supabase.from('kb_messages').insert({
-      conversation_id: conversation.id,
-      organization_id: membershipResult.data.organization_id,
-      message_type: 'assistant',
-      content: customGreeting.trim(),
-      processing_status: 'completed',
-      metadata: { is_greeting: true }
-    });
-  }
-  return conversation.id;
-}
-```
-
-**Features:**
-- **Automatic Display**: Greetings appear immediately when new conversations start
-- **Persistent Storage**: Greetings saved in message history for reference
-- **Customizable**: Each organization can set unique greeting messages
-- **Seamless Integration**: Works with existing conversation management system
-
-#### 5. SimpleChat UI/UX Overhaul
-**Major Design Improvements:**
-- **Removed card styling**: Eliminated borders, shadows, and rounded corners from chat container
-- **Full-width layout**: Chat interface now fills entire conversation area
-- **Streamlined input**: Simplified input area without card-like appearance
-- **Clean aesthetics**: Removed excessive gradients and visual effects
-
-**Code Changes:**
-```typescript
-// Before: Card-wrapped with heavy styling
-<div className="h-full flex flex-col bg-gradient-to-br from-background to-muted/10 border rounded-2xl shadow-xl backdrop-blur-sm">
-
-// After: Clean, full-width layout  
-<div className="h-full flex flex-col bg-background">
-```
-
-**UI Improvements:**
-- **Removed internal header**: Eliminated redundant "AI Assistant" title
-- **Simplified input styling**: Clean, minimal input field design
-- **Better space utilization**: Chat messages fill entire available area
-- **Improved readability**: Enhanced text formatting and spacing
-
-### 🔧 Technical Implementation Summary
-
-#### Database Enhancements
-1. **New `ai_prompts` table** with comprehensive prompt management
-2. **Enhanced `kb_ai_chat_settings`** with additional_chat_instructions field
-3. **RLS policies applied** for multi-tenant isolation
-4. **Indexes and constraints** for optimal performance
-5. **Audit triggers** for tracking changes
-
-#### Service Layer Updates
-- **SimpleChatService.createConversation()**: Enhanced with custom greeting support
-- **Comprehensive logging**: Step-by-step debugging for webhook integration
-- **Error handling**: Robust error reporting and recovery mechanisms
-- **90-second timeouts**: Extended processing time for complex workflows
-
-#### Frontend Architecture
-- **useKBAIChatSettings hook**: Real-time settings integration across components
-- **Dynamic UI updates**: Settings changes reflect immediately
-- **Enhanced form validation**: Real-time character counting and validation
-- **Improved UX**: Streamlined, card-free chat interface
-
-#### React Query Integration
-- **Optimistic updates**: Immediate UI feedback for all operations
-- **Smart caching**: Efficient data fetching and invalidation
-- **Error boundaries**: Graceful error handling with user feedback
-- **Real-time subscriptions**: Live updates across sessions
-
-### 🚀 Production Status
-
-#### Live Features (August 25, 2025)
-- **AI Prompts System**: Ready for N8N workflow integration
-- **Enhanced Settings Page**: Clean, user-friendly configuration
-- **Dynamic Assistant Names**: Personalized chat experience
-- **Custom Greetings**: Automatic welcome messages
-- **Streamlined Chat UI**: Modern, clean interface design
-
-#### Database Migrations Applied
-```sql
--- AI Prompts table with full feature set
-CREATE TABLE ai_prompts (...);
-ALTER TABLE ai_prompts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "org_isolation" ON ai_prompts ...;
-
--- Enhanced chat settings
-ALTER TABLE kb_ai_chat_settings 
-ADD COLUMN additional_chat_instructions TEXT;
-
--- Optimized indexes
-CREATE INDEX idx_ai_prompts_org_feature ON ai_prompts(organization_id, feature_slug);
-CREATE INDEX idx_ai_prompts_active ON ai_prompts(is_active) WHERE is_active = true;
-```
-
-#### System Architecture Updates
-```
-KBChat (Enhanced Layout)
-├── Dynamic Header (with custom assistant name)
-├── ConversationSidebar (existing)
-└── SimpleChat (streamlined UI)
-    ├── Custom Greeting (auto-inserted)
-    ├── Message Display (full-width)
-    └── Clean Input Area (simplified styling)
-
-Settings Integration Flow:
-AI Chat Settings → Database → N8N Webhook → AI Prompts → Chat Experience
-```
-
-#### Next Development Priorities
-1. **N8N Workflow Testing**: Validate prompt generation workflows
-2. **AI Prompts UI**: Admin interface for managing prompts
-3. **Advanced Personalization**: Role-based prompt variations
-4. **Analytics Integration**: Track prompt effectiveness and usage
-5. **Multi-language Support**: Internationalization for prompts and greetings
-
-This document serves as the primary reference for understanding the OrganizePrime application architecture and should be updated as the system evolves.
+**Live Application**: https://organize-prime.vercel.app/ ✅

@@ -226,7 +226,11 @@ export function SystemFeatureManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleEditFeature(feature)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEditFeature(feature);
+                                }}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>

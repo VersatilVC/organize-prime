@@ -123,9 +123,9 @@ export function useOrganizationFeatures(organizationId?: string) {
       return false;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-    staleTime: 15 * 60 * 1000, // Cache for 15 minutes - features rarely change
-    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
-    refetchOnWindowFocus: false, // Don't refetch when window gets focus
+    staleTime: 2 * 60 * 1000, // Reduced to 2 minutes - allow faster updates for ordering changes
+    gcTime: 10 * 60 * 1000, // Reduced to 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window gets focus  
     refetchOnMount: false, // Don't refetch on every mount
     refetchOnReconnect: false, // Don't refetch on network reconnect
     refetchInterval: false, // Don't poll

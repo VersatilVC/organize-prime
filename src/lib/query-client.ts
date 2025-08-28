@@ -98,7 +98,7 @@ export const cacheConfig = {
 
 // Create optimized query client
 export const createOptimizedQueryClient = () => {
-  return new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: cacheConfig.dynamic.staleTime,
@@ -138,6 +138,13 @@ export const createOptimizedQueryClient = () => {
       },
     },
   });
+  
+  // Make query client globally available in development for debugging
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    (window as any).queryClient = queryClient;
+  }
+  
+  return queryClient;
 };
 
 // Query invalidation helpers
