@@ -1,0 +1,64 @@
+name: Extraction Queue Processor
+
+on:
+  schedule:
+    # Run every minute to ensure immediate processing
+    - cron: '* * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  process-extractions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Trigger Extraction Processing
+        run: |
+          echo "🚀 Triggering extraction queue processor..."
+          
+          # Call the scheduled extraction processor directly
+          curl -X POST "https://cjwgfoingscquolnfkhh.supabase.co/functions/v1/scheduled-extraction-processor" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -d '{
+              "trigger_source": "github_actions",
+              "workflow_run_id": "${{ github.run_id }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"
+            }' \
+            -s -o response.json
+          
+          # Log the response
+          echo "📊 Processing Result:"
+          cat response.json | jq '.'
+          
+          # Check if processing was successful
+          SUCCESS=$(cat response.json | jq -r '.success // false')
+          PROCESSED=$(cat response.json | jq -r '.processed // 0')
+          
+          if [ "$SUCCESS" = "true" ]; then
+            echo "✅ Extraction processing completed successfully"
+            if [ "$PROCESSED" -gt 0 ]; then
+              echo "📋 Processed $PROCESSED items"
+            else
+              echo "📋 No items needed processing"
+            fi
+          else
+            echo "❌ Extraction processing failed"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Health Check
+        if: always()
+        run: |
+          echo "🔍 Checking queue health..."
+          
+          curl -X GET "https://cjwgfoingscquolnfkhh.supabase.co/functions/v1/scheduled-extraction-processor" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -s -o health.json
+          
+          echo "🏥 Queue Health:"
+          cat health.json | jq '.'

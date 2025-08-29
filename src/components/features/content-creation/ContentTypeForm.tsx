@@ -11,6 +11,7 @@ import { useContentTypes } from '@/features/content-creation/hooks/useContentTyp
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { uploadContentExampleFiles, ContentExampleFile } from '@/features/content-creation/services/contentFileUploadService';
 import { useContentExtraction } from '@/features/content-creation/hooks/useContentExtraction';
+import { useAutomaticExtraction } from '@/features/content-creation/hooks/useAutomaticExtraction';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -42,7 +43,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, X, Upload, Link, FileText, Sparkles, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Loader2, Plus, X, Upload, Link, FileText, Sparkles, CheckCircle, AlertCircle, Clock, Zap, RefreshCw } from 'lucide-react';
 
 // Define the form schema
 const contentTypeFormSchema = z.object({
@@ -86,6 +87,14 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
     isConfigured: isExtractionConfigured,
     supportedFileTypes 
   } = useContentExtraction();
+  const {
+    triggerExtraction,
+    isExtractionInProgress,
+    isExtractionCompleted,
+    isExtractionFailed,
+    getLocalExtractionStatus,
+    getLocalExtractionStatusSync
+  } = useAutomaticExtraction();
   const [requiredSections, setRequiredSections] = useState<string[]>([]);
   const [examples, setExamples] = useState<Array<{ type: 'file' | 'url'; value: string; description?: string }>>([]);
   const [newSection, setNewSection] = useState('');
@@ -95,9 +104,11 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
   const [newExample, setNewExample] = useState({ type: 'url' as 'file' | 'url', value: '', description: '' });
   const [extractedContent, setExtractedContent] = useState<Record<string, string>>({});
   const [extractionStatus, setExtractionStatus] = useState<Record<string, 'pending' | 'processing' | 'completed' | 'failed'>>({});
+  const [isProcessingExtraction, setIsProcessingExtraction] = useState(false);
+  const [processingContentTypeId, setProcessingContentTypeId] = useState<string | null>(null);
 
   const isEditing = !!contentType;
-  const isLoading = isCreating || isUpdating || isUploading || isExtracting;
+  const isLoading = isCreating || isUpdating || isUploading || isExtracting || isProcessingExtraction;
 
   const form = useForm<ContentTypeFormData>({
     resolver: zodResolver(contentTypeFormSchema),
@@ -112,6 +123,62 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
       is_default: false,
     },
   });
+
+  // Define handleClose function before useEffect that references it
+  const handleClose = () => {
+    form.reset();
+    setRequiredSections([]);
+    setExamples([]);
+    setUploadedFiles([]);
+    setUploadProgress(0);
+    setIsUploading(false);
+    setNewSection('');
+    setNewExample({ type: 'url', value: '', description: '' });
+    onClose();
+  };
+
+  // Monitor extraction completion for real-time updates
+  useEffect(() => {
+    if (isProcessingExtraction && processingContentTypeId) {
+      console.log(`🔍 Monitoring extraction for content type: ${processingContentTypeId}`);
+      
+      // Check extraction status every 2 seconds
+      const checkExtractionStatus = async () => {
+        const status = await getLocalExtractionStatus(processingContentTypeId);
+        console.log(`📊 Extraction status for ${processingContentTypeId}:`, status);
+        
+        if (status?.status === 'completed') {
+          console.log('✅ Extraction completed!');
+          setIsProcessingExtraction(false);
+          setProcessingContentTypeId(null);
+          toast({
+            title: "Extraction completed",
+            description: "Content has been successfully extracted and processed.",
+          });
+          handleClose();
+        } else if (status?.status === 'failed') {
+          console.log('❌ Extraction failed!');
+          setIsProcessingExtraction(false);
+          setProcessingContentTypeId(null);
+          toast({
+            title: "Extraction failed",
+            description: status.error_message || "Content extraction encountered an error.",
+            variant: "destructive",
+          });
+          // Don't close modal on failure, let user retry
+        }
+      };
+
+      // Check immediately and then every 2 seconds
+      checkExtractionStatus();
+      const interval = setInterval(checkExtractionStatus, 2000);
+      
+      // Cleanup function
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [isProcessingExtraction, processingContentTypeId, getLocalExtractionStatus, toast, handleClose]);
 
   // Reset form when modal opens/closes or contentType changes
   useEffect(() => {
@@ -149,18 +216,6 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
     }
   }, [isOpen, contentType, form]);
 
-  const handleClose = () => {
-    form.reset();
-    setRequiredSections([]);
-    setExamples([]);
-    setUploadedFiles([]);
-    setUploadProgress(0);
-    setIsUploading(false);
-    setNewSection('');
-    setNewExample({ type: 'url', value: '', description: '' });
-    onClose();
-  };
-
   const handleSubmit = (data: ContentTypeFormData) => {
     const formData: CreateContentTypeForm = {
       name: data.name,
@@ -179,14 +234,51 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
     console.log('🚀 Submitting content type with examples:', examples);
     console.log('📝 Form data examples:', formData.examples);
 
+    // Check if this will trigger automatic extraction
+    const hasExtractableExamples = examples.length > 0 && 
+      examples.some(ex => ex.type === 'file' || ex.type === 'url');
 
     if (isEditing && contentType) {
       updateContentType({ id: contentType.id, ...formData }, {
-        onSuccess: handleClose,
+        onSuccess: (updatedContentType) => {
+          if (hasExtractableExamples) {
+            // Start monitoring extraction process
+            setIsProcessingExtraction(true);
+            setProcessingContentTypeId(updatedContentType.id);
+            toast({
+              title: "Content type updated",
+              description: "Processing automatic extraction...",
+            });
+            // Don't close modal yet - wait for extraction completion
+          } else {
+            toast({
+              title: "Content type updated",
+              description: "Content type updated successfully.",
+            });
+            handleClose();
+          }
+        },
       });
     } else {
       createContentType(formData, {
-        onSuccess: handleClose,
+        onSuccess: (newContentType) => {
+          if (hasExtractableExamples) {
+            // Start monitoring extraction process
+            setIsProcessingExtraction(true);
+            setProcessingContentTypeId(newContentType.id);
+            toast({
+              title: "Content type created",
+              description: "Processing automatic extraction...",
+            });
+            // Don't close modal yet - wait for extraction completion
+          } else {
+            toast({
+              title: "Content type created",
+              description: "Content type created successfully.",
+            });
+            handleClose();
+          }
+        },
       });
     }
   };
@@ -697,12 +789,95 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
             </div>
 
 
+            {/* Automatic Extraction Status */}
+            {isEditing && contentType && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Automatic Extraction Status
+                </h4>
+                <div className="border rounded-lg p-4 bg-muted/20">
+                  {isExtractionInProgress(contentType.id) ? (
+                    <div className="flex items-center gap-3">
+                      <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-600">Extraction in Progress</p>
+                        <p className="text-xs text-muted-foreground">
+                          Automatically extracting content from {examples.length} example(s)...
+                        </p>
+                      </div>
+                    </div>
+                  ) : isExtractionCompleted(contentType.id) ? (
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-600">Extraction Completed</p>
+                        <p className="text-xs text-muted-foreground">
+                          Content has been automatically extracted and is ready for use.
+                        </p>
+                      </div>
+                    </div>
+                  ) : isExtractionFailed(contentType.id) ? (
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-600">Extraction Failed</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getLocalExtractionStatusSync(contentType.id)?.error_message || 'Automatic extraction encountered an error.'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => triggerExtraction(contentType.id)}
+                        disabled={isProcessing}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </Button>
+                    </div>
+                  ) : examples.length > 0 ? (
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-yellow-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-yellow-600">Pending Extraction</p>
+                        <p className="text-xs text-muted-foreground">
+                          {examples.length} example(s) queued for automatic extraction.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => triggerExtraction(contentType.id)}
+                        disabled={isProcessing}
+                      >
+                        <Zap className="h-3 w-3 mr-1" />
+                        Extract Now
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">No Examples Added</p>
+                        <p className="text-xs text-muted-foreground">
+                          Add file or URL examples to enable automatic content extraction.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Extracted Content Display */}
             {Object.keys(extractedContent).length > 0 && (
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Extracted Content
+                  Extracted Content (Manual)
                 </h4>
                 <div className="space-y-3">
                   {Object.entries(extractedContent).map(([key, content]) => (
@@ -816,7 +991,21 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Update' : 'Create'} Content Type
+                {isProcessingExtraction ? (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                    Processing Extraction...
+                  </>
+                ) : isCreating || isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    {isEditing ? 'Update' : 'Create'} Content Type
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>

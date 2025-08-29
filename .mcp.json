@@ -1,4 +1,4 @@
-\{
+{
   "mcpServers": {
     "supabase": {
       "type": "stdio",
@@ -9,7 +9,15 @@
         "--project-ref=cjwgfoingscquolnfkhh"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_014b4df13a1909d0c73f4a6155a8f28c9c8b9064"
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "apify": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@apify/actors-mcp-server"],
+      "env": {
+        "APIFY_TOKEN": "${APIFY_TOKEN}"
       }
     }
   }

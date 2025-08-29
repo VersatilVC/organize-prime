@@ -560,29 +560,72 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Use safe database function to update content_types table
+    // Update content_types table with chunked approach for large content
     if (result.success && result.markdown) {
       try {
-        console.log('📝 Using safe database function to update content_types');
-        const { data: dbResult, error: dbError } = await supabase.rpc('safe_update_content_types_no_triggers', {
-          p_content_type_id: contentTypeId,
-          p_markdown: result.markdown,
-          p_word_count: result.metadata?.wordCount || 0,
-          p_extraction_metadata: result.metadata || {}
-        });
+        const contentLength = result.markdown.length;
+        console.log('📝 Updating content_types table, content size:', contentLength);
+        
+        // For very large content (>50KB), use direct table update to avoid function parameter limits
+        if (contentLength > 50000) {
+          console.log('⚠️ Large content detected, using direct table update approach');
+          
+          // Truncate content for the content_types table (10KB limit)
+          const maxContentLength = 10000;
+          const truncatedContent = contentLength > maxContentLength 
+            ? result.markdown.substring(0, maxContentLength - 100) + '\n\n... (content truncated, see extraction logs for full content)'
+            : result.markdown;
 
-        if (dbError) {
-          console.error('❌ Database function error:', dbError);
-        } else if (dbResult) {
-          console.log('✅ Successfully updated content_types using database function');
-          if (result.markdown.length > 10000) {
+          const { data: dbResult, error: dbError } = await supabase
+            .from('content_types')
+            .update({
+              extracted_content: {
+                markdown: truncatedContent,
+                wordCount: result.metadata?.wordCount || 0,
+                lastUpdate: new Date().toISOString(),
+                isTruncated: contentLength > maxContentLength,
+                fullContentSize: contentLength
+              },
+              extraction_status: 'completed',
+              extraction_error: null,
+              last_extracted_at: new Date().toISOString(),
+              extraction_metadata: result.metadata || {},
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', contentTypeId)
+            .select('id');
+
+          if (dbError) {
+            console.error('❌ Direct table update error:', dbError);
+          } else if (dbResult && dbResult.length > 0) {
+            console.log('✅ Successfully updated content_types using direct table update');
             console.log('⚠️ Content was truncated for content_types table, full content stored in extraction logs');
+          } else {
+            console.error('❌ Content type not found for direct update');
           }
         } else {
-          console.error('❌ Database function returned false - content_type not found');
+          // For smaller content, use the database function
+          console.log('📝 Using database function for smaller content');
+          const { data: dbResult, error: dbError } = await supabase.rpc('safe_update_content_types_no_triggers', {
+            p_content_type_id: contentTypeId,
+            p_markdown: result.markdown,
+            p_word_count: result.metadata?.wordCount || 0,
+            p_extraction_metadata: result.metadata || {}
+          });
+
+          if (dbError) {
+            console.error('❌ Database function error:', dbError);
+          } else if (dbResult) {
+            console.log('✅ Successfully updated content_types using database function');
+            if (result.markdown.length > 10000) {
+              console.log('⚠️ Content was truncated for content_types table, full content stored in extraction logs');
+            }
+          } else {
+            console.error('❌ Database function returned false - content_type not found');
+          }
         }
       } catch (error) {
-        console.error('❌ Error calling database function:', error);
+        console.error('❌ Error updating content_types:', error);
       }
     }
 

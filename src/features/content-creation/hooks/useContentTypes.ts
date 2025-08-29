@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffect } from 'react';
 import type { 
   ContentType, 
   CreateContentTypeForm, 
@@ -42,8 +43,59 @@ export function useContentTypes() {
       return data || [];
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 30 * 1000, // 30 seconds (reduced from 2 minutes)
+    refetchInterval: 15 * 1000, // Refetch every 15 seconds for real-time status updates
   });
+
+  // Set up real-time subscription for extraction status updates
+  useEffect(() => {
+    if (!currentOrganization?.id) return;
+
+    console.log('🔔 Setting up real-time subscription for content types extraction status');
+
+    // Listen for forced cache refresh events
+    const handleForceRefresh = () => {
+      console.log('🔄 Force refresh triggered, invalidating cache');
+      queryClient.invalidateQueries({ 
+        queryKey: ['content-types', currentOrganization.id] 
+      });
+    };
+    
+    window.addEventListener('force-content-types-refresh', handleForceRefresh);
+
+    const channel = supabase.channel('content-types-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'content_types',
+          filter: `organization_id=eq.${currentOrganization.id}`
+        },
+        (payload) => {
+          console.log('📡 Content type status update received:', payload.new);
+          
+          // Invalidate and refetch the query immediately
+          queryClient.invalidateQueries({ 
+            queryKey: ['content-types', currentOrganization.id] 
+          });
+          
+          // Also invalidate single content type queries
+          if (payload.new?.id) {
+            queryClient.invalidateQueries({ 
+              queryKey: ['content-type', payload.new.id, currentOrganization.id] 
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔕 Cleaning up content types real-time subscription');
+      window.removeEventListener('force-content-types-refresh', handleForceRefresh);
+      channel.unsubscribe();
+    };
+  }, [currentOrganization?.id, queryClient]);
 
   const createContentTypeMutation = useMutation({
     mutationFn: async (formData: CreateContentTypeForm): Promise<ContentType> => {
@@ -232,6 +284,7 @@ export function useContentType(id: string | undefined) {
       return data;
     },
     enabled: !!id && !!currentOrganization?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds (reduced from 5 minutes)
+    refetchInterval: 15 * 1000, // Refetch every 15 seconds for real-time status updates
   });
 }
