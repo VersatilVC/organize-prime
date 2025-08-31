@@ -46,7 +46,7 @@ import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
 import { useKBFileStatus } from '../hooks/useKBFileStatus';
 import { FileDetailsModal } from './FileDetailsModal';
 import { KBFile, resetFileForRetry } from '../services/fileUploadApi';
-import { KBFileProcessingService } from '../services/KBFileProcessingService';
+import { KBContentExtractionService } from '../services/KBContentExtractionService';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -110,11 +110,11 @@ export function FileList({ selectedKbId, showProcessingOnly = false, className }
     try {
       setRetryingFileId(fileId);
       
-      // Reset file status first
-      await resetFileForRetry(fileId);
-      
-      // Then trigger processing
-      await KBFileProcessingService.retryFileProcessing(fileId);
+      // Retry extraction using new service
+      const file = files?.find(f => f.id === fileId);
+      if (file) {
+        await KBContentExtractionService.retryExtraction(fileId);
+      }
       
       toast({
         title: 'Retry Started',

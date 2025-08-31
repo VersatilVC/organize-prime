@@ -168,20 +168,64 @@ Standard React/TypeScript structure with:
 
 ## Edge Functions & Content Extraction
 
-### 1. content-extraction (NEW - August 28, 2025)
-**Purpose**: Extract text content from files (PDF, DOCX, etc.) and URLs using ConvertAPI + web scraping
+### 1. kb-file-extraction (Updated - August 31, 2025)
+**Purpose**: Knowledge Base file processing with ConvertAPI integration and OpenAI embeddings
 **Key Features**:
-- **File Processing**: ConvertAPI integration for PDF, DOCX, PPT, XLS formats
-- **URL Processing**: Web scraping with HTML-to-markdown conversion
-- **Database Logging**: Full extraction logs with cascade delete on content type removal
-- **Status Updates**: Uses `safe_update_content_types_no_triggers()` function for reliable status management
-- **Content Truncation**: 10KB limit for content_types table, full content in extraction_logs
-- **Error Handling**: Comprehensive error reporting and 90-second timeout support
+- **Multi-format Support**: PDF, DOCX, PPT, XLS, TXT, MD, RTF, ODT via ConvertAPI
+- **URL Processing**: Web scraping with HTML-to-markdown conversion  
+- **Vector Storage**: OpenAI embeddings stored in KB-specific vector tables
+- **Real-time Progress**: Status updates with chunk/embedding counts
+- **Intelligent Chunking**: Text segmentation with overlap for optimal embeddings
+- **Error Recovery**: Comprehensive error handling with retry capabilities
 
-**Recent Fixes (August 28, 2025)**:
-- ✅ Fixed database permission error: "session_replication_role" superuser requirement
-- ✅ Proper content type status updates from "pending" to "completed" 
-- ✅ Verified cascading delete: content_extraction_logs auto-delete with content_types
+**Latest Implementation (August 31, 2025)**:
+- ✅ **Full ConvertAPI Integration**: Working file conversion with proper secret access
+- ✅ **Vector Storage Fixed**: Uses KB-specific tables instead of organization-wide tables  
+- ✅ **CORS Headers**: Proper cross-origin support for frontend integration
+- ✅ **Duplicate Processing**: Eliminated with unique ID tracking system
+- ✅ **Schema Compatibility**: Fixed vector table structure mismatch
+- ✅ **End-to-End Working**: Complete file upload → extraction → embedding → vector storage pipeline
+
+**Database Tables**:
+```sql
+-- KB file tracking with extraction status
+kb_files {
+  id: UUID PRIMARY KEY
+  kb_id: UUID REFERENCES kb_configurations(id)
+  organization_id: UUID REFERENCES organizations(id)
+  file_name: TEXT NOT NULL
+  source_type: TEXT -- 'file' | 'url'
+  source_url: TEXT -- For URL sources
+  extraction_status: TEXT -- 'pending' | 'processing' | 'completed' | 'failed'
+  embedding_status: TEXT -- 'pending' | 'processing' | 'completed' | 'failed'
+  embedding_count: INTEGER DEFAULT 0
+  chunk_count: INTEGER DEFAULT 0
+  extracted_content: TEXT -- Markdown content
+  extraction_metadata: JSONB
+  uploaded_by: UUID REFERENCES auth.users(id)
+}
+
+-- Extraction processing logs
+kb_extraction_logs {
+  id: UUID PRIMARY KEY
+  kb_file_id: UUID REFERENCES kb_files(id) ON DELETE CASCADE
+  organization_id: UUID REFERENCES organizations(id)
+  extraction_method: TEXT -- 'convertapi' | 'web_scraping'
+  status: TEXT -- 'processing' | 'completed' | 'failed'
+  markdown_content: TEXT -- Full extracted content
+  extraction_metadata: JSONB
+  processing_time_ms: INTEGER
+  error_message: TEXT
+}
+
+-- KB-specific vector tables (example)
+kb_docs_versatil_vc_company_documents {
+  id: BIGSERIAL PRIMARY KEY
+  content: TEXT -- Text chunk
+  embedding: VECTOR(1536) -- OpenAI embedding
+  metadata: JSONB -- { source_file_id, chunk_index, kb_id, file_name, etc. }
+}
+```
 
 ### 2. exec-n8n-webhook
 N8N webhook execution with rate limiting (60 req/10min per user)
@@ -247,6 +291,14 @@ The AI assistant has direct Supabase database access via MCP (Model Context Prot
 
 ## Latest Updates Summary
 
+### Knowledge Base File Extraction System (August 31, 2025)
+- ✅ **Complete ConvertAPI Integration**: Multi-format document processing (PDF, DOCX, PPT, XLS, RTF, ODT)
+- ✅ **OpenAI Embeddings Pipeline**: Text chunking → embedding generation → vector storage
+- ✅ **KB-Specific Vector Tables**: Proper routing to configured knowledge base vector tables
+- ✅ **Frontend Integration**: React hooks, unique ID tracking, real-time status updates
+- ✅ **CORS & Error Handling**: Full cross-origin support, comprehensive error recovery
+- ✅ **End-to-End Verification**: Complete file upload → extraction → embedding → search ready
+
 ### Content Extraction System (August 28, 2025)
 - ✅ **ConvertAPI Integration**: PDF, DOCX, PPT, XLS file processing
 - ✅ **Web Scraping**: URL content extraction with HTML-to-markdown
@@ -268,6 +320,6 @@ The AI assistant has direct Supabase database access via MCP (Model Context Prot
 
 ## Summary
 
-OrganizePrime is a **production-ready multi-tenant SaaS platform** with comprehensive content extraction, AI chat, and feature management systems. The latest content extraction system (August 28, 2025) successfully processes files and URLs with proper database management and cascading deletes.
+OrganizePrime is a **production-ready multi-tenant SaaS platform** with comprehensive knowledge base management, AI-powered document processing, and feature management systems. The latest KB file extraction system (August 31, 2025) provides complete end-to-end document processing with ConvertAPI integration, OpenAI embeddings, and vector storage in knowledge base-specific tables.
 
 **Live Application**: https://organize-prime.vercel.app/ ✅

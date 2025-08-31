@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { uploadFileToKB, deleteKBFile } from '../services/fileUploadApi';
 import { FileValidator, FileValidationResult } from '../utils/fileValidation';
-import { KBFileProcessingService } from '../services/KBFileProcessingService';
+import { KBContentExtractionService } from '../services/KBContentExtractionService';
 
 export interface EnhancedFileUploadProgress {
   fileId: string;

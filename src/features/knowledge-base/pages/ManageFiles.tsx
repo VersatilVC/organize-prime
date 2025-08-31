@@ -3,7 +3,7 @@ import { Upload, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileUploadArea } from '../components/FileUploadArea';
+import { KBFileUploadArea } from '../components/KBFileUploadArea';
 import { FileList } from '../components/FileList';
 import { FileStats } from '../components/FileStats';
 import { FileManagementErrorBoundary } from '../components/FileManagementErrorBoundary';
@@ -102,7 +102,7 @@ export default function ManageFiles() {
             fallbackTitle="Upload Error"
             fallbackDescription="There was an issue with the file upload system."
           >
-            <FileUploadArea 
+            <KBFileUploadArea 
               selectedKbId={selectedKbId}
               onKbChange={setSelectedKbId}
             />
@@ -190,8 +190,11 @@ export default function ManageFiles() {
               <ul className="text-muted-foreground space-y-1">
                 <li>• PDF documents</li>
                 <li>• Word documents (.docx, .doc)</li>
-                <li>• Text files (.txt)</li>
-                <li>• Markdown files (.md)</li>
+                <li>• PowerPoint (.pptx, .ppt)</li>
+                <li>• Excel (.xlsx, .xls)</li>
+                <li>• Text files (.txt, .md, .rtf)</li>
+                <li>• OpenDocument (.odt)</li>
+                <li>• Web URLs</li>
               </ul>
             </div>
             
@@ -209,9 +212,10 @@ export default function ManageFiles() {
               <h4 className="font-medium mb-2">Processing Steps</h4>
               <ul className="text-muted-foreground space-y-1">
                 <li>• File upload & validation</li>
-                <li>• Text extraction</li>
-                <li>• Content chunking</li>
-                <li>• Vector generation</li>
+                <li>• ConvertAPI text extraction</li>
+                <li>• Intelligent content chunking</li>
+                <li>• OpenAI embedding generation</li>
+                <li>• Vector storage & indexing</li>
               </ul>
             </div>
             
