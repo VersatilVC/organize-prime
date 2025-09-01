@@ -92,7 +92,7 @@ export default function KBDashboard() {
             <NotificationBell />
             <KBPermissionGuard can="can_upload">
               <Button asChild variant="secondary">
-                <Link to="/features/knowledge-base/files">Upload Files</Link>
+                <Link to="/features/knowledge-base/manage-files">Upload Files</Link>
               </Button>
             </KBPermissionGuard>
             <KBPermissionGuard can="can_chat">
@@ -190,7 +190,7 @@ export default function KBDashboard() {
             <div className="flex flex-wrap gap-2">
               <KBPermissionGuard can="can_upload">
                 <Button asChild variant="secondary">
-                  <Link to="/features/knowledge-base/files">Upload Documents</Link>
+                  <Link to="/features/knowledge-base/manage-files">Upload Documents</Link>
                 </Button>
               </KBPermissionGuard>
               <KBPermissionGuard can="can_chat">
@@ -264,7 +264,7 @@ export default function KBDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Button asChild size="sm" variant="ghost">
-                      <Link to={`/features/knowledge-base/files?kbId=${kb.id}`}>Files</Link>
+                      <Link to={`/features/knowledge-base/manage-files?kbId=${kb.id}`}>Files</Link>
                     </Button>
                     <Button asChild size="sm" variant="ghost">
                       <Link to={`/features/knowledge-base/chat?kbId=${kb.id}`}>Chat</Link>

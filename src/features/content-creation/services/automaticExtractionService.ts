@@ -7,10 +7,12 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ExtractionQueueItem {
   id: string;
-  content_type_id: string;
+  content_type_id?: string; // For content types (nullable now)
+  content_idea_id?: string; // For content ideas
   organization_id: string;
   payload: {
-    content_type_id: string;
+    content_type_id?: string;
+    content_idea_id?: string;
     organization_id: string;
     examples: Array<{
       type: 'file' | 'url';
@@ -38,6 +40,9 @@ class AutomaticExtractionService {
     
     // Listen for queue changes and trigger server-side processing
     this.setupServerSideTriggerListener();
+    
+    // Start the queue processor automatically
+    this.startQueueProcessor();
   }
 
   /**
@@ -132,7 +137,9 @@ class AutomaticExtractionService {
       // Process each pending item
       for (const item of pendingItems) {
         try {
-          console.log(`🔄 Processing extraction for content_type_id: ${item.content_type_id}`);
+          const itemType = item.content_type_id ? 'content_type' : 'content_idea';
+          const itemId = item.content_type_id || item.content_idea_id;
+          console.log(`🔄 Processing extraction for ${itemType}: ${itemId}`);
           
           // Update status to processing
           await supabase
@@ -175,13 +182,15 @@ class AutomaticExtractionService {
               .eq('id', item.id);
 
             processed++;
-            console.log(`✅ Extraction completed for content_type_id: ${item.content_type_id}`);
+            console.log(`✅ Extraction completed for ${itemType}: ${itemId}`);
           } else {
             throw new Error(result.error || 'Extraction failed');
           }
 
         } catch (error) {
-          console.error(`❌ Extraction failed for ${item.content_type_id}:`, error);
+          const itemType = item.content_type_id ? 'content_type' : 'content_idea';
+          const itemId = item.content_type_id || item.content_idea_id;
+          console.error(`❌ Extraction failed for ${itemType} ${itemId}:`, error);
 
           // Update with error status
           const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
@@ -197,16 +206,27 @@ class AutomaticExtractionService {
             })
             .eq('id', item.id);
 
-          // Also update content type status if we're giving up
+          // Also update content type or content idea status if we're giving up
           if (!shouldRetry) {
-            await supabase
-              .from('content_types')
-              .update({
-                extraction_status: 'failed',
-                extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', item.content_type_id);
+            if (item.content_type_id) {
+              await supabase
+                .from('content_types')
+                .update({
+                  extraction_status: 'failed',
+                  extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', item.content_type_id);
+            } else if (item.content_idea_id) {
+              await supabase
+                .from('content_ideas')
+                .update({
+                  extraction_status: 'failed',
+                  extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', item.content_idea_id);
+            }
           }
         }
       }
@@ -331,7 +351,9 @@ class AutomaticExtractionService {
    * Process a single extraction request
    */
   private async processExtractionRequest(item: ExtractionQueueItem) {
-    console.log(`🔄 Processing extraction for content_type_id: ${item.content_type_id}`);
+    const itemType = item.content_type_id ? 'content_type' : 'content_idea';
+    const itemId = item.content_type_id || item.content_idea_id;
+    console.log(`🔄 Processing extraction for ${itemType}: ${itemId}`);
 
     try {
       // Update status to processing
@@ -386,13 +408,13 @@ class AutomaticExtractionService {
           })
           .eq('id', item.id);
 
-        console.log(`✅ Extraction completed for content_type_id: ${item.content_type_id}`);
+        console.log(`✅ Extraction completed for ${itemType}: ${itemId}`);
       } else {
         throw new Error(result.error || 'Extraction failed');
       }
 
     } catch (error) {
-      console.error(`❌ Extraction failed for ${item.content_type_id}:`, error);
+      console.error(`❌ Extraction failed for ${itemType} ${itemId}:`, error);
 
       // Update with error status
       const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
@@ -408,16 +430,27 @@ class AutomaticExtractionService {
         })
         .eq('id', item.id);
 
-      // Also update content type status if we're giving up
+      // Also update content type or content idea status if we're giving up
       if (!shouldRetry) {
-        await supabase
-          .from('content_types')
-          .update({
-            extraction_status: 'failed',
-            extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.content_type_id);
+        if (item.content_type_id) {
+          await supabase
+            .from('content_types')
+            .update({
+              extraction_status: 'failed',
+              extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.content_type_id);
+        } else if (item.content_idea_id) {
+          await supabase
+            .from('content_ideas')
+            .update({
+              extraction_status: 'failed',
+              extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.content_idea_id);
+        }
       }
     }
   }

@@ -127,9 +127,25 @@ Deno.serve(async (req: Request) => {
     // Process each item by calling the existing extraction-queue-processor
     for (const item of pendingItems) {
       try {
-        console.log(`🔄 Processing extraction for content_type_id: ${item.content_type_id}`);
+        const isContentIdea = !!item.content_idea_id;
+        const entityId = item.content_type_id || item.content_idea_id;
+        const entityType = isContentIdea ? 'content_idea_id' : 'content_type_id';
+        
+        console.log(`🔄 Processing extraction for ${entityType}: ${entityId}`);
         
         // Call the extraction-queue-processor with this specific item
+        const requestBody = {
+          trigger_source: 'scheduled_batch',
+          organization_id: item.organization_id
+        };
+        
+        // Add the appropriate ID field
+        if (isContentIdea) {
+          requestBody.content_idea_id = item.content_idea_id;
+        } else {
+          requestBody.content_type_id = item.content_type_id;
+        }
+        
         const response = await fetch(`${supabaseUrl}/functions/v1/extraction-queue-processor`, {
           method: 'POST',
           headers: {
@@ -137,34 +153,30 @@ Deno.serve(async (req: Request) => {
             'Authorization': `Bearer ${supabaseServiceKey}`,
             'apikey': supabaseServiceKey,
           },
-          body: JSON.stringify({
-            trigger_source: 'scheduled_batch',
-            organization_id: item.organization_id,
-            content_type_id: item.content_type_id
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (response.ok) {
           const processingResult = await response.json();
           if (processingResult.success && processingResult.processed > 0) {
             result.processed++;
-            console.log(`✅ Successfully processed content_type_id: ${item.content_type_id}`);
+            console.log(`✅ Successfully processed ${entityType}: ${entityId}`);
           } else {
             result.failed++;
-            result.errors.push(`${item.content_type_id}: Processing returned no results`);
+            result.errors.push(`${entityId}: Processing returned no results`);
           }
         } else {
           const errorText = await response.text();
           result.failed++;
-          result.errors.push(`${item.content_type_id}: HTTP ${response.status} - ${errorText}`);
-          console.error(`❌ HTTP error processing ${item.content_type_id}:`, response.status, errorText);
+          result.errors.push(`${entityId}: HTTP ${response.status} - ${errorText}`);
+          console.error(`❌ HTTP error processing ${entityId}:`, response.status, errorText);
         }
 
       } catch (error) {
         result.failed++;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        result.errors.push(`${item.content_type_id}: ${errorMessage}`);
-        console.error(`❌ Exception processing ${item.content_type_id}:`, error);
+        result.errors.push(`${entityId}: ${errorMessage}`);
+        console.error(`❌ Exception processing ${entityId}:`, error);
       }
     }
 

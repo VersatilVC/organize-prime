@@ -4,39 +4,45 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createOptimizedQueryClient } from '@/lib/query-client';
 import { AuthProvider } from './auth/AuthProvider';
 import { OrganizationProvider } from './contexts/OrganizationContext';
+import { ImpersonationProvider } from './contexts/ImpersonationContext';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { AccessibilityProvider, SkipToContent } from './components/accessibility/AccessibilityProvider';
 import { AppRoutes } from './AppRoutes';
-// import { registerServiceWorker } from './utils/serviceWorker'; // Temporarily disabled
-import { useRoutePreloader } from './hooks/useResourcePreloader';
-import { useBundlePerformance, useMemoryOptimization } from './hooks/usePerformanceMonitor';
-import { usePerformanceMonitoring, useLifecycleMonitoring } from './hooks/usePerformanceMonitoring';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-// Preview system removed - using simplified webhook management
-import { emergencyCircuitBreaker } from './lib/emergency-circuit-breaker';
+import { ErrorBoundary, AsyncErrorBoundary } from '@/components/ErrorBoundary';
+import { setupGlobalErrorHandling } from '@/lib/error-handling';
+import { errorHandler } from '@/lib/error-handling';
 import './index.css';
 
 // Create optimized query client instance - memoized to prevent recreation
 const queryClient = createOptimizedQueryClient();
 
-// Memoized app content with error boundaries around each context provider
+// Setup global error handling on module load
+setupGlobalErrorHandling();
+
+// Memoized app content with properly structured error boundaries
 const AppContent = React.memo(() => (
-  <ErrorBoundary>
+  <ErrorBoundary
+    onError={(error, errorInfo) => {
+      errorHandler.handleError(error, 'App Root Error Boundary');
+    }}
+  >
     <AccessibilityProvider>
       <SkipToContent />
-      <ErrorBoundary>
+      <AsyncErrorBoundary>
         <AuthProvider>
-          <ErrorBoundary>
+          <AsyncErrorBoundary>
             <OrganizationProvider>
-              <ErrorBoundary>
-                <PermissionProvider>
-                  <AppRoutes />
-                </PermissionProvider>
-              </ErrorBoundary>
+              <AsyncErrorBoundary>
+                <ImpersonationProvider>
+                  <PermissionProvider>
+                    <AppRoutes />
+                  </PermissionProvider>
+                </ImpersonationProvider>
+              </AsyncErrorBoundary>
             </OrganizationProvider>
-          </ErrorBoundary>
+          </AsyncErrorBoundary>
         </AuthProvider>
-      </ErrorBoundary>
+      </AsyncErrorBoundary>
     </AccessibilityProvider>
   </ErrorBoundary>
 ));
@@ -44,67 +50,60 @@ const AppContent = React.memo(() => (
 AppContent.displayName = 'AppContent';
 
 
+/**
+ * Main App Component
+ * 
+ * Provides the core application structure with proper error boundaries,
+ * context providers, and optimized rendering patterns.
+ */
 function App() {
-  // BYPASS MECHANISM DISABLED PER USER REQUEST
-  // User requested: "let's cancel the bypass it is causing too many issues"
-  // const isDevelopmentBypass = false; // Always disabled now
-
-
-  // Initialize service worker only (feature configs handled server-side)
+  // Initialize service worker in production for progressive enhancement
   React.useEffect(() => {
     try {
-      // Disable service worker in development to prevent fetch errors
       if (import.meta.env.PROD) {
-        // Register service worker for progressive enhancement (production only)
-        // Service worker temporarily disabled for debugging
+        // Service worker temporarily disabled for debugging - enable when ready
         console.log('Service worker registration skipped for debugging');
+        // TODO: Re-enable when service worker is stable
+        // registerServiceWorker();
       } else {
         console.log('Service worker disabled in development to prevent caching issues.');
       }
     } catch (error) {
-      console.error('Failed to initialize app:', error);
+      errorHandler.handleError(error, 'App initialization', errorHandler.ErrorSeverity.LOW);
     }
   }, []);
 
-  // 🚨 Emergency circuit breaker - prevent infinite loops (after hooks)
-  if (!emergencyCircuitBreaker.checkRenderAllowed('App')) {
-    return null; // Component blocked by emergency system
+  try {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <AppContent />
+        </Router>
+      </QueryClientProvider>
+    );
+  } catch (error) {
+    // Fallback for critical render errors
+    errorHandler.handleError(error, 'App render', errorHandler.ErrorSeverity.CRITICAL);
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold text-destructive">Application Error</h1>
+          <p className="text-muted-foreground">The application failed to start properly.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Reload Application
+          </button>
+        </div>
+      </div>
+    );
   }
-
-  // 🚫 TEMPORARILY DISABLED: Performance monitoring (causing overhead)
-  // usePerformanceMonitoring('App');
-  // useLifecycleMonitoring('App');
-  
-  // 🚫 TEMPORARILY DISABLED: Bundle and memory monitoring
-  // useBundlePerformance({ 
-  //   enabled: import.meta.env.VITE_ENABLE_BUNDLE_MONITORING !== 'false',
-  //   logPerformanceMetrics: import.meta.env.DEV 
-  // });
-  
-  // const { addCleanupFunction } = useMemoryOptimization({ 
-  //   enabled: import.meta.env.VITE_ENABLE_MEMORY_OPTIMIZATION !== 'false'
-  // });
-
-  // 🚫 TEMPORARILY DISABLED: Route preloading
-  // useRoutePreloader([
-  //   '/dashboard', 
-  //   '/features/knowledge-base',
-  //   '/users',
-  //   '/settings'
-  // ]);
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <Router
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
-        <AppContent />
-      </Router>
-    </QueryClientProvider>
-  );
 }
 
 export default App;

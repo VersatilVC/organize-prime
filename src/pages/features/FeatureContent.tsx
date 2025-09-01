@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/ui/icons';
 import { Link } from 'react-router-dom';
 import { PlaceholderPage } from '@/components/ui/placeholder-page';
+import { ContentCreationGeneratePage } from '@/components/features/content-creation/ContentCreationGeneratePage';
 
 export default function FeatureContent() {
   const { config, navigation } = useSimpleFeatureContext();
@@ -116,6 +117,9 @@ export default function FeatureContent() {
 
   const renderContentCreationContent = () => {
     switch (currentPath) {
+      case 'generate':
+        return <ContentCreationGeneratePage />;
+      
       case 'projects':
         return (
           <div className="space-y-6">

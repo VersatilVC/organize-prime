@@ -3,12 +3,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 // Automatic extraction queue item
 interface ExtractionQueueItem {
-  content_type_id: string;
+  content_type_id?: string; // For content types (legacy)
+  content_idea_id?: string; // For content ideas (new)
   organization_id: string;
   examples: Array<{
     type: 'file' | 'url';
     value: string;
-    description?: string;
+    description?: string; // Used by content types
+    name?: string; // Used by content ideas
   }>;
   trigger_time: string;
 }
@@ -323,16 +325,29 @@ Deno.serve(async (req: Request) => {
     }
 
     const queueItem = await req.json() as ExtractionQueueItem;
-    console.log('📥 Processing automatic extraction for content_type_id:', queueItem.content_type_id);
+    const isContentIdea = !!queueItem.content_idea_id;
+    const entityId = queueItem.content_type_id || queueItem.content_idea_id;
+    
+    console.log(`📥 Processing automatic extraction for ${isContentIdea ? 'content_idea_id' : 'content_type_id'}:`, entityId);
 
     // Update status to processing
-    await supabase
-      .from('content_types')
-      .update({
-        extraction_status: 'processing',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', queueItem.content_type_id);
+    if (isContentIdea) {
+      await supabase
+        .from('content_ideas')
+        .update({
+          extraction_status: 'processing',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', queueItem.content_idea_id);
+    } else {
+      await supabase
+        .from('content_types')
+        .update({
+          extraction_status: 'processing',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', queueItem.content_type_id);
+    }
 
     // Process each example
     const extractionResults = [];
@@ -342,25 +357,30 @@ Deno.serve(async (req: Request) => {
 
     // Check if extraction logs already exist to prevent duplicates
     // Also check for any status to avoid race conditions
-    const { data: existingLogs } = await supabase
-      .from('content_extraction_logs')
-      .select('file_name, status, markdown_content, extraction_metadata')
-      .eq('content_type_id', queueItem.content_type_id);
+    const existingLogs = isContentIdea 
+      ? await supabase
+          .from('content_idea_extractions')
+          .select('file_name, status, markdown_content, extraction_metadata')
+          .eq('content_idea_id', queueItem.content_idea_id)
+      : await supabase
+          .from('content_extraction_logs')
+          .select('file_name, status, markdown_content, extraction_metadata')
+          .eq('content_type_id', queueItem.content_type_id);
     
-    const processedFiles = new Set(existingLogs?.map(log => log.file_name) || []);
-    const completedFiles = new Set(existingLogs?.filter(log => log.status === 'completed').map(log => log.file_name) || []);
-    console.log(`📋 Found ${processedFiles.size} total files (${completedFiles.size} completed) for content_type_id: ${queueItem.content_type_id}`);
+    const processedFiles = new Set(existingLogs.data?.map(log => log.file_name) || []);
+    const completedFiles = new Set(existingLogs.data?.filter(log => log.status === 'completed').map(log => log.file_name) || []);
+    console.log(`📋 Found ${processedFiles.size} total files (${completedFiles.size} completed) for ${isContentIdea ? 'content_idea_id' : 'content_type_id'}: ${entityId}`);
 
     for (let i = 0; i < queueItem.examples.length; i++) {
       const example = queueItem.examples[i];
-      const fileName = example.description || example.value;
+      const fileName = example.description || example.name || example.value;
       
       // Skip if already processed (any status) to prevent duplicates
       if (processedFiles.has(fileName)) {
         console.log(`⏭️ Skipping already processed file: ${fileName}`);
         
         // Get existing content to include in combined markdown (only if completed)
-        const existingLog = existingLogs?.find(log => log.file_name === fileName && log.status === 'completed');
+        const existingLog = existingLogs.data?.find(log => log.file_name === fileName && log.status === 'completed');
         if (existingLog && existingLog.markdown_content) {
           combinedMarkdown += existingLog.markdown_content + '\n\n---\n\n';
           totalWordCount += existingLog.extraction_metadata?.wordCount || 0;
@@ -377,7 +397,9 @@ Deno.serve(async (req: Request) => {
       if (example.type === 'url') {
         result = await extractFromUrl(example.value);
       } else if (example.type === 'file') {
-        result = await extractFromFile(example.value, example.description || `file-${i}`);
+        // Support both description (content types) and name (content ideas) fields
+        const fileName = example.description || example.name || `file-${i}`;
+        result = await extractFromFile(example.value, fileName);
       } else {
         result = {
           success: false,
@@ -385,19 +407,34 @@ Deno.serve(async (req: Request) => {
         };
       }
 
-      // Log extraction to content_extraction_logs
-      await supabase.from('content_extraction_logs').insert({
-        organization_id: queueItem.organization_id,
-        content_type_id: queueItem.content_type_id,
-        file_name: example.description || example.value,
-        file_type: example.type,
-        extraction_method: example.type === 'url' ? 'web_scraping' : 'convertapi',
-        status: result.success ? 'completed' : 'failed',
-        markdown_content: result.success ? result.markdown?.substring(0, 100000) : null,
-        extraction_metadata: result.metadata,
-        processing_time_ms: Date.now() - startTime,
-        error_message: result.error || null,
-      });
+      // Log extraction to appropriate table
+      if (isContentIdea) {
+        await supabase.from('content_idea_extractions').insert({
+          organization_id: queueItem.organization_id,
+          content_idea_id: queueItem.content_idea_id,
+          file_name: example.description || example.name || example.value,
+          file_type: example.type,
+          extraction_method: example.type === 'url' ? 'web_scraping' : 'convertapi',
+          status: result.success ? 'completed' : 'failed',
+          markdown_content: result.success ? result.markdown?.substring(0, 100000) : null,
+          extraction_metadata: result.metadata,
+          processing_time_ms: Date.now() - startTime,
+          error_message: result.error || null,
+        });
+      } else {
+        await supabase.from('content_extraction_logs').insert({
+          organization_id: queueItem.organization_id,
+          content_type_id: queueItem.content_type_id,
+          file_name: example.description || example.name || example.value,
+          file_type: example.type,
+          extraction_method: example.type === 'url' ? 'web_scraping' : 'convertapi',
+          status: result.success ? 'completed' : 'failed',
+          markdown_content: result.success ? result.markdown?.substring(0, 100000) : null,
+          extraction_metadata: result.metadata,
+          processing_time_ms: Date.now() - startTime,
+          error_message: result.error || null,
+        });
+      }
 
       if (result.success) {
         successCount++;
@@ -408,33 +445,90 @@ Deno.serve(async (req: Request) => {
       extractionResults.push(result);
     }
 
-    // Update content type with results
+    // Update content type or content idea with results
     const extractionStatus = successCount > 0 ? 'completed' : 'failed';
     const extractionError = successCount === 0 ? 'All extractions failed' : null;
 
-    // Always use the database function for consistent updates
-    // This ensures reliable status updates without trigger conflicts
-    console.log(`🔄 Updating content type status to: ${extractionStatus}`);
+    console.log(`🔄 Updating ${isContentIdea ? 'content idea' : 'content type'} status to: ${extractionStatus}`);
     
     try {
-      const functionResult = await supabase.rpc('safe_update_content_types_no_triggers', {
-        p_content_type_id: queueItem.content_type_id,
-        p_markdown: combinedMarkdown,
-        p_word_count: totalWordCount,
-        p_extraction_metadata: {
-          totalWordCount,
-          successfulExtractions: successCount,
-          totalExamples: queueItem.examples.length,
-          extractionTime: Date.now() - startTime,
-          isAutomatic: true,
-          extractionStatus: extractionStatus,
-          extractionError: extractionError
-        }
-      });
+      if (isContentIdea) {
+        // Update content idea directly (no special database function needed)
+        const processingStatus = extractionStatus === 'completed' ? 'generating ideas' : 'failed';
+        
+        await supabase
+          .from('content_ideas')
+          .update({
+            extracted_content: combinedMarkdown,
+            extraction_status: extractionStatus,
+            extraction_error: extractionError,
+            processing_status: processingStatus,
+            processing_error: extractionStatus === 'failed' ? extractionError : null,
+            extraction_metadata: {
+              totalWordCount,
+              successfulExtractions: successCount,
+              totalExamples: queueItem.examples.length,
+              extractionTime: Date.now() - startTime,
+              isAutomatic: true
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', queueItem.content_idea_id);
 
-      if (!functionResult.data) {
-        console.error(`⚠️ Warning: Content type update may have failed for ${queueItem.content_type_id}`);
-        // Fallback direct update to ensure status is set correctly
+        // Trigger N8N webhook for AI processing if extraction was successful
+        if (extractionStatus === 'completed') {
+          console.log(`🚀 Triggering N8N webhook for content idea: ${queueItem.content_idea_id}`);
+          await triggerContentIdeaWebhook(supabase, queueItem.content_idea_id, queueItem.organization_id, combinedMarkdown);
+        }
+      } else {
+        // Use the database function for content types (existing logic)
+        const functionResult = await supabase.rpc('safe_update_content_types_no_triggers', {
+          p_content_type_id: queueItem.content_type_id,
+          p_markdown: combinedMarkdown,
+          p_word_count: totalWordCount,
+          p_extraction_metadata: {
+            totalWordCount,
+            successfulExtractions: successCount,
+            totalExamples: queueItem.examples.length,
+            extractionTime: Date.now() - startTime,
+            isAutomatic: true,
+            extractionStatus: extractionStatus,
+            extractionError: extractionError
+          }
+        });
+
+        if (!functionResult.data) {
+          console.error(`⚠️ Warning: Content type update may have failed for ${queueItem.content_type_id}`);
+          // Fallback direct update to ensure status is set correctly
+          await supabase
+            .from('content_types')
+            .update({
+              extraction_status: extractionStatus,
+              extraction_error: extractionError,
+              last_extracted_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', queueItem.content_type_id);
+          
+          console.log(`🔄 Applied fallback status update for ${queueItem.content_type_id}`);
+        } else {
+          console.log(`✅ Content type status updated successfully: ${extractionStatus}`);
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Error updating ${isContentIdea ? 'content idea' : 'content type'} status:`, error);
+      
+      // Always ensure status is updated, even if other fields fail
+      if (isContentIdea) {
+        await supabase
+          .from('content_ideas')
+          .update({
+            extraction_status: extractionStatus,
+            extraction_error: extractionError,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', queueItem.content_idea_id);
+      } else {
         await supabase
           .from('content_types')
           .update({
@@ -444,32 +538,17 @@ Deno.serve(async (req: Request) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', queueItem.content_type_id);
-        
-        console.log(`🔄 Applied fallback status update for ${queueItem.content_type_id}`);
-      } else {
-        console.log(`✅ Content type status updated successfully: ${extractionStatus}`);
       }
-    } catch (error) {
-      console.error(`❌ Error updating content type status:`, error);
-      // Always ensure status is updated, even if other fields fail
-      await supabase
-        .from('content_types')
-        .update({
-          extraction_status: extractionStatus,
-          extraction_error: extractionError,
-          last_extracted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', queueItem.content_type_id);
       
-      console.log(`🔄 Applied error fallback status update for ${queueItem.content_type_id}`);
+      console.log(`🔄 Applied error fallback status update for ${entityId}`);
     }
 
-    console.log(`✅ Automatic extraction completed for ${queueItem.content_type_id}: ${successCount}/${queueItem.examples.length} successful`);
+    console.log(`✅ Automatic extraction completed for ${entityId}: ${successCount}/${queueItem.examples.length} successful`);
 
     return new Response(JSON.stringify({
       success: true,
       contentTypeId: queueItem.content_type_id,
+      contentIdeaId: queueItem.content_idea_id,
       successfulExtractions: successCount,
       totalExamples: queueItem.examples.length,
       totalWordCount,
@@ -497,3 +576,90 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+
+/**
+ * Trigger N8N webhook for content idea AI processing
+ */
+async function triggerContentIdeaWebhook(
+  supabase: any,
+  contentIdeaId: string,
+  organizationId: string,
+  extractedContent: string
+): Promise<void> {
+  try {
+    console.log(`🔗 Triggering N8N webhook for content idea ${contentIdeaId}`);
+
+    // Get the content idea details
+    const { data: idea, error: ideaError } = await supabase
+      .from('content_ideas')
+      .select('*')
+      .eq('id', contentIdeaId)
+      .single();
+
+    if (ideaError) {
+      console.error('❌ Error fetching content idea:', ideaError);
+      return;
+    }
+
+    // Prepare webhook payload
+    const webhookPayload = {
+      ideaId: contentIdeaId,
+      title: idea.title,
+      description: idea.description,
+      extractedContent: extractedContent,
+      targetAudience: idea.target_audience,
+      contentType: idea.content_type,
+      keywords: idea.keywords || [],
+      organizationId: organizationId,
+      userId: idea.created_by
+    };
+
+    // Use the hardcoded webhook URL for content ideas
+    const webhookUrl = 'https://versatil.app.n8n.cloud/webhook/fac91ae2-5c77-4b96-97d3-099d6b83fb4f';
+
+    console.log(`📤 Calling N8N webhook: ${webhookUrl}`);
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(webhookPayload),
+      signal: AbortSignal.timeout(30000) // 30 second timeout
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ N8N webhook failed: ${response.status} - ${errorText}`);
+      
+      // Update content idea with error
+      await supabase
+        .from('content_ideas')
+        .update({
+          processing_status: 'failed',
+          processing_error: `N8N webhook failed: ${response.status} - ${errorText}`
+        })
+        .eq('id', contentIdeaId);
+      
+      return;
+    }
+
+    const result = await response.json();
+    console.log('✅ N8N webhook response:', result);
+
+    // The N8N webhook should handle updating the content idea with AI suggestions
+    // If it doesn't, we may need to process the response here
+
+  } catch (error) {
+    console.error('❌ Error triggering N8N webhook:', error);
+    
+    // Update content idea with error
+    await supabase
+      .from('content_ideas')
+      .update({
+        processing_status: 'failed',
+        processing_error: `Webhook trigger failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      })
+      .eq('id', contentIdeaId);
+  }
+}

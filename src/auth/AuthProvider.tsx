@@ -1,18 +1,28 @@
 import * as React from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { debugSafeguards } from '@/lib/debug-safeguards';
 
+/**
+ * Authentication response type with proper error typing
+ */
+interface AuthResponse {
+  error: AuthError | null;
+}
+
+/**
+ * Authentication context interface with proper typing
+ */
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<AuthResponse>;
+  signUp: (email: string, password: string) => Promise<AuthResponse>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<AuthResponse>;
+  signInWithGoogle: () => Promise<AuthResponse>;
   clearError: () => void;
 }
 

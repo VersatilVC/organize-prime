@@ -187,6 +187,7 @@ export interface ContentType {
   prompt_template_id?: string | null;
   custom_instructions?: string | null;
   required_sections: string[];
+  content_structure?: string | null;
   usage_count: number;
   last_used_at?: string | null;
   is_active: boolean;
@@ -237,6 +238,7 @@ export interface CreateContentTypeForm {
   style_guidelines?: string;
   custom_instructions?: string;
   required_sections?: string[];
+  content_structure?: string;
   is_active?: boolean;
   is_default?: boolean;
 }

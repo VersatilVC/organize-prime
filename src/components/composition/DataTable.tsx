@@ -89,11 +89,11 @@ export const DataTable = memo(<T,>({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("border rounded-lg", className)}>
+      <div className={cn("border rounded-lg overflow-x-auto", className)}>
         <Table>
           <TableHeader>
             <TableRow>
-              {hasSelection && <TableHead className="w-12"></TableHead>}
+              {hasSelection && <TableHead className="w-14"></TableHead>}
               {columns.map((column) => (
                 <TableHead key={column.key} className={column.className}>
                   {column.label}
@@ -125,11 +125,11 @@ export const DataTable = memo(<T,>({
   // Empty state
   if (data.length === 0) {
     return (
-      <div className={cn("border rounded-lg", className)}>
+      <div className={cn("border rounded-lg overflow-x-auto", className)}>
         <Table>
           <TableHeader>
             <TableRow>
-              {hasSelection && <TableHead className="w-12"></TableHead>}
+              {hasSelection && <TableHead className="w-14"></TableHead>}
               {columns.map((column) => (
                 <TableHead key={column.key} className={column.className}>
                   {column.label}
@@ -171,13 +171,15 @@ export const DataTable = memo(<T,>({
           <TableHeader>
             <TableRow>
               {hasSelection && (
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Select all items"
-                    {...(someSelected && { "data-indeterminate": true })}
-                  />
+                <TableHead className="w-14">
+                  <div className="flex items-center justify-center pr-2">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all items"
+                      {...(someSelected && { "data-indeterminate": true })}
+                    />
+                  </div>
                 </TableHead>
               )}
               {columns.map((column) => (
@@ -228,16 +230,26 @@ export const DataTable = memo(<T,>({
                 >
                   {hasSelection && (
                     <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleItemSelect(item, !!checked)}
-                        aria-label={`Select item ${virtualRow.index + 1}`}
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                      <div className="flex items-center justify-center pr-2">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleItemSelect(item, !!checked)}
+                          aria-label={`Select item ${virtualRow.index + 1}`}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
                     </TableCell>
                   )}
                   {columns.map((column) => (
-                    <TableCell key={column.key} className={column.className}>
+                    <TableCell 
+                      key={column.key} 
+                      className={cn(
+                        column.className,
+                        "max-w-[200px] truncate",
+                        column.width && `w-[${column.width}]`
+                      )}
+                      title={column.render ? undefined : String((item as any)[column.key] || '')}
+                    >
                       {column.render ? column.render(item, virtualRow.index) : (item as any)[column.key]}
                     </TableCell>
                   ))}
@@ -258,18 +270,20 @@ export const DataTable = memo(<T,>({
 
   // Non-virtualized fallback
   return (
-    <div className={cn("border rounded-lg", className)}>
+    <div className={cn("border rounded-lg overflow-x-auto", className)}>
       <Table>
         <TableHeader>
           <TableRow>
             {hasSelection && (
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={handleSelectAll}
-                  aria-label="Select all items"
-                  {...(someSelected && { "data-indeterminate": true })}
-                />
+              <TableHead className="w-14">
+                <div className="flex items-center justify-center pr-2">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all items"
+                    {...(someSelected && { "data-indeterminate": true })}
+                  />
+                </div>
               </TableHead>
             )}
             {columns.map((column) => (
@@ -311,16 +325,26 @@ export const DataTable = memo(<T,>({
               >
                 {hasSelection && (
                   <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleItemSelect(item, !!checked)}
-                      aria-label={`Select item ${index + 1}`}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    <div className="flex items-center justify-center pr-2">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleItemSelect(item, !!checked)}
+                        aria-label={`Select item ${index + 1}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
                   </TableCell>
                 )}
                 {columns.map((column) => (
-                  <TableCell key={column.key} className={column.className}>
+                  <TableCell 
+                    key={column.key} 
+                    className={cn(
+                      column.className,
+                      "max-w-[200px] truncate",
+                      column.width && `w-[${column.width}]`
+                    )}
+                    title={column.render ? undefined : String((item as any)[column.key] || '')}
+                  >
                     {column.render ? column.render(item, index) : (item as any)[column.key]}
                   </TableCell>
                 ))}

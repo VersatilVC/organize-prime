@@ -99,7 +99,14 @@
       "mcp__supabase__get_anon_key",
       "Read(C:\\Users\\ilanh\\Downloads/**)",
       "Read(C:\\Users\\ilanh\\Downloads/**)",
-      "Read(C:\\Users\\ilanh\\Downloads/**)"
+      "Read(C:\\Users\\ilanh\\Downloads/**)",
+      "mcp__supabase__search_docs",
+      "Read(C:\\Users\\ilanh\\Downloads/**)",
+      "Read(C:\\Users\\ilanh\\Downloads/**)",
+      "Read(C:\\Users\\ilanh\\Downloads/**)",
+      "mcp__supabase__get_advisors",
+      "Read(c:\\Users\\ilanh\\Downloads/**)",
+      "Read(c:\\Users\\ilanh\\Downloads/**)"
     ],
     "deny": [],
     "ask": [],

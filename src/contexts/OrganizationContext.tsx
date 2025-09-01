@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { safeStorage } from '@/lib/safe-storage';
 import { useToast } from '@/hooks/use-toast';
 import { debugSafeguards } from '@/lib/debug-safeguards';
+import { getAllOrganizations } from '@/services/superAdminService';
 
 interface Organization {
   id: string;
@@ -18,13 +19,16 @@ interface Organization {
 interface OrganizationContextType {
   currentOrganization: Organization | null;
   organizations: Organization[];
+  allOrganizations: Organization[]; // For super admin - all orgs in system
   loading: boolean;
   error: Error | null;
   isOffline: boolean;
   retryCount: number;
   setCurrentOrganization: (org: Organization | null) => void;
   refreshOrganizations: () => Promise<void>;
+  refreshAllOrganizations: () => Promise<void>; // For super admin
   retryConnection: () => Promise<void>;
+  getEffectiveOrganization: (impersonationState?: any) => Organization | null; // Helper for impersonation
 }
 
 const OrganizationContext = React.createContext<OrganizationContextType | undefined>(undefined);
@@ -34,6 +38,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   const { toast } = useToast();
   const [currentOrganization, setCurrentOrganization] = React.useState<Organization | null>(null);
   const [organizations, setOrganizations] = React.useState<Organization[]>([]);
+  const [allOrganizations, setAllOrganizations] = React.useState<Organization[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
@@ -167,6 +172,33 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     refreshOrganizationsRef.current = refreshOrganizations;
   }, [refreshOrganizations]);
 
+  const refreshAllOrganizations = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const allOrgs = await getAllOrganizations();
+      setAllOrganizations(allOrgs);
+
+      // Cache the result
+      if (user) {
+        cacheManager.set(`all-organizations-${user.id}`, allOrgs, 15 * 60 * 1000); // 15 minutes
+      }
+    } catch (fetchError) {
+      const err = fetchError as Error;
+      setError(err);
+      console.error('Error fetching all organizations:', err);
+      
+      toast({
+        title: "Unable to Load All Organizations",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [user, toast]);
+
   const retryConnection = React.useCallback(async () => {
     if (refreshOrganizationsRef.current) {
       await refreshOrganizationsRef.current(true);
@@ -193,17 +225,38 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     cacheManager.clear('permissions-');
   }, []);
 
+  // Helper function to get effective organization considering impersonation
+  const getEffectiveOrganization = React.useCallback((impersonationState?: any) => {
+    if (impersonationState?.isImpersonating && impersonationState.impersonatedOrganization) {
+      // Convert impersonated organization to Organization type
+      const impersonatedOrg = impersonationState.impersonatedOrganization;
+      return {
+        id: impersonatedOrg.id,
+        name: impersonatedOrg.name,
+        slug: impersonatedOrg.slug,
+        logo_url: impersonatedOrg.logo_url,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Organization;
+    }
+    return currentOrganization;
+  }, [currentOrganization]);
+
   const contextValue = React.useMemo(() => ({
     currentOrganization,
     organizations,
+    allOrganizations,
     loading,
     error,
     isOffline,
     retryCount,
     setCurrentOrganization: handleSetCurrentOrganization,
     refreshOrganizations,
+    refreshAllOrganizations,
     retryConnection,
-  }), [currentOrganization, organizations, loading, error, isOffline, retryCount, handleSetCurrentOrganization, refreshOrganizations, retryConnection]);
+    getEffectiveOrganization,
+  }), [currentOrganization, organizations, allOrganizations, loading, error, isOffline, retryCount, handleSetCurrentOrganization, refreshOrganizations, refreshAllOrganizations, retryConnection, getEffectiveOrganization]);
 
   return React.createElement(
     OrganizationContext.Provider,

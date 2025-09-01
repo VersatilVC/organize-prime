@@ -7,12 +7,12 @@ import {
   CreateTargetAudienceForm,
   COMPANY_SIZES,
   JOB_LEVELS,
-  COMMUNICATION_STYLES,
   COMMON_INDUSTRIES,
-  COMMON_DEPARTMENTS,
-  CONTENT_FORMATS
+  COMMON_DEPARTMENTS
 } from '@/features/content-creation/types/contentCreationTypes';
 import { useTargetAudiences } from '@/features/content-creation/hooks/useTargetAudiences';
+import { useN8NIntegration } from '@/apps/shared/hooks/useN8NIntegration';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,9 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Loader2, Plus, X, Sparkles, Eye, Edit } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Define the form schema
 const targetAudienceFormSchema = z.object({
@@ -54,7 +56,6 @@ const targetAudienceFormSchema = z.object({
   description: z.string()
     .max(500, 'Description must be 500 characters or less')
     .optional(),
-  communication_style: z.string().optional(),
   segment_analysis: z.string()
     .max(1000, 'Segment analysis must be 1000 characters or less')
     .optional(),
@@ -71,6 +72,7 @@ interface TargetAudienceFormProps {
 
 export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAudienceFormProps) {
   const { createTargetAudience, updateTargetAudience, isCreating, isUpdating } = useTargetAudiences();
+  const { executeWebhook, isTesting } = useN8NIntegration({ appId: 'content-creation' });
   
   // State for multi-select fields
   const [companyTypes, setCompanyTypes] = useState<string[]>([]);
@@ -82,7 +84,54 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
   const [interests, setInterests] = useState<string[]>([]);
   const [painPoints, setPainPoints] = useState<string[]>([]);
   const [goals, setGoals] = useState<string[]>([]);
-  const [contentFormats, setContentFormats] = useState<string[]>([]);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const [savedAudienceId, setSavedAudienceId] = useState<string | null>(null);
+  const [showAnalysisPreview, setShowAnalysisPreview] = useState(false);
+
+  // Helper function to extract markdown from code blocks
+  const extractMarkdownFromCodeBlock = (text: string): string => {
+    if (!text) return text;
+    
+    console.log('🔍 Raw text length:', text.length, 'starts with:', JSON.stringify(text.substring(0, 50)));
+    
+    // Handle different variations of code block wrappers
+    const patterns = [
+      // ```markdown ... ``` (most common from N8N)
+      /^```markdown\s*\r?\n([\s\S]*?)\r?\n```\s*$/,
+      // ``` ... ``` (generic code block)
+      /^```\s*\r?\n([\s\S]*?)\r?\n```\s*$/,
+      // Handle cases with extra leading/trailing whitespace
+      /^\s*```markdown\s*\r?\n([\s\S]*?)\r?\n```\s*$/,
+      /^\s*```\s*\r?\n([\s\S]*?)\r?\n```\s*$/,
+      // Handle cases where there might be no newlines after opening
+      /^```markdown\s*([\s\S]*?)\s*```$/,
+      /^```\s*([\s\S]*?)\s*```$/,
+    ];
+    
+    for (let i = 0; i < patterns.length; i++) {
+      const pattern = patterns[i];
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        const extracted = match[1].trim();
+        console.log(`✅ Pattern ${i + 1} matched! Extracted ${extracted.length} characters`);
+        console.log('✅ First 100 chars of extracted:', JSON.stringify(extracted.substring(0, 100)));
+        return extracted;
+      }
+    }
+    
+    console.log('⚠️ No code block pattern matched, returning original text');
+    return text;
+  };
+
+  // Test function for debugging markdown extraction (accessible via browser console)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).testMarkdownExtraction = (text: string) => {
+        console.log('🧪 Testing markdown extraction...');
+        return extractMarkdownFromCodeBlock(text);
+      };
+    }
+  }, []);
   
   // State for custom input fields
   const [newCompanyType, setNewCompanyType] = useState('');
@@ -99,7 +148,6 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
     defaultValues: {
       name: '',
       description: '',
-      communication_style: '',
       segment_analysis: '',
       is_active: true,
     },
@@ -112,7 +160,6 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
       form.reset({
         name: targetAudience.name,
         description: targetAudience.description || '',
-        communication_style: targetAudience.communication_style || '',
         segment_analysis: targetAudience.segment_analysis || '',
         is_active: targetAudience.is_active,
       });
@@ -125,13 +172,11 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
       setInterests(targetAudience.interests || []);
       setPainPoints(targetAudience.pain_points || []);
       setGoals(targetAudience.goals || []);
-      setContentFormats(targetAudience.preferred_content_formats || []);
     } else if (isOpen && !targetAudience) {
       // Creating new target audience
       form.reset({
         name: '',
         description: '',
-        communication_style: '',
         segment_analysis: '',
         is_active: true,
       });
@@ -144,9 +189,44 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
       setInterests([]);
       setPainPoints([]);
       setGoals([]);
-      setContentFormats([]);
     }
   }, [isOpen, targetAudience, form]);
+
+  // Real-time subscription for analysis updates from N8N
+  useEffect(() => {
+    if (!savedAudienceId || !isGeneratingAnalysis) return;
+
+    console.log('🔔 Setting up real-time subscription for analysis updates:', savedAudienceId);
+    
+    const subscription = supabase
+      .channel(`target_audience_analysis_${savedAudienceId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'target_audiences',
+        filter: `id=eq.${savedAudienceId}`
+      }, (payload) => {
+        console.log('🔔 Real-time update received:', payload);
+        console.log('🔔 Old analysis:', payload.old?.segment_analysis);
+        console.log('🔔 New analysis:', payload.new?.segment_analysis);
+        
+        if (payload.new?.segment_analysis && payload.new.segment_analysis !== payload.old?.segment_analysis) {
+          console.log('✅ Analysis updated by N8N, updating form field');
+          const cleanMarkdown = extractMarkdownFromCodeBlock(payload.new.segment_analysis);
+          form.setValue('segment_analysis', cleanMarkdown);
+          setIsGeneratingAnalysis(false);
+          // Auto-switch to preview mode to show the formatted result
+          setShowAnalysisPreview(true);
+        }
+      })
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      console.log('🔕 Cleaning up analysis subscription');
+      subscription.unsubscribe();
+    };
+  }, [savedAudienceId, isGeneratingAnalysis, form]);
 
   const handleClose = () => {
     form.reset();
@@ -160,13 +240,14 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
     setInterests([]);
     setPainPoints([]);
     setGoals([]);
-    setContentFormats([]);
     // Reset input fields
     setNewCompanyType('');
     setNewJobTitle('');
     setNewInterest('');
     setNewPainPoint('');
     setNewGoal('');
+    // Reset saved audience ID
+    setSavedAudienceId(null);
     onClose();
   };
 
@@ -183,8 +264,8 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
       interests: interests,
       pain_points: painPoints,
       goals: goals,
-      preferred_content_formats: contentFormats,
-      communication_style: data.communication_style,
+      preferred_content_formats: [],
+      communication_style: '',
       segment_analysis: data.segment_analysis,
       demographics: {},
       content_consumption_habits: {},
@@ -196,7 +277,13 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
       updateTargetAudience({ id: targetAudience.id, ...formData }, {
         onSuccess: handleClose,
       });
+    } else if (savedAudienceId) {
+      // Record was already saved during analysis generation, just update with any changes
+      updateTargetAudience({ id: savedAudienceId, ...formData }, {
+        onSuccess: handleClose,
+      });
     } else {
+      // Create new record
       createTargetAudience(formData, {
         onSuccess: handleClose,
       });
@@ -217,6 +304,62 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
 
   const removeArrayItem = (array: string[], setArray: (arr: string[]) => void, item: string) => {
     setArray(array.filter(i => i !== item));
+  };
+
+  const generateSegmentAnalysis = async () => {
+    setIsGeneratingAnalysis(true);
+    try {
+      // First, save the target audience record to database
+      const formData: CreateTargetAudienceForm = {
+        name: form.getValues('name'),
+        description: form.getValues('description'),
+        company_types: companyTypes,
+        industries: industries,
+        company_sizes: companySizes,
+        job_titles: jobTitles,
+        job_levels: jobLevels,
+        departments: departments,
+        interests: interests,
+        pain_points: painPoints,
+        goals: goals,
+        preferred_content_formats: [],
+        communication_style: '',
+        segment_analysis: '', // Will be updated after AI generation
+        demographics: {},
+        content_consumption_habits: {},
+        ai_segments: {},
+        is_active: form.getValues('is_active'),
+      };
+
+      // Save the record first
+      const savedAudience = await new Promise<TargetAudience>((resolve, reject) => {
+        createTargetAudience(formData, {
+          onSuccess: (data) => {
+            setSavedAudienceId(data.id);
+            resolve(data);
+          },
+          onError: (error) => reject(error),
+        });
+      });
+
+      // Send the actual saved record data to webhook
+      // N8N will process and store the analysis back to the database
+      await executeWebhook({
+        webhookId: 'segment-analysis',
+        url: 'https://versatil.app.n8n.cloud/webhook/fe2c56a3-8bba-4cf0-8d10-21a1096ec0dc',
+        method: 'POST'
+      }, {
+        action: 'generate_segment_analysis',
+        targetAudience: savedAudience
+      });
+
+      // Real-time subscription will handle form updates
+      // when N8N updates the database record
+      // Keep loading state active until N8N completes
+    } catch (error) {
+      console.error('Failed to generate segment analysis:', error);
+      setIsGeneratingAnalysis(false);
+    }
   };
 
   return (
@@ -538,80 +681,90 @@ export function TargetAudienceForm({ isOpen, onClose, targetAudience }: TargetAu
               </div>
             </div>
 
-            {/* Content Preferences */}
+
+            {/* Analysis */}
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold">Content Preferences</h4>
-              
-              {/* Preferred Content Formats */}
-              <div className="space-y-2">
-                <Label>Preferred Content Formats</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {CONTENT_FORMATS.map((format) => (
-                    <div key={format} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`format-${format}`}
-                        checked={contentFormats.includes(format)}
-                        onCheckedChange={() => toggleArrayItem(contentFormats, setContentFormats, format)}
-                      />
-                      <Label htmlFor={`format-${format}`} className="text-sm">
-                        {format}
-                      </Label>
-                    </div>
-                  ))}
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Segment Analysis</h4>
+                <div className="flex items-center gap-2">
+                  {form.getValues('segment_analysis') && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAnalysisPreview(!showAnalysisPreview)}
+                      className="flex items-center gap-2"
+                    >
+                      {showAnalysisPreview ? (
+                        <Edit className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      {showAnalysisPreview ? 'Edit' : 'Preview'}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateSegmentAnalysis}
+                    disabled={isGeneratingAnalysis || !form.getValues('name')}
+                    className="flex items-center gap-2"
+                  >
+                    {isGeneratingAnalysis ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {isGeneratingAnalysis ? 'Generating...' : 'Generate AI Analysis'}
+                  </Button>
                 </div>
               </div>
-
-              {/* Communication Style */}
+              
               <FormField
                 control={form.control}
-                name="communication_style"
+                name="segment_analysis"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Communication Style</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select communication style" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {COMMUNICATION_STYLES.map((style) => (
-                          <SelectItem key={style.value} value={style.value}>
-                            {style.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      {showAnalysisPreview && field.value ? (
+                        <div className="min-h-[150px] p-4 border rounded-md bg-muted/30">
+                          <div className="prose prose-sm max-w-none text-foreground">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                // Override default styling to match the app theme
+                                h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-3 text-foreground" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-lg font-semibold mb-2 text-foreground" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-base font-medium mb-2 text-foreground" {...props} />,
+                                p: ({node, ...props}) => <p className="mb-2 text-foreground leading-relaxed" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 text-foreground" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 text-foreground" {...props} />,
+                                li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                                strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                                em: ({node, ...props}) => <em className="italic" {...props} />,
+                              }}
+                            >
+                              {extractMarkdownFromCodeBlock(field.value)}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      ) : (
+                        <Textarea 
+                          placeholder="Click 'Generate AI Analysis' to automatically create detailed analysis of this audience segment, including behavior patterns, decision-making factors, and content consumption habits"
+                          rows={6}
+                          {...field}
+                        />
+                      )}
+                    </FormControl>
                     <FormDescription>
-                      How this audience prefers to receive information
+                      AI-powered comprehensive insights about this audience segment {field.value && '(supports Markdown formatting)'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-
-            {/* Analysis */}
-            <FormField
-              control={form.control}
-              name="segment_analysis"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Segment Analysis</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Detailed analysis of this audience segment, including behavior patterns, decision-making factors, and content consumption habits"
-                      rows={4}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Comprehensive insights about this audience segment
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Settings */}
             <div className="flex items-center space-x-2">

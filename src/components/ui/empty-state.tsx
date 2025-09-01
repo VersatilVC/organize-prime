@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, BarChart3, Users, Building, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,7 @@ interface EmptyStateProps {
   action?: {
     label: string;
     onClick: () => void;
-  };
+  } | React.ReactNode;
   className?: string;
 }
 
@@ -27,11 +27,15 @@ export function EmptyState({
       <CardContent className="flex flex-col items-center justify-center p-8 text-center">
         <Icon className="h-12 w-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-4 max-w-sm">{description}</p>
+        <p className="text-sm text-muted-foreground mb-6 max-w-sm">{description}</p>
         {action && (
-          <Button onClick={action.onClick}>
-            {action.label}
-          </Button>
+          typeof action === 'object' && 'label' in action && 'onClick' in action ? (
+            <Button onClick={action.onClick}>
+              {action.label}
+            </Button>
+          ) : (
+            action
+          )
         )}
       </CardContent>
     </Card>
@@ -42,7 +46,7 @@ export function EmptyState({
 export function DashboardEmptyState() {
   return (
     <EmptyState
-      icon={require('lucide-react').BarChart3}
+      icon={BarChart3}
       title="Welcome to your dashboard"
       description="Your dashboard will show activity and analytics once you start using the platform."
       action={{
@@ -56,7 +60,7 @@ export function DashboardEmptyState() {
 export function UsersEmptyState() {
   return (
     <EmptyState
-      icon={require('lucide-react').Users}
+      icon={Users}
       title="No team members yet"
       description="Invite your first team member to get started with collaboration."
       action={{
@@ -73,7 +77,7 @@ export function UsersEmptyState() {
 export function OrganizationsEmptyState() {
   return (
     <EmptyState
-      icon={require('lucide-react').Building}
+      icon={Building}
       title="No organizations found"
       description="Create your first organization to start managing teams and projects."
       action={{
@@ -90,7 +94,7 @@ export function OrganizationsEmptyState() {
 export function FeedbackEmptyState() {
   return (
     <EmptyState
-      icon={require('lucide-react').MessageSquare}
+      icon={MessageSquare}
       title="No feedback yet"
       description="Share your thoughts and feedback to help us improve the platform."
       action={{

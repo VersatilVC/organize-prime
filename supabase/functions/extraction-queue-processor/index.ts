@@ -14,6 +14,7 @@ interface ProcessorRequest {
   trigger_source?: 'database_trigger' | 'manual_trigger' | 'scheduled';
   organization_id?: string;
   content_type_id?: string;
+  content_idea_id?: string;
   pending_count?: number;
 }
 
@@ -101,6 +102,11 @@ Deno.serve(async (req: Request) => {
       query = query.eq('content_type_id', requestBody.content_type_id);
     }
 
+    // Filter by content_idea_id if specified
+    if (requestBody.content_idea_id) {
+      query = query.eq('content_idea_id', requestBody.content_idea_id);
+    }
+
     // Limit batch size (more for database triggers, fewer for manual)
     const batchSize = triggerSource === 'database_trigger' ? 3 : 10;
     query = query.limit(batchSize);
@@ -148,7 +154,11 @@ Deno.serve(async (req: Request) => {
 
     // Process each item
     for (const item of pendingItems) {
-      console.log(`🔄 Processing extraction for content_type_id: ${item.content_type_id}`);
+      const isContentIdea = !!item.content_idea_id;
+      const entityId = item.content_type_id || item.content_idea_id;
+      const entityType = isContentIdea ? 'content_idea_id' : 'content_type_id';
+      
+      console.log(`🔄 Processing extraction for ${entityType}: ${entityId}`);
       
       try {
         // Update status to processing
@@ -192,13 +202,13 @@ Deno.serve(async (req: Request) => {
             .eq('id', item.id);
 
           result.processed++;
-          console.log(`✅ Extraction completed for content_type_id: ${item.content_type_id}`);
+          console.log(`✅ Extraction completed for ${entityType}: ${entityId}`);
         } else {
           throw new Error(extractionResult.error || 'Extraction failed');
         }
 
       } catch (error) {
-        console.error(`❌ Extraction failed for ${item.content_type_id}:`, error);
+        console.error(`❌ Extraction failed for ${entityType} ${entityId}:`, error);
 
         // Update with error status
         const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
@@ -214,20 +224,32 @@ Deno.serve(async (req: Request) => {
           })
           .eq('id', item.id);
 
-        // Also update content type status if we're giving up
+        // Also update content type/idea status if we're giving up
         if (!shouldRetry) {
-          await supabase
-            .from('content_types')
-            .update({
-              extraction_status: 'failed',
-              extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', item.content_type_id);
+          if (isContentIdea) {
+            await supabase
+              .from('content_ideas')
+              .update({
+                extraction_status: 'failed',
+                processing_status: 'failed',
+                extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', item.content_idea_id);
+          } else {
+            await supabase
+              .from('content_types')
+              .update({
+                extraction_status: 'failed',
+                extraction_error: `Automatic extraction failed after ${maxAttempts} attempts: ${errorMessage}`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', item.content_type_id);
+          }
         }
 
         result.failed++;
-        result.errors.push(`${item.content_type_id}: ${errorMessage}`);
+        result.errors.push(`${entityId}: ${errorMessage}`);
       }
     }
 

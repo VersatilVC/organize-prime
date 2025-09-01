@@ -1,6 +1,5 @@
 import React, { Suspense, memo, useEffect } from 'react';
 import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { usePerformanceMonitor } from '@/hooks/usePerformanceMonitor';
 import { useStableLoading } from '@/hooks/useLoadingState';
 import { FeatureProvider } from '@/contexts/FeatureContext';
 import { FeatureLayout } from './FeatureLayout';
@@ -36,8 +35,7 @@ const FeatureAccessCheck = memo(function FeatureAccessCheck({ children, slug }: 
   // Use stable loading to prevent flashing
   const stableLoading = useStableLoading(isLoading, 200);
   
-  // Monitor performance of feature access check
-  usePerformanceMonitor('FeatureAccessCheck');
+  // Performance monitoring removed - replaced with better error boundaries
 
   // Show stable loading state - prevents flashing on quick loads
   if (stableLoading) {
@@ -156,7 +154,7 @@ const FeatureRoutes = memo(function FeatureRoutes() {
   const location = useLocation();
   
   // Monitor performance of feature routes
-  usePerformanceMonitor('FeatureRoutes');
+  // Performance monitoring removed - using error boundaries instead
   
   // Handle invalid or missing slug
   if (!slug) {
@@ -282,7 +280,7 @@ export const FeatureRouter = memo(function FeatureRouter() {
   const { slug } = useParams<FeatureRouteParams>();
   
   // Monitor performance of feature router
-  usePerformanceMonitor('FeatureRouter');
+  // Performance monitoring handled by error boundaries
 
   // logger.debug('FeatureRouter mounted', { component: 'FeatureRouter', feature: slug });
 

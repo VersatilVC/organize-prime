@@ -48,13 +48,29 @@ export interface SettingsSection {
   fields: SettingsField[];
 }
 
+/**
+ * Settings field value types
+ */
+export type SettingsFieldValue = string | number | boolean | File | undefined | null;
+
+/**
+ * Settings option type with proper value typing
+ */
+export interface SettingsOption {
+  label: string;
+  value: SettingsFieldValue;
+}
+
+/**
+ * Settings field configuration
+ */
 export interface SettingsField {
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'select' | 'toggle' | 'number' | 'url' | 'email' | 'file';
   required?: boolean;
-  default?: any;
-  options?: { label: string; value: any }[];
+  default?: SettingsFieldValue;
+  options?: SettingsOption[];
   validation?: {
     min?: number;
     max?: number;

@@ -6,7 +6,8 @@ interface ServiceRequest {
   type: 'file' | 'url';
   content: string; // Base64 for files, URL for URLs
   filename: string;
-  contentTypeId: string; // Maps to content_type_id in database
+  contentTypeId?: string; // Maps to content_type_id in database (legacy)
+  contentIdeaId?: string; // Maps to content_idea_id in database (new)
   options?: {
     maxPages?: number;
     preserveFormatting?: boolean;
@@ -191,13 +192,15 @@ Deno.serve(async (req: Request) => {
       type: requestData.type || 'legacy',
       filename: requestData.filename,
       contentLength: requestData.content?.length || 0,
-      contentTypeId: requestData.contentTypeId || requestData.kb_config_id
+      contentTypeId: requestData.contentTypeId || requestData.kb_config_id,
+      contentIdeaId: requestData.contentIdeaId
     });
 
     // Handle both new service format and legacy format
     let filename: string;
     let content: string;
-    let contentTypeId: string;
+    let contentTypeId: string | undefined;
+    let contentIdeaId: string | undefined;
     let extractionType: 'file' | 'url';
 
     if (requestData.type) {
@@ -206,6 +209,7 @@ Deno.serve(async (req: Request) => {
       filename = serviceReq.filename;
       content = serviceReq.content;
       contentTypeId = serviceReq.contentTypeId;
+      contentIdeaId = serviceReq.contentIdeaId;
       extractionType = serviceReq.type;
     } else {
       // Legacy format
@@ -216,12 +220,13 @@ Deno.serve(async (req: Request) => {
       extractionType = 'file'; // Assume file for legacy
     }
 
-    if (!content || !filename || !contentTypeId) {
+    // Validate required fields - need either contentTypeId or contentIdeaId
+    if (!content || !filename || (!contentTypeId && !contentIdeaId)) {
       console.error('❌ Missing required fields');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Missing required fields: content, filename, and contentTypeId/kb_config_id' 
+          error: 'Missing required fields: content, filename, and either contentTypeId or contentIdeaId' 
         }),
         { 
           status: 400, 
@@ -248,26 +253,51 @@ Deno.serve(async (req: Request) => {
 
     // Create extraction log entry
     try {
-      const { data: logData, error: logError } = await supabase
-        .from('content_extraction_logs')
-        .insert({
-          organization_id: membership.organization_id,
-          content_type_id: contentTypeId,
-          file_name: filename,
-          file_size: fileSize,
-          file_type: fileExtension,
-          extraction_method: extractionType === 'file' ? 'convert_api' : 'web_scraping',
-          status: 'processing',
-          created_by: user.id,
-        })
-        .select('id')
-        .single();
+      let logData, logError;
+      
+      if (contentIdeaId) {
+        // Create log entry for content idea extraction
+        const { data: ideaLogData, error: ideaLogError } = await supabase
+          .from('content_idea_extractions')
+          .insert({
+            organization_id: membership.organization_id,
+            content_idea_id: contentIdeaId,
+            file_name: filename,
+            file_type: fileExtension,
+            extraction_method: extractionType === 'file' ? 'convertapi' : 'web_scraping',
+            status: 'processing'
+          })
+          .select('id')
+          .single();
+        
+        logData = ideaLogData;
+        logError = ideaLogError;
+      } else {
+        // Create log entry for content type extraction (legacy)
+        const { data: typeLogData, error: typeLogError } = await supabase
+          .from('content_extraction_logs')
+          .insert({
+            organization_id: membership.organization_id,
+            content_type_id: contentTypeId,
+            file_name: filename,
+            file_size: fileSize,
+            file_type: fileExtension,
+            extraction_method: extractionType === 'file' ? 'convert_api' : 'web_scraping',
+            status: 'processing',
+            created_by: user.id,
+          })
+          .select('id')
+          .single();
+        
+        logData = typeLogData;
+        logError = typeLogError;
+      }
 
       if (logError) {
         console.error('❌ Failed to create extraction log:', logError);
       } else {
         extractionLogId = logData.id;
-        console.log('📝 Created extraction log:', extractionLogId);
+        console.log('📝 Created extraction log:', extractionLogId, contentIdeaId ? '(content idea)' : '(content type)');
       }
     } catch (error) {
       console.error('❌ Error creating extraction log:', error);
@@ -545,10 +575,21 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         };
 
-        const { error: updateError } = await supabase
-          .from('content_extraction_logs')
-          .update(updateData)
-          .eq('id', extractionLogId);
+        // Update the appropriate log table
+        let updateError;
+        if (contentIdeaId) {
+          const { error } = await supabase
+            .from('content_idea_extractions')
+            .update(updateData)
+            .eq('id', extractionLogId);
+          updateError = error;
+        } else {
+          const { error } = await supabase
+            .from('content_extraction_logs')
+            .update(updateData)
+            .eq('id', extractionLogId);
+          updateError = error;
+        }
 
         if (updateError) {
           console.error('❌ Failed to update extraction log:', updateError);
@@ -560,69 +601,95 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Update content_types table with chunked approach for large content
+    // Update appropriate table with extracted content
     if (result.success && result.markdown) {
       try {
         const contentLength = result.markdown.length;
-        console.log('📝 Updating content_types table, content size:', contentLength);
         
-        // For very large content (>50KB), use direct table update to avoid function parameter limits
-        if (contentLength > 50000) {
-          console.log('⚠️ Large content detected, using direct table update approach');
+        if (contentIdeaId) {
+          // Update content_ideas table
+          console.log('📝 Updating content_ideas table, content size:', contentLength);
           
-          // Truncate content for the content_types table (10KB limit)
-          const maxContentLength = 10000;
-          const truncatedContent = contentLength > maxContentLength 
-            ? result.markdown.substring(0, maxContentLength - 100) + '\n\n... (content truncated, see extraction logs for full content)'
-            : result.markdown;
-
           const { data: dbResult, error: dbError } = await supabase
-            .from('content_types')
+            .from('content_ideas')
             .update({
-              extracted_content: {
-                markdown: truncatedContent,
-                wordCount: result.metadata?.wordCount || 0,
-                lastUpdate: new Date().toISOString(),
-                isTruncated: contentLength > maxContentLength,
-                fullContentSize: contentLength
-              },
+              extracted_content: result.markdown,
               extraction_status: 'completed',
               extraction_error: null,
-              last_extracted_at: new Date().toISOString(),
               extraction_metadata: result.metadata || {},
               updated_at: new Date().toISOString()
             })
-            .eq('id', contentTypeId)
+            .eq('id', contentIdeaId)
             .select('id');
 
           if (dbError) {
-            console.error('❌ Direct table update error:', dbError);
+            console.error('❌ Failed to update content_ideas table:', dbError);
           } else if (dbResult && dbResult.length > 0) {
-            console.log('✅ Successfully updated content_types using direct table update');
-            console.log('⚠️ Content was truncated for content_types table, full content stored in extraction logs');
+            console.log('✅ Successfully updated content_ideas table');
           } else {
-            console.error('❌ Content type not found for direct update');
+            console.error('❌ Content idea not found for update');
           }
         } else {
-          // For smaller content, use the database function
-          console.log('📝 Using database function for smaller content');
-          const { data: dbResult, error: dbError } = await supabase.rpc('safe_update_content_types_no_triggers', {
-            p_content_type_id: contentTypeId,
-            p_markdown: result.markdown,
-            p_word_count: result.metadata?.wordCount || 0,
-            p_extraction_metadata: result.metadata || {}
-          });
+          // Update content_types table (legacy)
+          console.log('📝 Updating content_types table, content size:', contentLength);
+          
+          // For very large content (>50KB), use direct table update to avoid function parameter limits
+          if (contentLength > 50000) {
+            console.log('⚠️ Large content detected, using direct table update approach');
+            
+            // Truncate content for the content_types table (10KB limit)
+            const maxContentLength = 10000;
+            const truncatedContent = contentLength > maxContentLength 
+              ? result.markdown.substring(0, maxContentLength - 100) + '\n\n... (content truncated, see extraction logs for full content)'
+              : result.markdown;
 
-          if (dbError) {
-            console.error('❌ Database function error:', dbError);
-          } else if (dbResult) {
-            console.log('✅ Successfully updated content_types using database function');
-            if (result.markdown.length > 10000) {
+            const { data: dbResult, error: dbError } = await supabase
+              .from('content_types')
+              .update({
+                extracted_content: {
+                  markdown: truncatedContent,
+                  wordCount: result.metadata?.wordCount || 0,
+                  lastUpdate: new Date().toISOString(),
+                  isTruncated: contentLength > maxContentLength,
+                  fullContentSize: contentLength
+                },
+                extraction_status: 'completed',
+                extraction_error: null,
+                last_extracted_at: new Date().toISOString(),
+                extraction_metadata: result.metadata || {},
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', contentTypeId)
+              .select('id');
+
+            if (dbError) {
+              console.error('❌ Direct table update error:', dbError);
+            } else if (dbResult && dbResult.length > 0) {
+              console.log('✅ Successfully updated content_types using direct table update');
               console.log('⚠️ Content was truncated for content_types table, full content stored in extraction logs');
+            } else {
+              console.error('❌ Content type not found for direct update');
             }
           } else {
-            console.error('❌ Database function returned false - content_type not found');
-          }
+            // For smaller content, use the database function
+            console.log('📝 Using database function for smaller content');
+            const { data: dbResult, error: dbError } = await supabase.rpc('safe_update_content_types_no_triggers', {
+              p_content_type_id: contentTypeId,
+              p_markdown: result.markdown,
+              p_word_count: result.metadata?.wordCount || 0,
+              p_extraction_metadata: result.metadata || {}
+            });
+
+            if (dbError) {
+              console.error('❌ Database function error:', dbError);
+            } else if (dbResult) {
+              console.log('✅ Successfully updated content_types using database function');
+              if (result.markdown.length > 10000) {
+                console.log('⚠️ Content was truncated for content_types table, full content stored in extraction logs');
+              }
+            } else {
+              console.error('❌ Database function returned false - content_type not found');
+            }
         }
       } catch (error) {
         console.error('❌ Error updating content_types:', error);
@@ -645,15 +712,24 @@ Deno.serve(async (req: Request) => {
     // Update extraction log with error
     if (extractionLogId) {
       try {
-        await supabase
-          .from('content_extraction_logs')
-          .update({
-            status: 'failed',
-            error_message: error.message,
-            processing_time_ms: Date.now() - startTime,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', extractionLogId);
+        const updateData = {
+          status: 'failed',
+          error_message: error.message,
+          processing_time_ms: Date.now() - startTime,
+          updated_at: new Date().toISOString(),
+        };
+        
+        if (contentIdeaId) {
+          await supabase
+            .from('content_idea_extractions')
+            .update(updateData)
+            .eq('id', extractionLogId);
+        } else {
+          await supabase
+            .from('content_extraction_logs')
+            .update(updateData)
+            .eq('id', extractionLogId);
+        }
       } catch (updateError) {
         console.error('❌ Error updating extraction log with error:', updateError);
       }

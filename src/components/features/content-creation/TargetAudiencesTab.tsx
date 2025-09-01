@@ -28,6 +28,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -39,6 +47,7 @@ export const TargetAudiencesTab = React.memo<TargetAudiencesTabProps>(({ classNa
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTargetAudience, setSelectedTargetAudience] = useState<TargetAudience | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [viewTargetAudience, setViewTargetAudience] = useState<TargetAudience | null>(null);
   const [deleteTargetAudience, setDeleteTargetAudience] = useState<TargetAudience | null>(null);
   const [sortBy, setSortBy] = useState<string>('usage_count');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -105,8 +114,9 @@ export const TargetAudiencesTab = React.memo<TargetAudiencesTabProps>(({ classNa
     setIsFormOpen(true);
   };
 
-  // Handle view/use - increment usage count
+  // Handle view/use - open view modal and increment usage count
   const handleView = (targetAudience: TargetAudience) => {
+    setViewTargetAudience(targetAudience);
     updateUsageCount(targetAudience.id);
   };
 
@@ -201,19 +211,6 @@ export const TargetAudiencesTab = React.memo<TargetAudiencesTabProps>(({ classNa
               </span>
             )}
           </div>
-        </div>
-      ),
-      width: '150px'
-    },
-    {
-      key: 'communication_style',
-      label: 'Communication Style',
-      render: (audience) => (
-        <div className="flex items-center gap-2">
-          <Briefcase className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm capitalize">
-            {audience.communication_style || 'N/A'}
-          </span>
         </div>
       ),
       width: '150px'
@@ -386,6 +383,210 @@ export const TargetAudiencesTab = React.memo<TargetAudiencesTabProps>(({ classNa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View Target Audience Modal */}
+      <Dialog open={!!viewTargetAudience} onOpenChange={() => setViewTargetAudience(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              {viewTargetAudience?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewTargetAudience && (
+            <div className="space-y-6">
+              {/* Description */}
+              {viewTargetAudience.description && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <p className="text-muted-foreground">{viewTargetAudience.description}</p>
+                </div>
+              )}
+
+              {/* Audience Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Industries */}
+                {viewTargetAudience.industries.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Industries</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {viewTargetAudience.industries.map((industry, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {industry}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Job Titles */}
+                {viewTargetAudience.job_titles.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Job Titles</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {viewTargetAudience.job_titles.map((title, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {title}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Company Types */}
+                {viewTargetAudience.company_types.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Company Types</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {viewTargetAudience.company_types.map((type, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {type}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Company Sizes */}
+                {viewTargetAudience.company_sizes.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Company Sizes</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {viewTargetAudience.company_sizes.map((size, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {size}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Job Levels */}
+                {viewTargetAudience.job_levels.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Job Levels</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {viewTargetAudience.job_levels.map((level, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {level}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Departments */}
+                {viewTargetAudience.departments.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Departments</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {viewTargetAudience.departments.map((dept, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {dept}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Interests, Pain Points, Goals */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Interests */}
+                {viewTargetAudience.interests.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 text-green-600 dark:text-green-400">Interests</h4>
+                    <ul className="space-y-1">
+                      {viewTargetAudience.interests.map((interest, index) => (
+                        <li key={index} className="text-sm text-muted-foreground">• {interest}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Pain Points */}
+                {viewTargetAudience.pain_points.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 text-red-600 dark:text-red-400">Pain Points</h4>
+                    <ul className="space-y-1">
+                      {viewTargetAudience.pain_points.map((pain, index) => (
+                        <li key={index} className="text-sm text-muted-foreground">• {pain}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Goals */}
+                {viewTargetAudience.goals.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 text-blue-600 dark:text-blue-400">Goals</h4>
+                    <ul className="space-y-1">
+                      {viewTargetAudience.goals.map((goal, index) => (
+                        <li key={index} className="text-sm text-muted-foreground">• {goal}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Segment Analysis */}
+              {viewTargetAudience.segment_analysis && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">AI Segment Analysis</h3>
+                  <div className="p-4 border rounded-md bg-muted/30">
+                    <div className="prose prose-sm max-w-none text-foreground">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-3 text-foreground" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="text-lg font-semibold mb-2 text-foreground" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-base font-medium mb-2 text-foreground" {...props} />,
+                          p: ({node, ...props}) => <p className="mb-2 text-foreground leading-relaxed" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 text-foreground" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 text-foreground" {...props} />,
+                          li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                          em: ({node, ...props}) => <em className="italic" {...props} />,
+                        }}
+                      >
+                        {viewTargetAudience.segment_analysis.replace(/^```markdown\s*\n?|\n?```\s*$/g, '').trim()}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Usage Stats */}
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    <span>Used {viewTargetAudience.usage_count} times</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>Last updated {new Date(viewTargetAudience.updated_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setViewTargetAudience(null);
+                    handleEdit(viewTargetAudience);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

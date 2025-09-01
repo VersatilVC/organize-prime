@@ -831,7 +831,7 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
                         variant="outline"
                         size="sm"
                         onClick={() => triggerExtraction(contentType.id)}
-                        disabled={isProcessing}
+                        disabled={isProcessingExtraction}
                       >
                         <RefreshCw className="h-3 w-3 mr-1" />
                         Retry
@@ -851,7 +851,7 @@ export function ContentTypeForm({ isOpen, onClose, contentType }: ContentTypeFor
                         variant="outline"
                         size="sm"
                         onClick={() => triggerExtraction(contentType.id)}
-                        disabled={isProcessing}
+                        disabled={isProcessingExtraction}
                       >
                         <Zap className="h-3 w-3 mr-1" />
                         Extract Now

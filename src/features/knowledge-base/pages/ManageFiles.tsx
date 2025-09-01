@@ -75,7 +75,7 @@ export default function ManageFiles() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Manage Files</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Upload and manage your knowledge base documents
           </p>
         </div>

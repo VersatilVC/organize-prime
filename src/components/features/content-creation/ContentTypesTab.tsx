@@ -8,6 +8,7 @@ import { useContentTypes } from '@/features/content-creation/hooks/useContentTyp
 import { useContentExtraction } from '@/features/content-creation/hooks/useContentExtraction';
 import { ContentType } from '@/features/content-creation/types/contentCreationTypes';
 import { useQueryClient } from '@tanstack/react-query';
+import { MarkdownModal } from '@/components/ui/markdown-viewer';
 import { 
   Plus, 
   Search, 
@@ -56,6 +57,7 @@ export const ContentTypesTab = React.memo<ContentTypesTabProps>(({ className }) 
     isLoading,
     error,
     deleteContentType: deleteContentTypeFn,
+    updateContentType,
     updateUsageCount,
     isDeleting
   } = useContentTypes();
@@ -118,12 +120,16 @@ export const ContentTypesTab = React.memo<ContentTypesTabProps>(({ className }) 
     setIsFormOpen(true);
   };
 
-  // Handle view - show content type details
+  // Handle view - show content structure if available
   const handleView = (contentType: ContentType) => {
     console.log('👀 Viewing content type:', contentType.name);
     
-    // For now, just show an alert with the content type details
-    // In the future, this could open a proper modal
+    if (contentType.content_structure) {
+      // Content structure will be displayed via MarkdownModal trigger
+      return;
+    }
+    
+    // Fallback to showing content type details if no content structure
     const details = [
       `Name: ${contentType.name}`,
       `Description: ${contentType.description || 'No description'}`,
@@ -389,6 +395,25 @@ export const ContentTypesTab = React.memo<ContentTypesTabProps>(({ className }) 
       width: '120px'
     },
     {
+      key: 'content_structure',
+      label: 'Structure',
+      render: (contentType) => (
+        <div className="flex items-center justify-center">
+          {contentType.content_structure ? (
+            <Badge variant="outline" className="text-green-600 border-green-600">
+              <FileText className="h-3 w-3 mr-1" />
+              Available
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground">
+              No Structure
+            </Badge>
+          )}
+        </div>
+      ),
+      width: '110px'
+    },
+    {
       key: 'updated_at',
       label: 'Last Updated',
       sortable: true,
@@ -407,14 +432,46 @@ export const ContentTypesTab = React.memo<ContentTypesTabProps>(({ className }) 
       label: 'Actions',
       render: (contentType) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleView(contentType)}
-            className="h-8 w-8 p-0"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
+          {contentType.content_structure ? (
+            <MarkdownModal
+              content={contentType.content_structure}
+              title={`Content Structure - ${contentType.name}`}
+              fileName={`${contentType.name.toLowerCase().replace(/\s+/g, '-')}-structure.md`}
+              editable={true}
+              onSave={async (newContent) => {
+                // Update the content structure
+                try {
+                  await updateContentType({
+                    id: contentType.id,
+                    content_structure: newContent
+                  });
+                } catch (error) {
+                  console.error('Failed to update content structure:', error);
+                  throw error;
+                }
+              }}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="View and edit content structure"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              }
+            />
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleView(contentType)}
+              className="h-8 w-8 p-0"
+              title="View content type details"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
           {contentType.examples && contentType.examples.length > 0 && (
             <Button
               variant="ghost"

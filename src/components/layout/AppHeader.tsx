@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -144,6 +145,7 @@ UserMenuContent.displayName = 'UserMenuContent';
 export const AppHeader = React.memo(() => {
   const { user, signOut } = useAuth();
   const { role } = useOptimizedUserRole();
+  const { impersonationState, stopImpersonation } = useImpersonation();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch current user profile for avatar and display name
@@ -212,6 +214,30 @@ export const AppHeader = React.memo(() => {
       role="banner"
       aria-label="Main navigation"
     >
+      {/* Impersonation Banner */}
+      {impersonationState.isImpersonating && (
+        <div className="w-full bg-orange-500 text-white px-4 py-2 text-sm">
+          <div className="container flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icons.alertTriangle className="h-4 w-4" />
+              <span className="font-medium">
+                Super Admin Mode: Viewing as {impersonationState.impersonatedUser?.full_name || impersonationState.impersonatedUser?.username} 
+                in {impersonationState.impersonatedOrganization?.name}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={stopImpersonation}
+              className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+            >
+              <Icons.refresh className="h-3 w-3 mr-1" />
+              Exit Impersonation
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <div className="container flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-4">
           {/* Mobile nav trigger for small screens */}

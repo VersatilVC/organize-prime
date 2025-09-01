@@ -18,10 +18,14 @@ export function useAutomaticExtraction() {
     const unsubscribe = automaticExtractionService.subscribeToExtractionUpdates(
       currentOrganization.id,
       (update) => {
-        setExtractionStatuses(prev => ({
-          ...prev,
-          [update.content_type_id]: update
-        }));
+        // Handle both content types and content ideas
+        const key = update.content_type_id || update.content_idea_id;
+        if (key) {
+          setExtractionStatuses(prev => ({
+            ...prev,
+            [key]: update
+          }));
+        }
       }
     );
 
