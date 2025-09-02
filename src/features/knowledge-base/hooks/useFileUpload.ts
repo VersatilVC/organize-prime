@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/hooks/use-toast';
 import { useFileSubscription } from './useFileSubscription';
 import { 
@@ -171,6 +172,7 @@ export function useFileUpload() {
 
 export function useKBFiles(kbId?: string, page: number = 0, pageSize: number = 50) {
   const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
     queryKey: ['kb-files', effectiveOrganizationId, kbId, page, pageSize],
@@ -188,6 +190,7 @@ export function useKBFiles(kbId?: string, page: number = 0, pageSize: number = 5
 
 export function useFileStats() {
   const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
     queryKey: ['file-stats', effectiveOrganizationId],

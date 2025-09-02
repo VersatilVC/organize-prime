@@ -111,7 +111,7 @@ export function FileList({ selectedKbId, showProcessingOnly = false, className }
       setRetryingFileId(fileId);
       
       // Retry extraction using new service
-      const file = files?.find(f => f.id === fileId);
+      const file = filteredFiles?.find(f => f.id === fileId);
       if (file) {
         await KBContentExtractionService.retryExtraction(fileId);
       }
