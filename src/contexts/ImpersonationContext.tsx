@@ -2,6 +2,8 @@ import * as React from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { safeStorage } from '@/lib/safe-storage';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface ImpersonatedUser {
   id: string;
@@ -46,7 +48,41 @@ const ImpersonationContext = React.createContext<ImpersonationContextType | unde
 export function ImpersonationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { currentOrganization } = useOrganization();
   const [impersonationState, setImpersonationState] = React.useState<ImpersonationState>(defaultState);
+
+  // Load persisted state when user becomes available - run once only
+  React.useEffect(() => {
+    if (user?.id && !impersonationState.isImpersonating) {
+      const savedState = safeStorage.getItemSync(`impersonation-${user.id}`);
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+          // Only load if state is valid and different from current
+          if (parsedState.isImpersonating && parsedState.impersonatedOrganization) {
+            setImpersonationState({
+              ...parsedState,
+              startedAt: parsedState.startedAt ? new Date(parsedState.startedAt) : null,
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to parse saved impersonation state:', e);
+          safeStorage.removeItemSync(`impersonation-${user.id}`);
+        }
+      }
+    }
+  }, [user?.id, impersonationState.isImpersonating]);
+
+  // Persist impersonation state whenever it changes
+  React.useEffect(() => {
+    if (user?.id) {
+      if (impersonationState.isImpersonating) {
+        safeStorage.setItemSync(`impersonation-${user.id}`, JSON.stringify(impersonationState));
+      } else {
+        safeStorage.removeItemSync(`impersonation-${user.id}`);
+      }
+    }
+  }, [user?.id, impersonationState]);
 
   // Reset impersonation state when user changes (logout/login)
   React.useEffect(() => {
@@ -61,6 +97,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     try {
       await supabase.from('audit_logs').insert({
         user_id: user.id,
+        organization_id: impersonationState.impersonatedOrganization?.id || currentOrganization?.id,
         action: `impersonation_${action}`,
         resource_type: 'user_impersonation',
         resource_id: impersonationState.impersonatedUser?.id || impersonationState.impersonatedOrganization?.id,
@@ -75,7 +112,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     } catch (error) {
       console.error('Failed to log impersonation action:', error);
     }
-  }, [user, impersonationState]);
+  }, [user, impersonationState, currentOrganization]);
 
   const startImpersonation = React.useCallback(async (
     organization: ImpersonatedOrganization,

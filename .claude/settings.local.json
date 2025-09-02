@@ -106,7 +106,10 @@
       "Read(C:\\Users\\ilanh\\Downloads/**)",
       "mcp__supabase__get_advisors",
       "Read(c:\\Users\\ilanh\\Downloads/**)",
-      "Read(c:\\Users\\ilanh\\Downloads/**)"
+      "Read(c:\\Users\\ilanh\\Downloads/**)",
+      "Bash(where claude)",
+      "Bash(claude --version)",
+      "Bash(npx kill-port:*)"
     ],
     "deny": [],
     "ask": [],

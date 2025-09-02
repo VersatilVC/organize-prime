@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 
 export interface KnowledgeBase {
   id: string;
@@ -26,19 +26,19 @@ export interface KnowledgeBase {
 }
 
 export function useKnowledgeBases() {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
-    queryKey: ['knowledge-bases', currentOrganization?.id],
+    queryKey: ['knowledge-bases', effectiveOrganizationId],
     queryFn: async (): Promise<KnowledgeBase[]> => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         return [];
       }
 
       const { data, error } = await supabase
         .from('kb_configurations')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
@@ -49,19 +49,19 @@ export function useKnowledgeBases() {
 
       return data || [];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });
 }
 
 export function useKnowledgeBase(kbId: string) {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
-    queryKey: ['knowledge-base', kbId, currentOrganization?.id],
+    queryKey: ['knowledge-base', kbId, effectiveOrganizationId],
     queryFn: async (): Promise<KnowledgeBase | null> => {
-      if (!currentOrganization?.id || !kbId) {
+      if (!effectiveOrganizationId || !kbId) {
         return null;
       }
 
@@ -69,7 +69,7 @@ export function useKnowledgeBase(kbId: string) {
         .from('kb_configurations')
         .select('*')
         .eq('id', kbId)
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .single();
 
       if (error) {
@@ -79,7 +79,7 @@ export function useKnowledgeBase(kbId: string) {
 
       return data;
     },
-    enabled: !!currentOrganization?.id && !!kbId,
+    enabled: !!effectiveOrganizationId && !!kbId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });

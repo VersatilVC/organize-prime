@@ -45,6 +45,12 @@ export interface ContentBrief {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Generation tracking fields
+  generation_status?: 'pending' | 'processing' | 'completed' | 'error';
+  generation_started_at?: string;
+  generation_completed_at?: string;
+  generation_error?: string;
+  n8n_execution_id?: string;
 }
 
 export interface ContentItem {
@@ -60,6 +66,10 @@ export interface ContentItem {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Generation tracking fields
+  generation_method?: 'manual' | 'ai_generated' | 'n8n_workflow';
+  generation_metadata?: Record<string, any>;
+  parent_item_id?: string;
 }
 
 // Enhanced types with relationships and computed fields
@@ -81,6 +91,7 @@ export interface ContentItemWithDetails extends ContentItem {
   created_by_name?: string;
   can_create_derivatives: boolean;
   derivatives?: ContentItem[];
+  parent_item_title?: string;
 }
 
 // Form input types (for create/update operations)
@@ -431,6 +442,42 @@ export interface N8NWebhookResponse {
   suggestions?: AISuggestion[];
   error?: string;
   processing_time?: number;
+}
+
+// Content Generation types
+export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'error';
+export type GenerationMethod = 'manual' | 'ai_generated' | 'n8n_workflow';
+
+export interface ContentGenerationRequest {
+  brief_id: string;
+  organization_id: string;
+  title: string;
+  content_type: string;
+  requirements?: string;
+  tone?: string;
+  target_audience?: string;
+  keywords?: string[];
+  user_id: string;
+}
+
+export interface ContentGenerationResponse {
+  success: boolean;
+  content_item?: {
+    title: string;
+    content: string;
+    content_type: string;
+    metadata?: Record<string, any>;
+  };
+  execution_id?: string;
+  error?: string;
+}
+
+export interface GenerationStatusInfo {
+  status: GenerationStatus;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  executionId?: string;
 }
 
 // Pagination types

@@ -22,6 +22,9 @@ export * from './useAutoGenerateIdeas';
 // Brief Generation hooks
 export * from './useBriefGeneration';
 
+// Content Generation hooks
+export * from './useContentGeneration';
+
 // Re-export common types for convenience
 export type {
   ContentIdea,

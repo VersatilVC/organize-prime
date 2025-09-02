@@ -1,19 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { useAuth } from '@/auth/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentUploadData } from '../types/knowledgeBaseTypes';
 
 export function useDocumentUpload() {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const uploadDocument = useMutation({
     mutationFn: async (uploadData: DocumentUploadData) => {
-      if (!currentOrganization?.id || !user?.id) {
+      if (!effectiveOrganizationId || !user?.id) {
         throw new Error('Missing organization or user context');
       }
 
@@ -25,7 +25,7 @@ export function useDocumentUpload() {
       // Handle file upload to Supabase Storage
       if (uploadData.file) {
         const fileName = `${Date.now()}-${uploadData.file.name}`;
-        filePath = `${currentOrganization.id}/documents/${fileName}`;
+        filePath = `${effectiveOrganizationId}/documents/${fileName}`;
         fileSize = uploadData.file.size;
         fileType = uploadData.file.type;
 
@@ -51,7 +51,7 @@ export function useDocumentUpload() {
       const { data, error } = await supabase
         .from('kb_documents')
         .insert({
-          organization_id: currentOrganization.id,
+          organization_id: effectiveOrganizationId,
           title: uploadData.title,
           content,
           file_path: filePath,

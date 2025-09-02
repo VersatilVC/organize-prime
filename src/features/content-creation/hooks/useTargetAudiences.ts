@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import type { 
   TargetAudience, 
   CreateTargetAudienceForm, 
@@ -11,19 +11,19 @@ import type {
 export function useTargetAudiences() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   const { data: targetAudiences = [], isLoading, error } = useQuery({
-    queryKey: ['target-audiences', currentOrganization?.id],
+    queryKey: ['target-audiences', effectiveOrganizationId],
     queryFn: async (): Promise<TargetAudience[]> => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
 
       const { data, error } = await supabase
         .from('target_audiences')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .order('usage_count', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -34,18 +34,18 @@ export function useTargetAudiences() {
 
       return data || [];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   const createTargetAudienceMutation = useMutation({
     mutationFn: async (formData: CreateTargetAudienceForm): Promise<TargetAudience> => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
 
       const insertData: any = {
-        organization_id: currentOrganization.id,
+        organization_id: effectiveOrganizationId,
         name: formData.name,
         description: formData.description || null,
         company_types: formData.company_types || [],
@@ -77,7 +77,7 @@ export function useTargetAudiences() {
       return data;
     },
     onSuccess: (newTargetAudience) => {
-      queryClient.invalidateQueries({ queryKey: ['target-audiences', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['target-audiences', effectiveOrganizationId] });
       toast({
         title: 'Success',
         description: `Target audience "${newTargetAudience.name}" created successfully`,
@@ -127,7 +127,7 @@ export function useTargetAudiences() {
       return data;
     },
     onSuccess: (updatedTargetAudience) => {
-      queryClient.invalidateQueries({ queryKey: ['target-audiences', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['target-audiences', effectiveOrganizationId] });
       toast({
         title: 'Success',
         description: `Target audience "${updatedTargetAudience.name}" updated successfully`,
@@ -153,7 +153,7 @@ export function useTargetAudiences() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['target-audiences', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['target-audiences', effectiveOrganizationId] });
       toast({
         title: 'Success',
         description: 'Target audience deleted successfully',
@@ -178,7 +178,7 @@ export function useTargetAudiences() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['target-audiences', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['target-audiences', effectiveOrganizationId] });
     },
     onError: (error) => {
       console.error('Update usage count error:', error);
@@ -201,18 +201,18 @@ export function useTargetAudiences() {
 
 // Hook for a single target audience
 export function useTargetAudience(id: string | undefined) {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
-    queryKey: ['target-audience', id, currentOrganization?.id],
+    queryKey: ['target-audience', id, effectiveOrganizationId],
     queryFn: async (): Promise<TargetAudience | null> => {
-      if (!id || !currentOrganization?.id) return null;
+      if (!id || !effectiveOrganizationId) return null;
 
       const { data, error } = await supabase
         .from('target_audiences')
         .select('*')
         .eq('id', id)
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .single();
 
       if (error) {
@@ -222,7 +222,7 @@ export function useTargetAudience(id: string | undefined) {
 
       return data;
     },
-    enabled: !!id && !!currentOrganization?.id,
+    enabled: !!id && !!effectiveOrganizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

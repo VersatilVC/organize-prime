@@ -41,6 +41,15 @@ export const contentCreationKeys = {
   briefItems: (briefId: string) =>
     [...contentCreationKeys.briefs(), 'items', briefId] as const,
 
+  // ========== CONTENT GENERATION ==========
+  generation: () => [...contentCreationKeys.all, 'generation'] as const,
+  generationStatus: (briefId: string) =>
+    [...contentCreationKeys.generation(), 'status', briefId] as const,
+  generatedItems: (briefId: string) =>
+    [...contentCreationKeys.generation(), 'items', briefId] as const,
+  generationStats: (organizationId?: string) =>
+    [...contentCreationKeys.generation(), 'stats', organizationId] as const,
+
   // ========== CONTENT ITEMS ==========
   items: () => [...contentCreationKeys.all, 'items'] as const,
   itemsList: (filters?: ContentItemFilters, pagination?: PaginationParams) =>

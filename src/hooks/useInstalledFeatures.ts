@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/auth/AuthProvider';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -55,19 +55,19 @@ const featureMetadata: Record<string, Pick<InstalledFeature, 'displayName' | 'ic
  */
 export function useInstalledFeatures() {
   const { user } = useAuth();
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganization, effectiveOrganizationId } = useEffectiveOrganization();
   
   // Use database function instead of client-side logic
   const { data: effectiveFeatures = [], isLoading } = useQuery({
-    queryKey: ['user-effective-features', user?.id, currentOrganization?.id],
+    queryKey: ['user-effective-features', user?.id, effectiveOrganizationId],
     queryFn: async (): Promise<EffectiveFeatureResponse[]> => {
-      if (!user?.id || !currentOrganization?.id) {
+      if (!user?.id || !effectiveOrganizationId) {
         return [];
       }
       
       const { data, error } = await supabase.rpc('get_user_effective_features', {
         p_user_id: user.id,
-        p_organization_id: currentOrganization.id
+        p_organization_id: effectiveOrganizationId
       });
       
       if (error) {
@@ -77,13 +77,13 @@ export function useInstalledFeatures() {
       
       return data || [];
     },
-    enabled: !!(user?.id && currentOrganization?.id),
+    enabled: !!(user?.id && effectiveOrganizationId),
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 10 * 60 * 1000, // 10 minutes
   });
   
   return useMemo(() => {
-    if (isLoading || !currentOrganization) return [];
+    if (isLoading || !effectiveOrganization) return [];
     
     // Transform database response to UI format
     const installedFeatures = effectiveFeatures
@@ -111,5 +111,5 @@ export function useInstalledFeatures() {
       .map(({ menuOrder, ...feature }) => feature);
     
     return installedFeatures;
-  }, [effectiveFeatures, currentOrganization, isLoading]);
+  }, [effectiveFeatures, effectiveOrganization, isLoading]);
 }

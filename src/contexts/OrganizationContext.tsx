@@ -29,6 +29,7 @@ interface OrganizationContextType {
   refreshAllOrganizations: () => Promise<void>; // For super admin
   retryConnection: () => Promise<void>;
   getEffectiveOrganization: (impersonationState?: any) => Organization | null; // Helper for impersonation
+  getEffectiveOrganizationId: (impersonationState?: any) => string | null; // Helper for data queries
 }
 
 const OrganizationContext = React.createContext<OrganizationContextType | undefined>(undefined);
@@ -243,6 +244,12 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     return currentOrganization;
   }, [currentOrganization]);
 
+  // Get effective organization ID for data queries
+  const getEffectiveOrganizationId = React.useCallback((impersonationState?: any) => {
+    const effectiveOrg = getEffectiveOrganization(impersonationState);
+    return effectiveOrg?.id || null;
+  }, [getEffectiveOrganization]);
+
   const contextValue = React.useMemo(() => ({
     currentOrganization,
     organizations,
@@ -256,7 +263,8 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     refreshAllOrganizations,
     retryConnection,
     getEffectiveOrganization,
-  }), [currentOrganization, organizations, allOrganizations, loading, error, isOffline, retryCount, handleSetCurrentOrganization, refreshOrganizations, refreshAllOrganizations, retryConnection, getEffectiveOrganization]);
+    getEffectiveOrganizationId,
+  }), [currentOrganization, organizations, allOrganizations, loading, error, isOffline, retryCount, handleSetCurrentOrganization, refreshOrganizations, refreshAllOrganizations, retryConnection, getEffectiveOrganization, getEffectiveOrganizationId]);
 
   return React.createElement(
     OrganizationContext.Provider,

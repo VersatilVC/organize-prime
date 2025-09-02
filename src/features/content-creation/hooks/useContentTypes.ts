@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { useEffect } from 'react';
 import type { 
   ContentType, 
@@ -12,19 +12,19 @@ import type {
 export function useContentTypes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   const { data: contentTypes = [], isLoading, error } = useQuery({
-    queryKey: ['content-types', currentOrganization?.id],
+    queryKey: ['content-types', effectiveOrganizationId],
     queryFn: async (): Promise<ContentType[]> => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
 
       const { data, error } = await supabase
         .from('content_types')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .order('usage_count', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -42,14 +42,14 @@ export function useContentTypes() {
 
       return data || [];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 30 * 1000, // 30 seconds (reduced from 2 minutes)
     refetchInterval: 15 * 1000, // Refetch every 15 seconds for real-time status updates
   });
 
   // Set up real-time subscription for extraction status updates
   useEffect(() => {
-    if (!currentOrganization?.id) return;
+    if (!effectiveOrganizationId) return;
 
     console.log('🔔 Setting up real-time subscription for content types extraction status');
 
@@ -57,7 +57,7 @@ export function useContentTypes() {
     const handleForceRefresh = () => {
       console.log('🔄 Force refresh triggered, invalidating cache');
       queryClient.invalidateQueries({ 
-        queryKey: ['content-types', currentOrganization.id] 
+        queryKey: ['content-types', effectiveOrganizationId] 
       });
     };
     
@@ -70,20 +70,20 @@ export function useContentTypes() {
           event: 'UPDATE',
           schema: 'public',
           table: 'content_types',
-          filter: `organization_id=eq.${currentOrganization.id}`
+          filter: `organization_id=eq.${effectiveOrganizationId}`
         },
         (payload) => {
           console.log('📡 Content type status update received:', payload.new);
           
           // Invalidate and refetch the query immediately
           queryClient.invalidateQueries({ 
-            queryKey: ['content-types', currentOrganization.id] 
+            queryKey: ['content-types', effectiveOrganizationId] 
           });
           
           // Also invalidate single content type queries
           if (payload.new?.id) {
             queryClient.invalidateQueries({ 
-              queryKey: ['content-type', payload.new.id, currentOrganization.id] 
+              queryKey: ['content-type', payload.new.id, effectiveOrganizationId] 
             });
           }
         }
@@ -95,16 +95,16 @@ export function useContentTypes() {
       window.removeEventListener('force-content-types-refresh', handleForceRefresh);
       channel.unsubscribe();
     };
-  }, [currentOrganization?.id, queryClient]);
+  }, [effectiveOrganizationId, queryClient]);
 
   const createContentTypeMutation = useMutation({
     mutationFn: async (formData: CreateContentTypeForm): Promise<ContentType> => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
 
       const insertData: any = {
-        organization_id: currentOrganization.id,
+        organization_id: effectiveOrganizationId,
         name: formData.name,
         description: formData.description || null,
         type_category: formData.type_category,
@@ -142,7 +142,7 @@ export function useContentTypes() {
       return data;
     },
     onSuccess: (newContentType) => {
-      queryClient.invalidateQueries({ queryKey: ['content-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['content-types', effectiveOrganizationId] });
       toast({
         title: 'Success',
         description: `Content type "${newContentType.name}" created successfully`,
@@ -190,7 +190,7 @@ export function useContentTypes() {
       return data;
     },
     onSuccess: (updatedContentType) => {
-      queryClient.invalidateQueries({ queryKey: ['content-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['content-types', effectiveOrganizationId] });
       toast({
         title: 'Success',
         description: `Content type "${updatedContentType.name}" updated successfully`,
@@ -216,7 +216,7 @@ export function useContentTypes() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['content-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['content-types', effectiveOrganizationId] });
       toast({
         title: 'Success',
         description: 'Content type deleted successfully',
@@ -241,7 +241,7 @@ export function useContentTypes() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['content-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['content-types', effectiveOrganizationId] });
     },
     onError: (error) => {
       console.error('Update usage count error:', error);
@@ -264,18 +264,18 @@ export function useContentTypes() {
 
 // Hook for a single content type
 export function useContentType(id: string | undefined) {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
-    queryKey: ['content-type', id, currentOrganization?.id],
+    queryKey: ['content-type', id, effectiveOrganizationId],
     queryFn: async (): Promise<ContentType | null> => {
-      if (!id || !currentOrganization?.id) return null;
+      if (!id || !effectiveOrganizationId) return null;
 
       const { data, error } = await supabase
         .from('content_types')
         .select('*')
         .eq('id', id)
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .single();
 
       if (error) {
@@ -285,7 +285,7 @@ export function useContentType(id: string | undefined) {
 
       return data;
     },
-    enabled: !!id && !!currentOrganization?.id,
+    enabled: !!id && !!effectiveOrganizationId,
     staleTime: 30 * 1000, // 30 seconds (reduced from 5 minutes)
     refetchInterval: 15 * 1000, // Refetch every 15 seconds for real-time status updates
   });

@@ -1,28 +1,28 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { KBFile } from '../services/fileUploadApi';
 
 export function useFileSubscription() {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!currentOrganization?.id) return;
+    if (!effectiveOrganizationId) return;
 
     // Subscribe to file status changes
     const channel = supabase
-      .channel(`kb-files-${currentOrganization.id}`)
+      .channel(`kb-files-${effectiveOrganizationId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'kb_files',
-          filter: `organization_id=eq.${currentOrganization.id}`
+          filter: `organization_id=eq.${effectiveOrganizationId}`
         },
         (payload) => {
           console.log('File status update:', payload);
@@ -61,7 +61,7 @@ export function useFileSubscription() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentOrganization?.id, queryClient, toast]);
+  }, [effectiveOrganizationId, queryClient, toast]);
 
   const handleStatusChange = (oldRecord: KBFile, newRecord: KBFile) => {
     const statusMessages = {
@@ -99,7 +99,7 @@ export function useFileStatusSubscription(fileId: string, onStatusChange?: (stat
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!currentOrganization?.id || !fileId) return;
+    if (!effectiveOrganizationId || !fileId) return;
 
     const channel = supabase
       .channel(`file-${fileId}`)
@@ -127,5 +127,5 @@ export function useFileStatusSubscription(fileId: string, onStatusChange?: (stat
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fileId, currentOrganization?.id, onStatusChange, queryClient]);
+  }, [fileId, effectiveOrganizationId, onStatusChange, queryClient]);
 }

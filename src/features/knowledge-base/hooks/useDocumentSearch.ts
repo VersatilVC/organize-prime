@@ -1,26 +1,26 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { useAuth } from '@/auth/AuthProvider';
 import { KBDocument, KBSearch, DocumentSearchResult } from '../types/knowledgeBaseTypes';
 
 export function useDocumentSearch() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const searchDocuments = useQuery({
-    queryKey: ['document-search', currentOrganization?.id, searchQuery],
+    queryKey: ['document-search', effectiveOrganizationId, searchQuery],
     queryFn: async (): Promise<DocumentSearchResult[]> => {
-      if (!currentOrganization?.id || !searchQuery.trim()) return [];
+      if (!effectiveOrganizationId || !searchQuery.trim()) return [];
 
       // Simple text search for now - can be enhanced with vector search later
       const { data, error } = await supabase
         .from('kb_documents')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
         .limit(20);
 
@@ -60,18 +60,18 @@ export function useDocumentSearch() {
       // Sort by relevance
       return results.sort((a, b) => b.relevance_score - a.relevance_score);
     },
-    enabled: !!currentOrganization?.id && searchQuery.trim().length > 0,
+    enabled: !!effectiveOrganizationId && searchQuery.trim().length > 0,
     staleTime: 30 * 1000,
   });
 
   const saveSearch = useMutation({
     mutationFn: async (query: string) => {
-      if (!currentOrganization?.id || !user?.id) return;
+      if (!effectiveOrganizationId || !user?.id) return;
 
       const { data, error } = await supabase
         .from('kb_searches')
         .insert({
-          organization_id: currentOrganization.id,
+          organization_id: effectiveOrganizationId,
           user_id: user.id,
           query,
           results_count: searchDocuments.data?.length || 0,
@@ -88,14 +88,14 @@ export function useDocumentSearch() {
   });
 
   const searchHistory = useQuery({
-    queryKey: ['search-history', currentOrganization?.id, user?.id],
+    queryKey: ['search-history', effectiveOrganizationId, user?.id],
     queryFn: async (): Promise<KBSearch[]> => {
-      if (!currentOrganization?.id || !user?.id) return [];
+      if (!effectiveOrganizationId || !user?.id) return [];
 
       const { data, error } = await supabase
         .from('kb_searches')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -103,7 +103,7 @@ export function useDocumentSearch() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!currentOrganization?.id && !!user?.id,
+    enabled: !!effectiveOrganizationId && !!user?.id,
     staleTime: 60 * 1000,
   });
 

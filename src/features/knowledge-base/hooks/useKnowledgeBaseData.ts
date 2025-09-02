@@ -1,26 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { KBDocument, KBStats } from '../types/knowledgeBaseTypes';
 
 export function useKnowledgeBaseData() {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
 
   return useQuery({
-    queryKey: ['knowledge-base-data', currentOrganization?.id],
+    queryKey: ['knowledge-base-data', effectiveOrganizationId],
     queryFn: async (): Promise<KBDocument[]> => {
-      if (!currentOrganization?.id) return [];
+      if (!effectiveOrganizationId) return [];
 
       const { data, error } = await supabase
         .from('kb_documents')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -29,9 +29,9 @@ export function useKnowledgeBaseStats() {
   const { currentOrganization } = useOrganization();
 
   return useQuery({
-    queryKey: ['knowledge-base-stats', currentOrganization?.id],
+    queryKey: ['knowledge-base-stats', effectiveOrganizationId],
     queryFn: async (): Promise<KBStats> => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         return {
           total_documents: 0,
           processing_documents: 0,
@@ -46,7 +46,7 @@ export function useKnowledgeBaseStats() {
       const { data: documents, error: docsError } = await supabase
         .from('kb_documents')
         .select('processing_status')
-        .eq('organization_id', currentOrganization.id);
+        .eq('organization_id', effectiveOrganizationId);
 
       if (docsError) throw docsError;
 
@@ -54,7 +54,7 @@ export function useKnowledgeBaseStats() {
       const { data: searches, error: searchError } = await supabase
         .from('kb_searches')
         .select('results_count')
-        .eq('organization_id', currentOrganization.id);
+        .eq('organization_id', effectiveOrganizationId);
 
       if (searchError) throw searchError;
 
@@ -71,7 +71,7 @@ export function useKnowledgeBaseStats() {
 
       return stats;
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 60 * 1000, // 1 minute
   });
 }
@@ -80,21 +80,21 @@ export function useRecentDocuments(limit = 5) {
   const { currentOrganization } = useOrganization();
 
   return useQuery({
-    queryKey: ['recent-documents', currentOrganization?.id, limit],
+    queryKey: ['recent-documents', effectiveOrganizationId, limit],
     queryFn: async (): Promise<KBDocument[]> => {
-      if (!currentOrganization?.id) return [];
+      if (!effectiveOrganizationId) return [];
 
       const { data, error } = await supabase
         .from('kb_documents')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 30 * 1000,
   });
 }

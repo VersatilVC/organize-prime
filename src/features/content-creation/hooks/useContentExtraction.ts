@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { useAuth } from '@/auth/AuthProvider';
 import { contentExtractionService, ExtractionResult, ExtractionOptions } from '../services/contentExtractionService';
 import { toast } from 'sonner';
@@ -36,28 +36,28 @@ export interface UseContentExtractionResult {
 }
 
 export const useContentExtraction = (): UseContentExtractionResult => {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isExtracting, setIsExtracting] = useState(false);
 
   // Query extraction logs
   const { data: extractionLogs = [], isLoading: isLoadingLogs } = useQuery({
-    queryKey: ['content-extraction-logs', currentOrganization?.id],
+    queryKey: ['content-extraction-logs', effectiveOrganizationId],
     queryFn: async () => {
-      if (!currentOrganization?.id) return [];
+      if (!effectiveOrganizationId) return [];
 
       const { data, error } = await supabase
         .from('content_extraction_logs')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', effectiveOrganizationId)
         .order('created_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
       return data as ContentExtractionLog[];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 30000, // 30 seconds
   });
 
@@ -68,14 +68,14 @@ export const useContentExtraction = (): UseContentExtractionResult => {
     fileSize: number | null,
     fileType: string
   ): Promise<string> => {
-    if (!currentOrganization?.id || !user?.id) {
+    if (!effectiveOrganizationId || !user?.id) {
       throw new Error('Missing organization or user context');
     }
 
     const { data, error } = await supabase
       .from('content_extraction_logs')
       .insert({
-        organization_id: currentOrganization.id,
+        organization_id: effectiveOrganizationId,
         content_type_id: contentTypeId,
         file_name: fileName,
         file_size: fileSize,
@@ -88,7 +88,7 @@ export const useContentExtraction = (): UseContentExtractionResult => {
 
     if (error) throw error;
     return data.id;
-  }, [currentOrganization?.id, user?.id]);
+  }, [effectiveOrganizationId, user?.id]);
 
   // Update extraction log
   const updateExtractionLog = useCallback(async (

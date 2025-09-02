@@ -8,14 +8,14 @@ import { FileList } from '../components/FileList';
 import { FileStats } from '../components/FileStats';
 import { FileManagementErrorBoundary } from '../components/FileManagementErrorBoundary';
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 
 export default function ManageFiles() {
   const [selectedKbId, setSelectedKbId] = useState<string>('');
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganization } = useEffectiveOrganization();
   const { data: knowledgeBases, isLoading: kbLoading } = useKnowledgeBases();
 
-  if (!currentOrganization) {
+  if (!effectiveOrganization) {
     return (
       <div className="container mx-auto py-6">
         <Alert>

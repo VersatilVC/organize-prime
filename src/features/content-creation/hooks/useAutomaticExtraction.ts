@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { automaticExtractionService, type ExtractionQueueItem } from '../services/automaticExtractionService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -7,16 +7,16 @@ import { supabase } from '@/integrations/supabase/client';
  * Hook for managing automatic content extraction
  */
 export function useAutomaticExtraction() {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionStatuses, setExtractionStatuses] = useState<Record<string, ExtractionQueueItem>>({});
 
   // Subscribe to real-time updates
   useEffect(() => {
-    if (!currentOrganization?.id) return;
+    if (!effectiveOrganizationId) return;
 
     const unsubscribe = automaticExtractionService.subscribeToExtractionUpdates(
-      currentOrganization.id,
+      effectiveOrganizationId,
       (update) => {
         // Handle both content types and content ideas
         const key = update.content_type_id || update.content_idea_id;
@@ -30,7 +30,7 @@ export function useAutomaticExtraction() {
     );
 
     return unsubscribe;
-  }, [currentOrganization?.id]);
+  }, [effectiveOrganizationId]);
 
   /**
    * Trigger manual extraction for a content type

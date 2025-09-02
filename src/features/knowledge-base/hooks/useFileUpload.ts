@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { useFileSubscription } from './useFileSubscription';
 import { 
@@ -14,7 +14,7 @@ import {
 } from '../services/fileUploadApi';
 
 export function useFileUpload() {
-  const { currentOrganization } = useOrganization();
+  const { effectiveOrganizationId } = useEffectiveOrganization();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [uploadProgress, setUploadProgress] = useState<Record<string, FileUploadProgress>>({});
@@ -24,7 +24,7 @@ export function useFileUpload() {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ kbId, file }: { kbId: string; file: File }) => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
 
@@ -45,7 +45,7 @@ export function useFileUpload() {
         const result = await uploadFileToKB(
           kbId, 
           file, 
-          currentOrganization.id,
+          effectiveOrganizationId,
           (progress) => {
             setUploadProgress(prev => ({
               ...prev,
@@ -173,14 +173,14 @@ export function useKBFiles(kbId?: string, page: number = 0, pageSize: number = 5
   const { currentOrganization } = useOrganization();
 
   return useQuery({
-    queryKey: ['kb-files', currentOrganization?.id, kbId, page, pageSize],
+    queryKey: ['kb-files', effectiveOrganizationId, kbId, page, pageSize],
     queryFn: () => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
-      return getKBFiles(currentOrganization.id, kbId, page * pageSize, pageSize);
+      return getKBFiles(effectiveOrganizationId, kbId, page * pageSize, pageSize);
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: false,
   });
@@ -190,14 +190,14 @@ export function useFileStats() {
   const { currentOrganization } = useOrganization();
 
   return useQuery({
-    queryKey: ['file-stats', currentOrganization?.id],
+    queryKey: ['file-stats', effectiveOrganizationId],
     queryFn: () => {
-      if (!currentOrganization?.id) {
+      if (!effectiveOrganizationId) {
         throw new Error('No organization selected');
       }
-      return getFileProcessingStats(currentOrganization.id);
+      return getFileProcessingStats(effectiveOrganizationId);
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!effectiveOrganizationId,
     staleTime: 60 * 1000, // 1 minute
     refetchInterval: 30 * 1000, // Refresh every 30 seconds
   });

@@ -348,7 +348,7 @@ export class ContentCreationService {
         idea_title: brief.content_ideas?.title,
         created_by_name: 'User', // Will fetch profile separately if needed
         content_items_count: brief.content_items_count?.[0]?.count || 0,
-        can_generate_content: brief.status === 'approved'
+        can_generate_content: brief.status === 'approved' && brief.generation_status !== 'processing'
       }));
 
       return {
@@ -447,7 +447,7 @@ export class ContentCreationService {
         .select(`
           *,
           content_briefs:brief_id(title),
-          profiles:created_by(full_name)
+          parent_content_item:parent_item_id(title)
         `, { count: 'exact' });
 
       // Apply filters
@@ -491,7 +491,8 @@ export class ContentCreationService {
         ...item,
         brief_title: item.content_briefs?.title,
         created_by_name: 'User', // Will fetch profile separately if needed
-        can_create_derivatives: item.is_major_item && item.status === 'approved'
+        can_create_derivatives: item.is_major_item && item.status === 'approved',
+        parent_item_title: item.parent_content_item?.title
       }));
 
       return {
@@ -587,33 +588,47 @@ export class ContentCreationService {
   }
 
   /**
-   * Generate content from brief (placeholder for AI integration)
+   * Generate content from brief using N8N workflow
    */
   static async generateContentFromBrief(briefId: string, options: {
     format?: string;
     tone?: string;
     length?: 'short' | 'medium' | 'long';
-  } = {}): Promise<ContentItem> {
-    // This is a placeholder - actual AI generation will be implemented later
-    // For now, create a content item with placeholder content
-    
-    const brief = await supabase
-      .from('content_briefs')
-      .select('title, content_type, target_audience, tone')
-      .eq('id', briefId)
-      .single();
+  } = {}): Promise<{success: boolean; executionId?: string; error?: string}> {
+    const { ContentGenerationService } = await import('./ContentGenerationService');
+    return ContentGenerationService.triggerContentGeneration(briefId);
+  }
 
-    if (!brief.data) throw new Error('Brief not found');
+  /**
+   * Get generation status for a brief
+   */
+  static async getBriefGenerationStatus(briefId: string) {
+    const { ContentGenerationService } = await import('./ContentGenerationService');
+    return ContentGenerationService.getGenerationStatus(briefId);
+  }
 
-    const placeholderContent = `Generated content for: ${brief.data.title}\n\nContent type: ${brief.data.content_type}\nTarget audience: ${brief.data.target_audience || 'General'}\nTone: ${brief.data.tone || 'Professional'}\n\n[AI-generated content will appear here]`;
+  /**
+   * Get content items generated from a specific brief
+   */
+  static async getGeneratedContentItems(briefId: string): Promise<ContentItem[]> {
+    const { ContentGenerationService } = await import('./ContentGenerationService');
+    return ContentGenerationService.getGeneratedContentItems(briefId);
+  }
 
-    return this.createContentItem({
-      brief_id: briefId,
-      title: `Generated: ${brief.data.title}`,
-      content: placeholderContent,
-      content_type: brief.data.content_type,
-      is_major_item: true
-    });
+  /**
+   * Retry failed content generation
+   */
+  static async retryContentGeneration(briefId: string) {
+    const { ContentGenerationService } = await import('./ContentGenerationService');
+    return ContentGenerationService.retryGeneration(briefId);
+  }
+
+  /**
+   * Cancel ongoing content generation
+   */
+  static async cancelContentGeneration(briefId: string): Promise<void> {
+    const { ContentGenerationService } = await import('./ContentGenerationService');
+    return ContentGenerationService.cancelGeneration(briefId);
   }
 
   /**

@@ -10,8 +10,11 @@ import {
   useContentBriefs,
   useDeleteContentBrief,
   useGenerateContentFromBrief,
-  useUpdateContentBrief,
-  useContentTypeOptions
+  useApproveBrief,
+  useRejectBrief,
+  useContentTypeOptions,
+  useTriggerContentGeneration,
+  useContentGenerationWorkflow
 } from '@/hooks/content-creation';
 import type { 
   ContentBriefWithDetails,
@@ -100,17 +103,44 @@ export const ContentBriefsTab = React.memo<ContentBriefsTabProps>(({
     }
   });
 
-  const generateContentMutation = useGenerateContentFromBrief('', {
-    onSuccess: () => {
-      if (onGenerateContent) {
-        // Navigate to content items tab or show success notification
-        toast.success('Content generated successfully!');
+  const triggerGenerationMutation = useTriggerContentGeneration({
+    onSuccess: (data, briefId) => {
+      if (data.success) {
+        toast.success('Content generation started!', {
+          description: 'Your content is being generated. Check the Content Items tab when ready.'
+        });
+        if (onGenerateContent) {
+          // Find the brief and call the callback
+          const brief = briefsResponse?.data.find(b => b.id === briefId);
+          if (brief) onGenerateContent(brief);
+        }
       }
     }
   });
 
-  const updateBriefMutation = useUpdateContentBrief('', {
-    onSuccess: () => refetch()
+  // State for handling individual brief actions
+  const [approvingBrief, setApprovingBrief] = useState<string | null>(null);
+  const [rejectingBrief, setRejectingBrief] = useState<string | null>(null);
+
+  // Individual brief action hooks
+  const approveBriefMutation = useApproveBrief(approvingBrief || '', {
+    onSuccess: () => {
+      setApprovingBrief(null);
+      refetch();
+    },
+    onError: () => {
+      setApprovingBrief(null);
+    }
+  });
+
+  const rejectBriefMutation = useRejectBrief(rejectingBrief || '', {
+    onSuccess: () => {
+      setRejectingBrief(null);
+      refetch();
+    },
+    onError: () => {
+      setRejectingBrief(null);
+    }
   });
 
   // Event handlers
@@ -143,32 +173,31 @@ export const ContentBriefsTab = React.memo<ContentBriefsTabProps>(({
   };
 
   const handleGenerateContent = (brief: ContentBriefWithDetails) => {
-    if (onGenerateContent) {
-      onGenerateContent(brief);
-    } else {
-      // Default implementation - call the mutation directly
-      generateContentMutation.mutate({ 
-        format: 'standard',
-        tone: brief.tone || 'professional',
-        length: 'medium' 
-      });
+    if (brief.status !== 'approved') {
+      toast.error('Brief must be approved before generating content');
+      return;
     }
+    
+    if (brief.generation_status === 'processing') {
+      toast.info('Content generation is already in progress for this brief');
+      return;
+    }
+    
+    triggerGenerationMutation.mutate(brief.id);
   };
 
   const handleApprove = (brief: ContentBriefWithDetails) => {
-    updateBriefMutation.mutate({
-      ...brief,
-      status: 'approved'
-    });
-    toast.success('Brief approved successfully!');
+    if (brief.id && !approvingBrief) {
+      setApprovingBrief(brief.id);
+      approveBriefMutation.mutate();
+    }
   };
 
   const handleReject = (brief: ContentBriefWithDetails) => {
-    updateBriefMutation.mutate({
-      ...brief,
-      status: 'archived'
-    });
-    toast.success('Brief rejected and archived');
+    if (brief.id && !rejectingBrief) {
+      setRejectingBrief(brief.id);
+      rejectBriefMutation.mutate();
+    }
   };
 
   const handleItemSelect = (itemId: string, selected: boolean) => {
@@ -261,6 +290,7 @@ export const ContentBriefsTab = React.memo<ContentBriefsTabProps>(({
   const briefs = briefsResponse?.data || [];
   const totalCount = briefsResponse?.pagination.total || 0;
   const approvedCount = briefs.filter(brief => brief.status === 'approved').length;
+  const processingCount = briefs.filter(brief => brief.generation_status === 'processing').length;
 
   return (
     <div className={className}>
@@ -286,6 +316,11 @@ export const ContentBriefsTab = React.memo<ContentBriefsTabProps>(({
             {approvedCount > 0 && (
               <Badge variant="secondary" className="text-sm">
                 {approvedCount} ready to generate
+              </Badge>
+            )}
+            {processingCount > 0 && (
+              <Badge variant="default" className="text-sm animate-pulse">
+                {processingCount} generating
               </Badge>
             )}
             {selectedItems.length > 0 && (
@@ -432,12 +467,18 @@ export const ContentBriefsTab = React.memo<ContentBriefsTabProps>(({
 
       {/* Quick Stats */}
       {totalCount > 0 && (
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="text-center p-4 bg-muted/50 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">
-              {briefs.filter(b => b.status === 'approved').length}
+              {briefs.filter(b => b.status === 'approved' && b.generation_status !== 'processing').length}
             </div>
             <div className="text-sm text-muted-foreground">Ready to Generate</div>
+          </div>
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600 animate-pulse">
+              {processingCount}
+            </div>
+            <div className="text-sm text-muted-foreground">Generating Now</div>
           </div>
           <div className="text-center p-4 bg-muted/50 rounded-lg">
             <div className="text-2xl font-bold text-orange-600">

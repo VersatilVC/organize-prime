@@ -17,7 +17,10 @@ import {
   Trash2,
   Eye,
   Check,
-  X
+  X,
+  Clock,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -161,6 +164,52 @@ export const getContentBriefColumns = ({
     width: '100px'
   },
   {
+    key: 'generation_status',
+    label: 'Generation',
+    render: (brief) => {
+      const status = brief.generation_status || 'pending';
+      
+      if (status === 'processing') {
+        return (
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-blue-500 animate-spin" />
+            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+              Generating
+            </Badge>
+          </div>
+        );
+      } else if (status === 'completed') {
+        return (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+              Completed
+            </Badge>
+          </div>
+        );
+      } else if (status === 'error') {
+        return (
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">
+              Failed
+            </Badge>
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+            <Badge variant="outline" className="text-gray-600">
+              Ready
+            </Badge>
+          </div>
+        );
+      }
+    },
+    width: '120px'
+  },
+  {
     key: 'content_items_count',
     label: 'Items',
     sortable: true,
@@ -209,11 +258,20 @@ export const getContentBriefColumns = ({
           )}
           <DropdownMenuItem 
             onClick={() => onGenerateContent(brief)}
-            disabled={!brief.can_generate_content}
+            disabled={!brief.can_generate_content || brief.generation_status === 'processing'}
             className="text-blue-600 focus:text-blue-600"
           >
-            <Sparkles className="mr-2 h-4 w-4" />
-            Generate Content
+            {brief.generation_status === 'processing' ? (
+              <>
+                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Content
+              </>
+            )}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {onApprove && brief.status === 'draft' && (

@@ -320,15 +320,21 @@ export const useApproveBrief = (
   briefId: string,
   options: UseMutationOptions<ContentBrief, Error, void> = {}
 ) => {
-  return useUpdateContentBrief(briefId, {
-    ...options,
+  const updateBriefMutation = useUpdateContentBrief(briefId, {
     onSuccess: (data, variables, context) => {
       toast.success('Brief approved successfully!', {
         description: 'The brief is now ready for content generation.'
       });
       options.onSuccess?.(data, variables, context);
-    }
+    },
+    onError: options.onError
   });
+
+  return {
+    ...updateBriefMutation,
+    mutate: () => updateBriefMutation.mutate({ status: 'approved' }),
+    mutateAsync: () => updateBriefMutation.mutateAsync({ status: 'approved' })
+  };
 };
 
 /**
@@ -338,13 +344,19 @@ export const useRejectBrief = (
   briefId: string,
   options: UseMutationOptions<ContentBrief, Error, void> = {}
 ) => {
-  return useUpdateContentBrief(briefId, {
-    ...options,
+  const updateBriefMutation = useUpdateContentBrief(briefId, {
     onSuccess: (data, variables, context) => {
       toast.success('Brief rejected and archived');
       options.onSuccess?.(data, variables, context);
-    }
+    },
+    onError: options.onError
   });
+
+  return {
+    ...updateBriefMutation,
+    mutate: () => updateBriefMutation.mutate({ status: 'archived' }),
+    mutateAsync: () => updateBriefMutation.mutateAsync({ status: 'archived' })
+  };
 };
 
 // ========== CONVENIENCE HOOKS ==========

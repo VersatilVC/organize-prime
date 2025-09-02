@@ -1,6 +1,6 @@
 // Content Items Tab - Phase 3: UI Components
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,10 @@ import {
   Download,
   Upload,
   Archive,
-  Copy
+  Copy,
+  Eye,
+  Sparkles,
+  Bot
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -86,6 +89,9 @@ export const ContentItemsTab = React.memo<ContentItemsTabProps>(({
   // Derivatives dialog state
   const [derivativesItem, setDerivativesItem] = useState<ContentItemWithDetails | null>(null);
   const [selectedDerivativeTypes, setSelectedDerivativeTypes] = useState<string[]>([]);
+  
+  // Full item viewer state
+  const [viewingItem, setViewingItem] = useState<ContentItemWithDetails | null>(null);
 
   // Build filters object
   const filters: ContentItemFilters = useMemo(() => {
@@ -105,6 +111,15 @@ export const ContentItemsTab = React.memo<ContentItemsTabProps>(({
     error,
     refetch
   } = useContentItems(filters, { page, limit: 10, sortBy, sortOrder });
+
+  // Real-time updates - refetch every 10 seconds when items are being generated
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const { data: contentTypeOptions = [] } = useContentTypeOptions();
 
@@ -143,8 +158,7 @@ export const ContentItemsTab = React.memo<ContentItemsTabProps>(({
   };
 
   const handleView = (item: ContentItemWithDetails) => {
-    console.log('View item:', item.id);
-    toast.info('Content preview - coming soon!');
+    setViewingItem(item);
   };
 
   const handleDelete = (item: ContentItemWithDetails) => {
@@ -292,6 +306,7 @@ export const ContentItemsTab = React.memo<ContentItemsTabProps>(({
   const totalCount = itemsResponse?.pagination.total || 0;
   const majorItems = items.filter(item => item.is_major_item);
   const publishedItems = items.filter(item => item.status === 'published');
+  const generatedItems = items.filter(item => item.generation_method === 'n8n_workflow');
 
   return (
     <div className={className}>
@@ -323,6 +338,12 @@ export const ContentItemsTab = React.memo<ContentItemsTabProps>(({
             {publishedItems.length > 0 && (
               <Badge variant="secondary" className="text-sm">
                 {publishedItems.length} published
+              </Badge>
+            )}
+            {generatedItems.length > 0 && (
+              <Badge variant="outline" className="text-sm border-purple-200 text-purple-600 bg-purple-50">
+                <Bot className="h-3 w-3 mr-1" />
+                {generatedItems.length} AI generated
               </Badge>
             )}
             {selectedItems.length > 0 && (
@@ -512,6 +533,70 @@ export const ContentItemsTab = React.memo<ContentItemsTabProps>(({
           </div>
         </div>
       )}
+
+      {/* Full Item Viewer Modal */}
+      <Dialog open={!!viewingItem} onOpenChange={() => setViewingItem(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {viewingItem?.title}
+              {viewingItem?.generation_method === 'n8n_workflow' && (
+                <Badge variant="outline" className="border-purple-200 text-purple-600 bg-purple-50">
+                  <Bot className="h-3 w-3 mr-1" />
+                  AI Generated
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription className="flex flex-col gap-2">
+              <div className="flex items-center gap-4 text-sm">
+                <span>Type: {viewingItem?.content_type}</span>
+                <span>Status: {viewingItem?.status}</span>
+                {viewingItem?.brief_title && (
+                  <span>From: {viewingItem.brief_title}</span>
+                )}
+              </div>
+              {viewingItem?.generation_metadata?.generated_at && (
+                <span className="text-xs text-muted-foreground">
+                  Generated: {new Date(viewingItem.generation_metadata.generated_at).toLocaleString()}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            {viewingItem?.content ? (
+              <div className="prose prose-sm max-w-none">
+                <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg border">
+                  {viewingItem.content}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No content available
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setViewingItem(null)}>
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                if (viewingItem) {
+                  handleCreateDerivatives(viewingItem);
+                  setViewingItem(null);
+                }
+              }}
+              disabled={!viewingItem?.can_create_derivatives}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Create Derivatives
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Derivatives Dialog */}
       <Dialog open={!!derivativesItem} onOpenChange={() => setDerivativesItem(null)}>
