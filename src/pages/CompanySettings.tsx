@@ -15,9 +15,10 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, Loader2, Building } from 'lucide-react';
+import { Upload, Loader2, Building, Globe } from 'lucide-react';
 import { CompanyFeatureManagement } from '@/components/admin/CompanyFeatureManagement';
 import { InstalledAppsManagement } from '@/components/admin/InstalledAppsManagement';
+import { WebsiteIntegrationSettings } from '@/components/admin/WebsiteIntegrationSettings';
 
 interface CompanyData {
   id: string;
@@ -258,10 +259,14 @@ export default function CompanySettings() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
             <TabsTrigger value="apps">Installed Apps</TabsTrigger>
+            <TabsTrigger value="website" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Website
+            </TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
@@ -427,6 +432,10 @@ export default function CompanySettings() {
 
           <TabsContent value="apps">
             <InstalledAppsManagement />
+          </TabsContent>
+
+          <TabsContent value="website" className="space-y-6">
+            <WebsiteIntegrationSettings />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-6">

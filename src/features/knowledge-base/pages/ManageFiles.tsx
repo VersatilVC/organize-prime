@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -9,6 +9,7 @@ import { FileStats } from '../components/FileStats';
 import { FileManagementErrorBoundary } from '../components/FileManagementErrorBoundary';
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases';
 import { useEffectiveOrganization } from '@/hooks/useEffectiveOrganization';
+import { WebsitePagesList } from '../components/WebsitePagesList';
 
 export default function ManageFiles() {
   const [selectedKbId, setSelectedKbId] = useState<string>('');
@@ -95,6 +96,10 @@ export default function ManageFiles() {
             <FileText className="h-4 w-4" />
             File Library
           </TabsTrigger>
+          <TabsTrigger value="website-pages" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Website Pages
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload" className="space-y-6">
@@ -134,6 +139,14 @@ export default function ManageFiles() {
           </FileManagementErrorBoundary>
         </TabsContent>
 
+        <TabsContent value="website-pages" className="space-y-6">
+          <FileManagementErrorBoundary 
+            fallbackTitle="Website Pages Error"
+            fallbackDescription="Unable to display website pages."
+          >
+            <WebsitePagesList selectedKbId={selectedKbId} onKbChange={setSelectedKbId} />
+          </FileManagementErrorBoundary>
+        </TabsContent>
 
         <TabsContent value="monitoring" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

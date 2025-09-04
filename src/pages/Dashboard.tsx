@@ -3,6 +3,9 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
+import { useDashboardFeatureStats } from '@/hooks/useDashboardFeatureStats';
+import { FeatureCard } from '@/components/dashboard/FeatureCard';
+import { QuickActions } from '@/components/dashboard/QuickActions';
 import { useOrganizationCreation } from '@/hooks/useOrganizationCreation';
 import { useOrganizationSetup } from '@/hooks/useOrganizationSetup';
 import { OrganizationSetup } from '@/components/OrganizationSetup';
@@ -61,38 +64,7 @@ const StatCard = React.memo(({
 
 StatCard.displayName = 'StatCard';
 
-// Memoized QuickActionButton component
-const QuickActionButton = React.memo(({ 
-  to, 
-  icon: Icon, 
-  label, 
-  badge 
-}: {
-  to: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  badge?: number;
-}) => (
-  <Button asChild variant="outline" className="h-auto flex-col py-4 relative">
-    <Link to={to}>
-      <Icon className="h-6 w-6 mb-2" />
-      <span className="text-sm">{label}</span>
-      {badge && badge > 0 && (
-        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
-          {badge}
-        </Badge>
-      )}
-    </Link>
-  </Button>
-), (prevProps, nextProps) => {
-  return (
-    prevProps.to === nextProps.to &&
-    prevProps.label === nextProps.label &&
-    prevProps.badge === nextProps.badge
-  );
-});
-
-QuickActionButton.displayName = 'QuickActionButton';
+// Removed old QuickActionButton - now using enhanced QuickActions component
 
 export default function Dashboard() {
   // usePagePerformance('Dashboard'); // Temporarily disabled
@@ -105,6 +77,15 @@ export default function Dashboard() {
     unreadCount: notifications, 
     isLoading 
   } = useOptimizedDashboard();
+  
+  const {
+    features,
+    quickActions,
+    recentActivity,
+    hasProcessingItems,
+    hasAttentionItems,
+    isLoading: isFeatureStatsLoading
+  } = useDashboardFeatureStats();
   
   // Extract data from the new hook structure
   const orgCount = organizations.length; // Use organizations from useOrganization
@@ -332,7 +313,75 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Stats Grid */}
+            {/* Feature Overview Cards */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Feature Overview</h2>
+                {(hasProcessingItems || hasAttentionItems) && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {hasProcessingItems && (
+                      <div className="flex items-center gap-1">
+                        <Icons.refreshCw className="h-4 w-4 text-blue-500" />
+                        <span>Processing</span>
+                      </div>
+                    )}
+                    {hasAttentionItems && (
+                      <div className="flex items-center gap-1">
+                        <Icons.alertCircle className="h-4 w-4 text-orange-500" />
+                        <span>Needs attention</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {isFeatureStatsLoading ? (
+                  <>  
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <Card key={i} className="animate-pulse">
+                        <CardHeader className="space-y-0 pb-2">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-lg" />
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-3 w-16" />
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex justify-between">
+                            <div className="space-y-1">
+                              <Skeleton className="h-6 w-8" />
+                              <Skeleton className="h-3 w-12" />
+                            </div>
+                            <div className="space-y-1">
+                              <Skeleton className="h-5 w-6" />
+                              <Skeleton className="h-3 w-10" />
+                            </div>
+                          </div>
+                          <Skeleton className="h-8 w-full" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                ) : (
+                  features.map((feature) => (
+                    <FeatureCard
+                      key={feature.slug}
+                      slug={feature.slug}
+                      name={feature.name}
+                      icon={feature.icon as keyof typeof Icons}
+                      color={feature.color}
+                      stats={feature.stats}
+                      status={feature.status}
+                      quickAction={feature.quickAction}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Legacy Stats for Reference (can be removed later) */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {dashboardStats.map((stat) => (
                 <StatCard
@@ -346,52 +395,8 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icons.zap className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>
-                  Common tasks and shortcuts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <QuickActionButton
-                    to="/feedback"
-                    icon={Icons.messageSquare}
-                    label="Send Feedback"
-                  />
-                  
-                  {role === 'user' && feedback > 0 && (
-                    <QuickActionButton
-                      to="/feedback/my"
-                      icon={Icons.list}
-                      label="My Feedback"
-                    />
-                  )}
-                  
-                  {(role === 'admin' || role === 'super_admin') && feedback > 0 && (
-                    <QuickActionButton
-                      to="/admin/feedback"
-                      icon={Icons.mail}
-                      label="Manage Feedback"
-                      badge={feedback}
-                    />
-                  )}
-                  
-                  {role === 'admin' && (
-                    <QuickActionButton
-                      to="/users"
-                      icon={Icons.userPlus}
-                      label="Invite Users"
-                    />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Enhanced Quick Actions */}
+            <QuickActions actions={quickActions} />
 
             {/* Role-specific content */}
             {role === 'super_admin' && (
@@ -432,44 +437,60 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* Recent Activity */}
+            {/* Recent Activity with Real Data */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>
-                  Your latest actions and updates
+                  {recentActivity.length > 0 
+                    ? "Latest actions and updates from your organization"
+                    : "No recent activity to show"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                      <Icons.user className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium">Profile updated</p>
-                      <p className="text-xs text-muted-foreground">2 hours ago</p>
+                {isFeatureStatsLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <div key={i} className="flex items-center space-x-4">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="flex-1 space-y-1">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : recentActivity.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity, index) => {
+                      const IconComponent = Icons[activity.icon as keyof typeof Icons] || Icons.circle;
+                      const timeAgo = new Date(activity.timestamp).toLocaleString();
+                      
+                      return (
+                        <div key={`${activity.type}-${index}`} className="flex items-center space-x-4">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                            <IconComponent className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-sm font-medium">{activity.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {activity.description} • {timeAgo}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <div className="text-center">
+                      <Icons.clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No recent activity</p>
+                      <p className="text-xs">Start by uploading documents or creating content</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                      <Icons.fileText className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium">New file uploaded</p>
-                      <p className="text-xs text-muted-foreground">5 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                      <Icons.bell className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium">Notification preferences updated</p>
-                      <p className="text-xs text-muted-foreground">1 day ago</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </>
