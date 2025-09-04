@@ -50,13 +50,24 @@ export const supabase = globalThis.__supabaseClient ?? createClient<Database>(SU
       'X-Environment': import.meta.env.MODE,
       'X-App-Version': '1.0.0'
     },
-    // Add connection timeout configuration
+    // Add connection timeout configuration with comprehensive header support
     fetch: (url, options = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
+      // Ensure all Supabase requests have proper headers
+      const headers = { ...options.headers };
+      if (url.includes('supabase.co')) {
+        headers['apikey'] = SUPABASE_PUBLISHABLE_KEY;
+        // For auth endpoints, also add Authorization header
+        if (url.includes('/auth/v1/')) {
+          headers['Authorization'] = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+        }
+      }
+      
       return fetch(url, {
         ...options,
+        headers,
         signal: controller.signal,
       }).finally(() => clearTimeout(timeoutId));
     }
