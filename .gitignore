@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive configuration files
+.claude/
+.mcp.json
+.env
+.env.local
+.env.development
+.env.test
+.env.production
