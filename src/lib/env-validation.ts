@@ -96,10 +96,20 @@ function isValidSupabaseUrl(url: string): boolean {
 
 /**
  * Validates Supabase anon key format
+ * Supports both new publishable keys (sb_publishable_...) and legacy JWT format
  */
 function isValidSupabaseKey(key: string): boolean {
-  // Basic validation - should be a JWT-like string
-  return key.length > 100 && key.includes('.') && !key.includes(' ');
+  // New publishable key format (sb_publishable_...)
+  if (key.startsWith('sb_publishable_')) {
+    return key.length > 20 && !key.includes(' ');
+  }
+  
+  // Legacy JWT format (eyJ...)
+  if (key.startsWith('eyJ')) {
+    return key.length > 100 && key.includes('.') && !key.includes(' ');
+  }
+  
+  return false;
 }
 
 /**

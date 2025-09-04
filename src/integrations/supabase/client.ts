@@ -42,14 +42,15 @@ export const supabase = globalThis.__supabaseClient ?? createClient<Database>(SU
     // Ensure proper OAuth session handling
     storageKey: 'sb-auth-token',
   },
-  // Enhanced global configuration with production headers
+  // Enhanced global configuration with production headers and apikey support
   global: {
     headers: {
+      'apikey': SUPABASE_PUBLISHABLE_KEY, // Essential for publishable key authentication
       'X-Client-Info': 'organize-prime-web',
       'X-Environment': import.meta.env.MODE,
       'X-App-Version': '1.0.0'
     },
-    // Add connection timeout and retry configuration
+    // Add connection timeout configuration
     fetch: (url, options = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
