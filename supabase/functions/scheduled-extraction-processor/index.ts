@@ -17,7 +17,20 @@ Deno.serve(async (req: Request) => {
   
   // Initialize Supabase client with service role key
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  // In Edge Functions, the service role key is available as SUPABASE_SERVICE_ROLE_KEY
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseServiceKey) {
+    console.error('❌ SUPABASE_SERVICE_ROLE_KEY environment variable not found');
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Service role key not configured'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
