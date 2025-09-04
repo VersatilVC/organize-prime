@@ -9,7 +9,7 @@ beforeAll(() => {
   // Mock environment variables
   vi.stubEnv('NODE_ENV', 'test');
   vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
-  vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
+  vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'sb_publishable_test_key_for_testing_environment_12345');
 
   // Mock browser APIs that might not be available in jsdom
   testUtils.mockMatchMedia();

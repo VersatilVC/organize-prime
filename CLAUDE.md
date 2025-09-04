@@ -243,9 +243,9 @@ Organization invitations (admin-only, 50 req/hour per user)
 ## Environment Configuration
 
 ```env
-# Core Supabase
+# Core Supabase (Updated September 2025 - Uses Publishable Keys)
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_ANON_KEY=sb_publishable_your-publishable-key-here  # New publishable key format
 
 # Content Extraction (NEW)
 VITE_CONVERTAPI_SECRET=your-convertapi-secret-here
@@ -290,6 +290,15 @@ The AI assistant has direct Supabase database access via MCP (Model Context Prot
 **Infinite Loop Prevention**: Only ONE Vite dev server at a time! Kill existing: `taskkill /F /IM node.exe`, clear cache: `rm -rf node_modules/.vite`, then `npm run dev`
 
 ## Latest Updates Summary
+
+### Supabase Publishable Key Migration (September 2025)
+- ✅ **Security Response**: Rotated exposed credentials, implemented key rotation workflow
+- ✅ **Publishable Key Support**: Migrated from legacy JWT keys to modern `sb_publishable_` format
+- ✅ **OAuth PKCE Fix**: Implemented explicit code exchange for Google OAuth authentication
+- ✅ **Environment Validation**: Updated validation to accept both publishable and legacy key formats
+- ✅ **API Header Configuration**: Added `apikey` header to all Edge Function calls for proper authentication
+- ✅ **Test Environment**: Updated test setup with valid publishable key format
+- ✅ **Documentation**: Updated .env.example and CLAUDE.md with new key format requirements
 
 ### Knowledge Base File Extraction System (August 31, 2025)
 - ✅ **Complete ConvertAPI Integration**: Multi-format document processing (PDF, DOCX, PPT, XLS, RTF, ODT)
