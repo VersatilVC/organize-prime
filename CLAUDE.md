@@ -260,7 +260,7 @@ RESEND_API_KEY=your-resend-key
 
 **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions + Real-time)  
 **Frontend**: Vercel with SPA routing, optimized React vendor chunking, security headers  
-**Production**: https://organize-prime.vercel.app/ ✅ Live (August 28, 2025)
+**Production**: https://app.versatil.vc/ ✅ Live (September 3, 2025)
 
 ## AI Assistant Database Management
 
@@ -322,4 +322,4 @@ The AI assistant has direct Supabase database access via MCP (Model Context Prot
 
 OrganizePrime is a **production-ready multi-tenant SaaS platform** with comprehensive knowledge base management, AI-powered document processing, and feature management systems. The latest KB file extraction system (August 31, 2025) provides complete end-to-end document processing with ConvertAPI integration, OpenAI embeddings, and vector storage in knowledge base-specific tables.
 
-**Live Application**: https://organize-prime.vercel.app/ ✅
+**Live Application**: https://app.versatil.vc/ ✅
