@@ -19,8 +19,8 @@ jobs:
           # Call the scheduled extraction processor directly
           curl -X POST "https://cjwgfoingscquolnfkhh.supabase.co/functions/v1/scheduled-extraction-processor" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -d '{
               "trigger_source": "github_actions",
               "workflow_run_id": "${{ github.run_id }}",
@@ -56,8 +56,8 @@ jobs:
           echo "🔍 Checking queue health..."
           
           curl -X GET "https://cjwgfoingscquolnfkhh.supabase.co/functions/v1/scheduled-extraction-processor" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -s -o health.json
           
           echo "🏥 Queue Health:"
