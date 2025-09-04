@@ -50,19 +50,17 @@ export const supabase = globalThis.__supabaseClient ?? createClient<Database>(SU
       'X-Environment': import.meta.env.MODE,
       'X-App-Version': '1.0.0'
     },
-    // Add connection timeout configuration with comprehensive header support
+    // Add connection timeout configuration with proper API gateway authentication
     fetch: (url, options = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      // Ensure all Supabase requests have proper headers
+      // Ensure all Supabase requests have proper API gateway authentication
       const headers = { ...options.headers };
       if (url.includes('supabase.co')) {
         headers['apikey'] = SUPABASE_PUBLISHABLE_KEY;
-        // For auth endpoints, also add Authorization header
-        if (url.includes('/auth/v1/')) {
-          headers['Authorization'] = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
-        }
+        // No Authorization header - let Supabase handle JWT creation internally
+        // PKCE endpoints use code+verifier, not API keys as Bearer tokens
       }
       
       return fetch(url, {
