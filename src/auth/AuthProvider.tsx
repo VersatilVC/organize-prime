@@ -127,20 +127,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isSubscribed) return; // Prevent execution after cleanup
-      
-      debugSafeguards.trackAuthEvent('getSession', session);
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }).catch((error) => {
+    // Handle OAuth callback explicitly (for PKCE code exchange)
+    const handleOAuthCallback = async () => {
       if (!isSubscribed) return;
-      console.error('Error getting session:', error);
-      setLoading(false);
-    });
+      
+      // Check if we have an OAuth callback (code in URL)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        try {
+          console.log('OAuth callback detected, exchanging code for session...');
+          // Exchange code for session using exchangeCodeForSession
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('OAuth code exchange error:', error);
+            setError(error.message);
+            setLoading(false);
+            return;
+          }
+          
+          if (data.session) {
+            console.log('OAuth session established:', data.session);
+            debugSafeguards.trackAuthEvent('oauth_code_exchange', data.session);
+            
+            setSession(data.session);
+            setUser(data.session.user);
+            setLoading(false);
+            
+            // Clean up URL - remove code parameter
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('code');
+            window.history.replaceState({}, document.title, newUrl.toString());
+            
+            return; // Skip getSession() call below
+          }
+        } catch (error) {
+          console.error('OAuth callback handling failed:', error);
+          setError('OAuth authentication failed');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // If no OAuth callback, check for existing session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!isSubscribed) return; // Prevent execution after cleanup
+        
+        debugSafeguards.trackAuthEvent('getSession', session);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }).catch((error) => {
+        if (!isSubscribed) return;
+        console.error('Error getting session:', error);
+        setLoading(false);
+      });
+    };
+    
+    // Execute OAuth callback handling
+    handleOAuthCallback();
 
     return () => {
       isSubscribed = false;
