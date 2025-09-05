@@ -83,8 +83,8 @@ const defaultConfig: AppConfig = {
     debug: true,
   },
   supabase: {
-    url: 'https://cjwgfoingscquolnfkhh.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqd2dmb2luZ3NjcXVvbG5ma2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Mjc4NjIsImV4cCI6MjA2OTAwMzg2Mn0.CC2mCYNcN0btKcHvt_Rc4dKkqV6LVGRN1z4DVo10oYo',
+    url: import.meta.env.VITE_SUPABASE_URL || 'https://cjwgfoingscquolnfkhh.supabase.co',
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
   },
   features: {
     enableNotifications: true,
