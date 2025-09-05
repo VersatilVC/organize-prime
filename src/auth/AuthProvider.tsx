@@ -227,6 +227,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     setError(null);
+    
+    // Clear any cached auth state
+    localStorage.removeItem('sb-auth-token');
+    localStorage.removeItem('supabase.auth.token');
+    
     await supabase.auth.signOut();
   };
 

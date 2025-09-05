@@ -122,7 +122,7 @@ export const FeatureCard = React.memo<FeatureCardProps>(({
             {status === 'attention' ? (
               <Icons.alertCircle className="h-4 w-4" />
             ) : status === 'processing' ? (
-              <Icons.refreshCw className="h-4 w-4" />
+              <Icons.refresh className="h-4 w-4" />
             ) : (
               <Icons.arrowRight className="h-4 w-4" />
             )}
