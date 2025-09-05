@@ -2,14 +2,14 @@ import { useMemo } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/auth/AuthProvider';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useOptimizedUserRole } from '@/hooks/database/useOptimizedUserRole';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { queryKeys } from '@/lib/optimized-query-client';
 
 // Optimized dashboard hook with parallel data loading
 export function useOptimizedDashboard() {
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { role } = useOptimizedUserRole();
   const { currentOrganization } = useOrganization();
 
   // Parallel queries for maximum performance

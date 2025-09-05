@@ -158,6 +158,11 @@ Standard tables for feedback, notifications, invitations, audit logs, and analyt
 
 **Key Functions**: `is_super_admin()`, `is_org_admin()`, `get_user_effective_features()`, `safe_update_content_types_no_triggers()`
 
+**Permission Cache System**: Eliminates circular dependencies in RLS policies through cached permission lookups with SECURITY DEFINER functions:
+- `user_permission_cache`: Stores computed permissions for users
+- `auth_user_is_super_admin_cached()`: Bypass function for super admin checks
+- `auth_user_organization_ids_cached()`: Bypass function for organization access
+
 ## Frontend Architecture
 
 Standard React/TypeScript structure with:
@@ -290,6 +295,14 @@ The AI assistant has direct Supabase database access via MCP (Model Context Prot
 **Infinite Loop Prevention**: Only ONE Vite dev server at a time! Kill existing: `taskkill /F /IM node.exe`, clear cache: `rm -rf node_modules/.vite`, then `npm run dev`
 
 ## Latest Updates Summary
+
+### Critical RLS & Authentication Fixes (September 5, 2025)
+- ✅ **Infinite Recursion Fix**: Eliminated circular dependencies in RLS policies preventing super admin organization access
+- ✅ **Permission Cache System**: Implemented SECURITY DEFINER functions and cached permission lookup system
+- ✅ **Authentication Flow Fix**: Removed custom fetch interceptor that was blocking Authorization headers
+- ✅ **Publishable Key Support**: Fixed authentication with new `sb_publishable_` key format ensuring both `apikey` and JWT tokens are sent
+- ✅ **Dashboard Fix**: Updated useOptimizedDashboard to use working useOptimizedUserRole hook
+- ✅ **Complete Solution**: Super admin users can now access all organizations and features work correctly
 
 ### Supabase Publishable Key Migration (September 2025)
 - ✅ **Security Response**: Rotated exposed credentials, implemented key rotation workflow

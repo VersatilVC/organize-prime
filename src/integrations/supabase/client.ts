@@ -42,30 +42,20 @@ export const supabase = globalThis.__supabaseClient ?? createClient<Database>(SU
     // Ensure proper OAuth session handling
     storageKey: 'sb-auth-token',
   },
-  // Enhanced global configuration with production headers and apikey support
+  // Enhanced global configuration with proper header handling
   global: {
     headers: {
-      'apikey': SUPABASE_PUBLISHABLE_KEY, // Essential for publishable key authentication
       'X-Client-Info': 'organize-prime-web',
       'X-Environment': import.meta.env.MODE,
       'X-App-Version': '1.0.0'
     },
-    // Add connection timeout configuration with proper API gateway authentication
+    // Simplified fetch with timeout but preserving Supabase's auth headers
     fetch: (url, options = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      // Ensure all Supabase requests have proper API gateway authentication
-      const headers = { ...options.headers };
-      if (url.includes('supabase.co')) {
-        headers['apikey'] = SUPABASE_PUBLISHABLE_KEY;
-        // No Authorization header - let Supabase handle JWT creation internally
-        // PKCE endpoints use code+verifier, not API keys as Bearer tokens
-      }
-      
       return fetch(url, {
         ...options,
-        headers,
         signal: controller.signal,
       }).finally(() => clearTimeout(timeoutId));
     }
