@@ -83,8 +83,8 @@ const defaultConfig: AppConfig = {
     debug: true,
   },
   supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL || 'https://cjwgfoingscquolnfkhh.supabase.co',
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    url: import.meta.env.VITE_SUPABASE_URL,
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
   },
   features: {
     enableNotifications: true,
@@ -122,7 +122,7 @@ const defaultConfig: AppConfig = {
     rateLimitMax: 100, // 100 requests per 15 minutes
   },
   api: {
-    baseURL: 'https://cjwgfoingscquolnfkhh.supabase.co',
+    baseURL: import.meta.env.VITE_SUPABASE_URL,
     timeout: 30000, // 30 seconds
     retryAttempts: 3,
     retryDelay: 1000,

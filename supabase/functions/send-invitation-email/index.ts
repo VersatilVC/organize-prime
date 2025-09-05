@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     const inviterName = inviterProfile?.full_name || inviterProfile?.username || body.inviterName || 'An admin';
 
     // Build invite link from system setting if available
-    let siteUrl = req.headers.get('origin') || `https://cjwgfoingscquolnfkhh.supabase.co`;
+    let siteUrl = req.headers.get('origin') || 'https://app.versatil.vc';
     const { data: siteSetting } = await supabase
       .from('system_settings')
       .select('value')
