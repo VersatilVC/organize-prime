@@ -24,7 +24,7 @@ const QuickActionButton = React.memo<{
   action: QuickAction;
   className?: string;
 }>(({ action, className }) => {
-  const IconComponent = Icons[action.icon] || Icons.square;
+  const IconComponent = Icons[action.icon] || Icons.home;
   
   return (
     <Button 
